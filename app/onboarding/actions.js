@@ -41,7 +41,8 @@ export async function completeOnboardingAction(_prevState, formData) {
 
   const { error: updateError } = await supabase
     .from('profiles')
-    .update({
+    .upsert({
+      id: user.id,
       display_name: displayName,
       birthday,
       country,
@@ -52,7 +53,6 @@ export async function completeOnboardingAction(_prevState, formData) {
       bio,
       onboarding_complete: true,
     })
-    .eq('id', user.id)
 
   if (updateError) return { error: 'Không thể lưu hồ sơ: ' + updateError.message }
 
