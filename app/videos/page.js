@@ -4,9 +4,10 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Heart, MessageCircle, Share2, Volume2, VolumeX, 
-  Play, Pause, Music, Sparkles, Flame, UserPlus, Check, Send, Plus, Video as VideoIcon, Clock
+  Play, Pause, Music, Sparkles, Flame, UserPlus, Check, Send, Plus, Video as VideoIcon, Clock, AlertCircle, ShieldCheck
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { checkContent, checkTags } from '@/lib/moderation'
 import AppShell from '../components/AppShell'
 
 export default function RanVideoPage() {
@@ -26,6 +27,7 @@ export default function RanVideoPage() {
   const [newCaption, setNewCaption] = useState('')
   const [newTags, setNewTags] = useState('')
   const [toastMsg, setToastMsg] = useState('')
+  const [moderationError, setModerationError] = useState('')
   const [currentUserId, setCurrentUserId] = useState(null)
   const [currentUserName, setCurrentUserName] = useState('Người dùng RanMet')
 
@@ -134,6 +136,14 @@ export default function RanVideoPage() {
   async function handleAddComment() {
     if (!commentDraft.trim() || !currentUserId || !currentVideo) return
     const text = commentDraft.trim()
+
+    // AI Moderation check
+    const modCheck = checkContent(text)
+    if (!modCheck.isSafe) {
+      showToast('Bình luận vi phạm tiêu chuẩn cộng đồng, đã bị chặn!')
+      return
+    }
+
     setCommentDraft('')
 
     const newComment = {
@@ -157,10 +167,25 @@ export default function RanVideoPage() {
     e.preventDefault()
     if (!newVideoUrl.trim() || !newCaption.trim()) return
 
+    // AI AUTO-MODERATION CHECK ON VIDEO CAPTION AND TAGS
+    const modCaption = checkContent(newCaption)
+    if (!modCaption.isSafe) {
+      setModerationError(`Mô tả video chứa nội dung không an toàn (${modCaption.flaggedWord}). Hãy điều chỉnh!`)
+      return
+    }
+
     const tagArray = newTags
       .split(' ')
       .filter((t) => t.trim().length > 0)
       .map((t) => (t.startsWith('#') ? t : `#${t}`))
+
+    const modTags = checkTags(tagArray)
+    if (modTags.hasBlocked) {
+      setModerationError(`Hashtags [${modTags.blockedWords.join(', ')}] bị hệ thống AI từ chối!`)
+      return
+    }
+
+    setModerationError('')
 
     const newVid = {
       creator_id: currentUserId,
@@ -170,7 +195,7 @@ export default function RanVideoPage() {
       caption: newCaption.trim(),
       video_url: newVideoUrl.trim(),
       song_title: 'Original Sound - ' + currentUserName,
-      tags: tagArray.length > 0 ? tagArray : ['#RanVideo', '#Hot'],
+      tags: modTags.safeTags.length > 0 ? modTags.safeTags : ['#RanVideo', '#Hot'],
     }
 
     const { data, error } = await supabase.from('videos').insert(newVid).select().single()
@@ -427,7 +452,7 @@ export default function RanVideoPage() {
               </div>
             </div>
             <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 14 }}>
-              Chia sẻ các video ngắn, clip game, hướng dẫn lập trình hoặc âm nhạc của bạn lên RanVideo để kết nối với hàng ngàn người dùng khác.
+              Chia sẻ các video ngắn, clip game, hướng dẫn lập trình hoặc âm nhạc của bạn lên RanVideo để kiếm tiền và kết nối với cộng đồng.
             </p>
             <button 
               type="button" 
@@ -537,7 +562,7 @@ export default function RanVideoPage() {
         </div>
       )}
 
-      {/* POST VIDEO MODAL */}
+      {/* POST VIDEO MODAL WITH AI MODERATION */}
       {showPostModal && (
         <div 
           style={{
@@ -559,7 +584,12 @@ export default function RanVideoPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
-              <h2 className="rm-title" style={{ fontSize: 20 }}>Đăng Video Lên RanVideo</h2>
+              <div className="flex items-center g8">
+                <h2 className="rm-title" style={{ fontSize: 20 }}>Đăng Video Lên RanVideo</h2>
+                <span className="badge tiny flex items-center g4" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+                  <ShieldCheck size={12} /> AI Mod
+                </span>
+              </div>
               <button 
                 type="button" 
                 onClick={() => setShowPostModal(false)}
@@ -569,6 +599,12 @@ export default function RanVideoPage() {
                 ✕
               </button>
             </div>
+
+            {moderationError && (
+              <div className="err-text" style={{ marginBottom: 14 }}>
+                <AlertCircle size={16} /> {moderationError}
+              </div>
+            )}
 
             <form onSubmit={handlePostVideo} className="flex col g16">
               <div className="field-group">

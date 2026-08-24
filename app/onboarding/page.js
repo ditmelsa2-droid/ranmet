@@ -3,9 +3,10 @@
 import { useState, useActionState } from 'react'
 import { 
   Sparkles, User, Calendar, Globe, Languages, 
-  Heart, MessageSquare, ArrowLeft, ArrowRight, Rocket, Check, Flame, Plus, X
+  Heart, MessageSquare, ArrowLeft, ArrowRight, Rocket, Check, Flame, Plus, X, AlertCircle, ShieldCheck
 } from 'lucide-react'
 import { completeOnboardingAction } from './actions'
+import { checkContent, checkTags } from '@/lib/moderation'
 
 const COUNTRIES = [
   'Việt Nam', 'Nhật Bản', 'Hàn Quốc', 'Singapore', 'Hoa Kỳ', 'Pháp',
@@ -41,6 +42,7 @@ export default function OnboardingPage() {
   const [interests, setInterests] = useState([])
   const [customInterest, setCustomInterest] = useState('')
   const [style, setStyle] = useState('')
+  const [moderationError, setModerationError] = useState('')
   const [state, formAction, pending] = useActionState(completeOnboardingAction, null)
 
   function toggle(list, setList, value, max) {
@@ -55,6 +57,15 @@ export default function OnboardingPage() {
   function addCustomInterest() {
     const clean = customInterest.trim()
     if (!clean) return
+
+    // AI CONTENT MODERATION CHECK
+    const modCheck = checkContent(clean)
+    if (!modCheck.isSafe) {
+      setModerationError(`Từ khóa "${clean}" vi phạm tiêu chuẩn cộng đồng hoặc chứa nội dung độc hại! ⚠️`)
+      return
+    }
+
+    setModerationError('')
     if (!interests.includes(clean)) {
       setInterests([...interests, clean])
     }
@@ -207,9 +218,18 @@ export default function OnboardingPage() {
               </p>
             </div>
 
+            {moderationError && (
+              <div className="err-text">
+                <AlertCircle size={16} /> {moderationError}
+              </div>
+            )}
+
             {/* Custom Interests input */}
             <div className="field-group">
-              <label className="field-label"><Heart size={14} /> Sở thích của bạn (Nhập tự do)</label>
+              <div className="flex justify-between items-center">
+                <label className="field-label"><Heart size={14} /> Sở thích của bạn (Nhập tự do)</label>
+                <span className="tiny faint flex items-center g4"><ShieldCheck size={12} style={{ color: '#10b981' }} /> AI Protected</span>
+              </div>
               
               <div className="flex g8 items-center" style={{ marginBottom: 10 }}>
                 <input

@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Newspaper, Heart, MessageCircle, Share2, Send, 
-  Sparkles, Image as ImageIcon, Plus, Flame, Clock, MoreHorizontal
+  Sparkles, Image as ImageIcon, Plus, Flame, Clock, MoreHorizontal, AlertCircle, ShieldCheck
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { checkContent } from '@/lib/moderation'
 import AppShell from '../components/AppShell'
 
 const INITIAL_SEED_POSTS = [
@@ -55,10 +56,11 @@ export default function RanNewsPage() {
   const [currentUserId, setCurrentUserId] = useState(null)
   const [currentUserName, setCurrentUserName] = useState('Người dùng RanMet')
   const [toastMsg, setToastMsg] = useState('')
+  const [moderationWarning, setModerationWarning] = useState('')
 
   function showToast(msg) {
     setToastMsg(msg)
-    setTimeout(() => setToastMsg(''), 2500)
+    setTimeout(() => setToastMsg(''), 3000)
   }
 
   useEffect(() => {
@@ -132,6 +134,16 @@ export default function RanNewsPage() {
     e.preventDefault()
     if (!postDraft.trim() || !currentUserId) return
 
+    // AI AUTO-MODERATION CHECK
+    const modCheck = checkContent(postDraft)
+    if (!modCheck.isSafe) {
+      setModerationWarning(`Hệ thống AI từ chối: Bài viết chứa nội dung/từ khóa không phù hợp (${modCheck.flaggedWord}). Hãy điều chỉnh để bảo vệ cộng đồng!`)
+      showToast('Nội dung bài viết vi phạm tiêu chuẩn an toàn!')
+      return
+    }
+
+    setModerationWarning('')
+
     const newPost = {
       author_id: currentUserId,
       author_name: currentUserName,
@@ -178,6 +190,13 @@ export default function RanNewsPage() {
     const text = (commentDrafts[postId] || '').trim()
     if (!text || !currentUserId) return
 
+    // AI MODERATION CHECK ON COMMENT
+    const modCheck = checkContent(text)
+    if (!modCheck.isSafe) {
+      showToast('Bình luận chứa từ ngữ không phù hợp, đã bị chặn!')
+      return
+    }
+
     setCommentDrafts((prev) => ({ ...prev, [postId]: '' }))
 
     const newComment = {
@@ -211,15 +230,27 @@ export default function RanNewsPage() {
               border: '1px solid rgba(168, 85, 247, 0.25)'
             }}
           >
-            <div className="flex items-center g12" style={{ marginBottom: 14 }}>
-              <div className="avatar" style={{ width: 44, height: 44, fontSize: 16, background: 'var(--brand-gradient)' }}>
-                {currentUserName.charAt(0).toUpperCase()}
+            <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+              <div className="flex items-center g12">
+                <div className="avatar" style={{ width: 44, height: 44, fontSize: 16, background: 'var(--brand-gradient)' }}>
+                  {currentUserName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="semi small" style={{ color: '#fff' }}>{currentUserName}</div>
+                  <div className="tiny faint">Chia sẻ suy nghĩ của bạn với cộng đồng RanMet</div>
+                </div>
               </div>
-              <div className="grow">
-                <div className="semi small" style={{ color: '#fff' }}>{currentUserName}</div>
-                <div className="tiny faint">Chia sẻ suy nghĩ của bạn với cộng đồng RanMet</div>
-              </div>
+
+              <span className="badge tiny flex items-center g4" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+                <ShieldCheck size={12} /> AI Mod Active
+              </span>
             </div>
+
+            {moderationWarning && (
+              <div className="err-text" style={{ marginBottom: 12 }}>
+                <AlertCircle size={16} /> {moderationWarning}
+              </div>
+            )}
 
             <form onSubmit={handleCreatePost} className="flex col g12">
               <textarea
@@ -448,11 +479,11 @@ export default function RanNewsPage() {
 
           <div className="card" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <div className="flex items-center g8" style={{ marginBottom: 8 }}>
-              <Sparkles size={16} style={{ color: '#ec4899' }} />
-              <span className="semi small">Quy tắc đăng bài</span>
+              <ShieldCheck size={16} style={{ color: '#10b981' }} />
+              <span className="semi small">Kiểm duyệt AI Tự Động</span>
             </div>
             <p className="tiny muted" style={{ lineHeight: 1.5 }}>
-              Chia sẻ kiến thức, kinh nghiệm, câu chuyện tích cực và tôn trọng các thành viên trong cộng đồng.
+              Mọi bài viết và bình luận trên RanMet đều được giám sát bởi hệ thống AI Content Moderator chống các hành vi xâm hại trực tuyến, quấy rối và nội dung độc hại.
             </p>
           </div>
         </div>

@@ -5,11 +5,20 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
   User, ShieldCheck, Award, Heart, Sparkles, 
-  Globe, Languages, Save, Plus, X, Share2, Copy, Check, MessageSquare, LogOut
+  Globe, Languages, Save, Plus, X, Share2, Copy, Check, MessageSquare, 
+  Image as ImageIcon, DollarSign, AlertCircle, Palette
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { trustTier, nextTierInfo } from '@/lib/trust'
+import { checkContent, checkTags } from '@/lib/moderation'
 import AppShell from '../components/AppShell'
+
+const BANNER_THEMES = [
+  { id: 'cyberpunk', name: 'Cyberpunk Neon', bg: 'var(--discord-cyber)' },
+  { id: 'galaxy', name: 'Galaxy Cosmic', bg: 'var(--discord-galaxy)' },
+  { id: 'sunset', name: 'Sunset Vibe', bg: 'var(--discord-sunset)' },
+  { id: 'matrix', name: 'Matrix Emerald', bg: 'linear-gradient(135deg, #064e3b 0%, #059669 50%, #10b981 100%)' }
+]
 
 const SUGGESTED_INTERESTS = [
   'Minecraft', 'Anime', 'Lập trình', 'Bóng đá', 'AI', 'Du lịch',
@@ -27,6 +36,9 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('')
   const [country, setCountry] = useState('Việt Nam')
   const [bio, setBio] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [bannerTheme, setBannerTheme] = useState('cyberpunk')
+  const [customBannerUrl, setCustomBannerUrl] = useState('')
   const [interests, setInterests] = useState([])
   const [customInterest, setCustomInterest] = useState('')
   const [style, setStyle] = useState('')
@@ -36,6 +48,7 @@ export default function ProfilePage() {
   const [referralCount, setReferralCount] = useState(0)
   const [copiedLink, setCopiedLink] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
+  const [moderationError, setModerationError] = useState('')
 
   function showToast(msg) {
     setToastMsg(msg)
@@ -61,6 +74,9 @@ export default function ProfilePage() {
         setDisplayName(profile.display_name || '')
         setCountry(profile.country || 'Việt Nam')
         setBio(profile.bio || '')
+        setAvatarUrl(profile.avatar_url || '')
+        setBannerTheme(profile.banner_theme || 'cyberpunk')
+        setCustomBannerUrl(profile.banner_url || '')
         setInterests(profile.interests || [])
         setStyle(profile.conversation_style || '')
       }
@@ -80,6 +96,16 @@ export default function ProfilePage() {
   function addInterest(tag) {
     const clean = tag.trim()
     if (!clean) return
+
+    // AI MODERATION CHECK
+    const modCheck = checkContent(clean)
+    if (!modCheck.isSafe) {
+      setModerationError(`Từ khóa "${clean}" bị từ chối: Vi phạm tiêu chuẩn an toàn cộng đồng! ⚠️`)
+      showToast(`Từ khóa "${clean}" vi phạm tiêu chuẩn cộng đồng!`)
+      return
+    }
+
+    setModerationError('')
     if (!interests.includes(clean)) {
       setInterests([...interests, clean])
     }
@@ -93,13 +119,40 @@ export default function ProfilePage() {
   async function handleSaveProfile(e) {
     e?.preventDefault()
     if (!userId || saving) return
+
+    // AI MODERATION CHECK ON ENTIRE FORM
+    const bioCheck = checkContent(bio)
+    if (!bioCheck.isSafe) {
+      setModerationError(`Phần giới thiệu chứa từ khóa không phù hợp (${bioCheck.flaggedWord}). Vui lòng chỉnh sửa!`)
+      showToast('Nội dung Bio vi phạm tiêu chuẩn an toàn!')
+      return
+    }
+
+    const nameCheck = checkContent(displayName)
+    if (!nameCheck.isSafe) {
+      setModerationError(`Tên hiển thị chứa từ ngữ vi phạm tiêu chuẩn cộng đồng!`)
+      showToast('Tên hiển thị vi phạm tiêu chuẩn!')
+      return
+    }
+
+    const tagsCheck = checkTags(interests)
+    if (tagsCheck.hasBlocked) {
+      setModerationError(`Các tag [${tagsCheck.blockedWords.join(', ')}] bị hệ thống AI kiểm duyệt từ chối!`)
+      showToast('Có tag sở thích vi phạm tiêu chuẩn!')
+      return
+    }
+
+    setModerationError('')
     setSaving(true)
 
     const updates = {
       display_name: displayName.trim() || 'Người dùng',
       country,
       bio: bio.trim(),
-      interests,
+      avatar_url: avatarUrl.trim() || null,
+      banner_theme: bannerTheme,
+      banner_url: customBannerUrl.trim() || null,
+      interests: tagsCheck.safeTags,
       conversation_style: style.trim(),
       onboarding_complete: true
     }
@@ -110,7 +163,7 @@ export default function ProfilePage() {
     if (error) {
       showToast('Lỗi cập nhật hồ sơ: ' + error.message)
     } else {
-      showToast('Đã lưu hồ sơ thành công! ✨')
+      showToast('Đã lưu hồ sơ Discord-style thành công! ✨')
     }
   }
 
@@ -123,8 +176,8 @@ export default function ProfilePage() {
     setTimeout(() => setCopiedLink(false), 3000)
   }
 
-  const tier = trustTier(trustScore)
-  const next = nextTierInfo(trustScore)
+  const activeTheme = BANNER_THEMES.find(t => t.id === bannerTheme) || BANNER_THEMES[0]
+  const bannerBackground = customBannerUrl.trim() ? `url(${customBannerUrl})` : activeTheme.bg
 
   if (loading) {
     return (
@@ -138,64 +191,99 @@ export default function ProfilePage() {
 
   return (
     <AppShell trustScore={trustScore} userProfile={{ display_name: displayName }}>
-      <div className="flex col g24" style={{ maxWidth: 840, margin: '0 auto', width: '100%' }}>
-        {/* TOP PROFILE BANNER */}
+      <div className="flex col g24" style={{ maxWidth: 880, margin: '0 auto', width: '100%' }}>
+        {/* DISCORD-STYLE PROFILE CARD WITH FLOATING BANNER */}
         <div 
-          className="card"
-          style={{
-            padding: 28,
-            background: 'linear-gradient(135deg, rgba(28, 20, 48, 0.95) 0%, rgba(14, 10, 24, 0.98) 100%)',
-            border: '1px solid rgba(168, 85, 247, 0.3)',
-            boxShadow: '0 16px 40px -10px rgba(168, 85, 247, 0.25)'
+          className="card" 
+          style={{ 
+            padding: 0, 
+            overflow: 'hidden',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8)'
           }}
         >
-          <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 16 }}>
-            <div className="flex items-center g18">
+          {/* Top Banner */}
+          <div 
+            className="discord-banner" 
+            style={{ 
+              background: bannerBackground,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          >
+            <div className="discord-avatar-wrap">
               <div
                 className="avatar"
                 style={{
-                  width: 72,
-                  height: 72,
-                  fontSize: 28,
+                  width: 80,
+                  height: 80,
+                  fontSize: 32,
                   background: 'var(--brand-gradient)',
-                  boxShadow: '0 8px 24px rgba(236, 72, 153, 0.4)'
+                  border: 'none'
                 }}
               >
-                {(displayName || 'U').charAt(0).toUpperCase()}
+                {avatarUrl.trim() ? (
+                  <img src={avatarUrl} alt="Avatar" />
+                ) : (
+                  (displayName || 'U').charAt(0).toUpperCase()
+                )}
               </div>
+            </div>
+          </div>
 
+          {/* Profile Header Content */}
+          <div style={{ padding: '52px 28px 24px' }}>
+            <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 16 }}>
               <div>
-                <div className="flex items-center g8">
-                  <h1 className="rm-title" style={{ fontSize: 24, color: '#fff' }}>{displayName || 'Chưa đặt tên'}</h1>
+                <div className="flex items-center g10">
+                  <h1 className="rm-title" style={{ fontSize: 26, color: '#fff' }}>{displayName || 'Chưa đặt tên'}</h1>
                   <span className="badge badge-success tiny" style={{ fontSize: 10 }}>Đã xác thực</span>
                 </div>
                 <div className="tiny muted" style={{ marginTop: 4 }}>
-                  {country} · {interests.length} sở thích cá nhân
+                  {country} · {interests.length} sở thích · <span style={{ color: '#c084fc' }}>Phong cách: {style || 'Tự do'}</span>
                 </div>
+                {bio && (
+                  <p className="small" style={{ color: 'rgba(255,255,255,0.85)', marginTop: 8, maxWidth: 540 }}>
+                    {bio}
+                  </p>
+                )}
               </div>
-            </div>
 
-            <div className="flex items-center g10">
-              <button 
-                type="button"
-                className="btn btn-primary"
-                style={{ width: 'auto', padding: '10px 20px', fontSize: 13 }}
-                onClick={handleSaveProfile}
-                disabled={saving}
-              >
-                <Save size={16} /> {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}
-              </button>
+              <div className="flex g10 items-center">
+                <Link href="/creator" className="btn btn-secondary" style={{ width: 'auto', padding: '10px 18px', fontSize: 13, background: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)', color: '#fbbf24' }}>
+                  <DollarSign size={16} /> Creator Studio
+                </Link>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  style={{ width: 'auto', padding: '10px 20px', fontSize: 13 }}
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                >
+                  <Save size={16} /> {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* REFERRAL / ADS TRUST MILESTONES CARD */}
+        {/* AI MODERATION ALERT IF ANY */}
+        {moderationError && (
+          <div className="err-text" style={{ padding: '14px 18px', borderRadius: 14 }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <div>
+              <b style={{ color: '#fff' }}>Hệ thống AI Kiểm duyệt:</b> {moderationError}
+            </div>
+          </div>
+        )}
+
+        {/* REFERRAL / TRUST REWARDS CARD */}
         <div 
           className="card"
           style={{
             background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%)',
             border: '1px solid rgba(245, 158, 11, 0.4)',
-            padding: 24
+            padding: 22
           }}
         >
           <div className="flex justify-between items-start" style={{ marginBottom: 14 }}>
@@ -203,11 +291,11 @@ export default function ProfilePage() {
               <div className="badge tiny" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid #f59e0b50', marginBottom: 6 }}>
                 🎁 CHƯƠNG TRÌNH MỜI BẠN BÈ TÍCH ĐIỂM TRUST
               </div>
-              <h3 className="rm-title" style={{ fontSize: 19, color: '#fff' }}>
+              <h3 className="rm-title" style={{ fontSize: 18, color: '#fff' }}>
                 Mời bạn bè đăng ký RanMet nhận đến +100 Trust!
               </h3>
-              <p className="small muted" style={{ marginTop: 4, lineHeight: 1.45 }}>
-                • Mốc 3 bạn: <b>+25 Trust</b> · Mốc 5 bạn: <b>+50 Trust</b> · Mốc 10 bạn (Max): <b>+100 Trust</b>
+              <p className="tiny muted" style={{ marginTop: 4 }}>
+                • 3 bạn: <b>+25 Trust</b> · 5 bạn: <b>+50 Trust</b> · 10 bạn (Max): <b>+100 Trust</b>
               </p>
             </div>
 
@@ -221,10 +309,9 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          {/* Referral Milestones Track */}
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 12 }}>
             <div className="flex justify-between tiny bold" style={{ marginBottom: 6 }}>
-              <span>Tiến độ giới thiệu: <b style={{ color: '#f59e0b' }}>{referralCount} người</b></span>
+              <span>Tiến độ: <b style={{ color: '#f59e0b' }}>{referralCount} người</b></span>
               <span className="muted">Tối đa 10 bạn</span>
             </div>
             <div className="compat-bar-track" style={{ height: 8 }}>
@@ -239,10 +326,63 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* EDIT PROFILE FORM */}
-        <form onSubmit={handleSaveProfile} className="card flex col g20" style={{ padding: 28 }}>
-          <div className="rm-title" style={{ fontSize: 20, color: '#fff', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-            Chỉnh sửa thông tin cá nhân
+        {/* CUSTOMIZE BANNER & AVATAR (DISCORD STYLE) */}
+        <div className="card flex col g18" style={{ padding: 26 }}>
+          <div className="rm-title flex items-center g8" style={{ fontSize: 18, color: '#fff', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+            <Palette size={18} style={{ color: '#ec4899' }} /> Tùy chỉnh Ảnh Đại Diện & Ảnh Bìa (Discord Style)
+          </div>
+
+          <div className="field-group">
+            <label className="field-label"><ImageIcon size={14} /> Link Ảnh đại diện (URL ảnh online / Discord avatar)</label>
+            <input 
+              className="input" 
+              placeholder="https://images.unsplash.com/... hoặc link avatar online"
+              value={avatarUrl}
+              onChange={(e) => setAvatarUrl(e.target.value)}
+            />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Chọn Theme Màu Ảnh Bìa (Banner Presets)</label>
+            <div className="flex" style={{ flexWrap: 'wrap', gap: 10 }}>
+              {BANNER_THEMES.map((theme) => (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => { setBannerTheme(theme.id); setCustomBannerUrl(''); }}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: 14,
+                    background: theme.bg,
+                    border: bannerTheme === theme.id ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    boxShadow: bannerTheme === theme.id ? '0 0 16px rgba(255,255,255,0.5)' : 'none'
+                  }}
+                >
+                  {theme.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Hoặc Dán Link Ảnh Bìa Tùy Chọn (Custom Banner URL)</label>
+            <input 
+              className="input" 
+              placeholder="https://... ảnh bìa phong cảnh, anime..."
+              value={customBannerUrl}
+              onChange={(e) => setCustomBannerUrl(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* EDIT PROFILE DETAILS & TAGS WITH AI MODERATION */}
+        <form onSubmit={handleSaveProfile} className="card flex col g20" style={{ padding: 26 }}>
+          <div className="rm-title" style={{ fontSize: 18, color: '#fff', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+            Thông tin chi tiết & Sở thích tự do
           </div>
 
           <div className="field-group">
@@ -277,15 +417,17 @@ export default function ProfilePage() {
             />
           </div>
 
-          {/* CUSTOM INTERESTS / HOBBIES (FREE INPUT + SUGGESTIONS) */}
+          {/* CUSTOM INTERESTS / HOBBIES */}
           <div className="field-group">
-            <label className="field-label"><Heart size={14} /> Sở thích & Chủ đề quan tâm (Tùy chỉnh tự do)</label>
+            <div className="flex justify-between items-center">
+              <label className="field-label"><Heart size={14} /> Sở thích & Chủ đề (AI Kiểm duyệt tự động)</label>
+              <span className="tiny faint flex items-center g4"><ShieldCheck size={12} style={{ color: '#10b981' }} /> AI Safe Guard</span>
+            </div>
             
-            {/* Input custom interest */}
-            <div className="flex g8 items-center" style={{ marginBottom: 12 }}>
+            <div className="flex g8 items-center" style={{ marginBottom: 10 }}>
               <input 
                 className="input" 
-                placeholder="Nhập sở thích bất kỳ (Ví dụ: Thích ngắm mưa, Nuôi mèo, Đạp xe...) rồi bấm Thêm"
+                placeholder="Nhập sở thích (Ví dụ: Thích ngắm mưa, Nuôi mèo, Code dạo...) rồi bấm Thêm tag"
                 value={customInterest}
                 onChange={(e) => setCustomInterest(e.target.value)}
                 onKeyDown={(e) => {
@@ -306,7 +448,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Current Selected Tags */}
-            <div className="flex" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+            <div className="flex" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
               {interests.map((t) => (
                 <span 
                   key={t} 

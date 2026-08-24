@@ -26,9 +26,34 @@ create table if not exists public.profiles (
   conversation_style text,
   bio text,
   avatar_seed text,
+  avatar_url text,
+  banner_url text,
+  banner_theme text default 'cyberpunk',
+  is_creator boolean not null default false,
+  creator_earnings numeric not null default 0,
   onboarding_complete boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+-- Thêm các cột nếu bảng đã tồn tại
+do $$
+begin
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='avatar_url') then
+    alter table public.profiles add column avatar_url text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='banner_url') then
+    alter table public.profiles add column banner_url text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='banner_theme') then
+    alter table public.profiles add column banner_theme text default 'cyberpunk';
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='is_creator') then
+    alter table public.profiles add column is_creator boolean not null default false;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='creator_earnings') then
+    alter table public.profiles add column creator_earnings numeric not null default 0;
+  end if;
+end $$;
 
 alter table public.profiles enable row level security;
 
@@ -151,7 +176,7 @@ drop policy if exists "users can record referrals" on public.referrals;
 create policy "users can record referrals"
   on public.referrals for insert to authenticated with check (auth.uid() = referred_user_id or auth.uid() = referrer_id);
 
--- ---------- CHAT ----------
+-- ---------- CHAT & MEDIA MESSAGES ----------
 create table if not exists public.chats (
   id uuid primary key default gen_random_uuid(),
   user_a uuid not null references public.profiles(id) on delete cascade,
@@ -179,9 +204,22 @@ create table if not exists public.messages (
   chat_id uuid not null references public.chats(id) on delete cascade,
   sender_id uuid not null references public.profiles(id) on delete cascade,
   content text not null,
-  kind text not null default 'text',
+  kind text not null default 'text', -- 'text' | 'image' | 'video' | 'file'
+  media_url text,
+  file_name text,
   created_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='messages' and column_name='media_url') then
+    alter table public.messages add column media_url text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='messages' and column_name='file_name') then
+    alter table public.messages add column file_name text;
+  end if;
+end $$;
+
 alter table public.messages enable row level security;
 
 drop policy if exists "participants can view messages in their chats" on public.messages;
@@ -203,7 +241,7 @@ create policy "participants can send messages in their chats"
     )
   );
 
--- ---------- RANNEWS SOCIAL FEED (FACEBOOK-STYLE) ----------
+-- ---------- RANNEWS SOCIAL FEED ----------
 create table if not exists public.rannews_posts (
   id uuid primary key default gen_random_uuid(),
   author_id uuid not null references public.profiles(id) on delete cascade,

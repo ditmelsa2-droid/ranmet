@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   Home, Compass, Video, Globe, User, Zap, 
-  LogOut, ShieldCheck, Sparkles, MessageSquare, Newspaper
+  LogOut, ShieldCheck, Sparkles, MessageSquare, Newspaper, DollarSign
 } from 'lucide-react'
 
 export default function AppShell({ children, userProfile, trustScore }) {
@@ -17,6 +17,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
     { href: '/videos', label: 'RanVideo', icon: Video, badge: 'Hot' },
     { href: '/match', label: 'Ghép đôi', icon: Compass },
     { href: '/world', label: 'RanWorld', icon: Globe },
+    { href: '/creator', label: 'Creator Studio', icon: DollarSign, badge: 'Kiếm tiền' },
     { href: '/profile', label: 'Hồ sơ', icon: User },
   ]
 
@@ -32,7 +33,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
       <aside className="rm-desktop-sidebar">
         <div>
           {/* Brand Logo */}
-          <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none', marginBottom: 24 }}>
+          <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none', marginBottom: 20 }}>
             <div className="rm-logo" style={{ fontSize: 24 }}>
               <Zap size={24} style={{ color: '#ec4899' }} /> RanMet
             </div>
@@ -61,8 +62,8 @@ export default function AppShell({ children, userProfile, trustScore }) {
                         fontSize: 10, 
                         padding: '1px 6px', 
                         borderRadius: 6, 
-                        background: item.badge === 'Hot' ? 'rgba(244, 63, 94, 0.2)' : item.badge === 'New' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                        color: item.badge === 'Hot' ? '#fb7185' : item.badge === 'New' ? '#22d3ee' : '#34d399'
+                        background: item.badge === 'Hot' ? 'rgba(244, 63, 94, 0.2)' : item.badge === 'Kiếm tiền' ? 'rgba(245, 158, 11, 0.2)' : item.badge === 'New' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                        color: item.badge === 'Hot' ? '#fb7185' : item.badge === 'Kiếm tiền' ? '#f59e0b' : item.badge === 'New' ? '#22d3ee' : '#34d399'
                       }}
                     >
                       {item.badge}

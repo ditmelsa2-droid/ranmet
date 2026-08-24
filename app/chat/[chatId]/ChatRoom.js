@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { 
   ArrowLeft, Send, Sparkles, ShieldCheck, 
-  MessageCircle, Heart, Flame
+  MessageCircle, Heart, Flame, Image as ImageIcon, Video as VideoIcon, 
+  FileText, Paperclip, Plus, X, Download, Play
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { checkContent } from '@/lib/moderation'
 import AppShell from '../../components/AppShell'
 
 const ICE_BREAKERS = [
@@ -19,8 +21,18 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
   const [messages, setMessages] = useState(initialMessages || [])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [showMediaModal, setShowMediaModal] = useState(false)
+  const [mediaType, setMediaType] = useState('image') // 'image' | 'video' | 'file'
+  const [mediaUrl, setMediaUrl] = useState('')
+  const [fileName, setFileName] = useState('')
+  const [toastMsg, setToastMsg] = useState('')
   const scrollRef = useRef(null)
   const [supabase] = useState(() => createClient())
+
+  function showToast(msg) {
+    setToastMsg(msg)
+    setTimeout(() => setToastMsg(''), 2500)
+  }
 
   useEffect(() => {
     const channel = supabase
@@ -52,17 +64,56 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
     const text = (textToSend || draft).trim()
     if (!text || isSending) return
 
+    // AI AUTO-MODERATION CHECK
+    const modCheck = checkContent(text)
+    if (!modCheck.isSafe) {
+      showToast('Tin nhắn vi phạm tiêu chuẩn cộng đồng hoặc chứa từ ngữ độc hại!')
+      return
+    }
+
     setDraft('')
     setIsSending(true)
 
     const { error } = await supabase
       .from('messages')
-      .insert({ chat_id: chatId, sender_id: myId, content: text })
+      .insert({ chat_id: chatId, sender_id: myId, content: text, kind: 'text' })
 
     setIsSending(false)
 
     if (error) {
       setDraft(text)
+      showToast('Lỗi gửi tin nhắn: ' + error.message)
+    }
+  }
+
+  async function sendMedia(e) {
+    e?.preventDefault()
+    if (!mediaUrl.trim() || isSending) return
+
+    setIsSending(true)
+    const caption = draft.trim() || (mediaType === 'image' ? '[Hình ảnh]' : mediaType === 'video' ? '[Video]' : '[Tệp đính kèm]')
+
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        sender_id: myId,
+        content: caption,
+        kind: mediaType,
+        media_url: mediaUrl.trim(),
+        file_name: fileName.trim() || (mediaType === 'file' ? 'Tai_lieu.pdf' : null)
+      })
+
+    setIsSending(false)
+    setShowMediaModal(false)
+    setMediaUrl('')
+    setFileName('')
+    setDraft('')
+
+    if (error) {
+      showToast('Lỗi gửi tệp: ' + error.message)
+    } else {
+      showToast('Đã gửi tệp đính kèm! ✨')
     }
   }
 
@@ -76,13 +127,13 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           className="flex items-center justify-between" 
           style={{ 
             padding: '14px 20px', 
-            background: 'rgba(18, 14, 28, 0.9)',
+            background: 'rgba(18, 14, 28, 0.95)',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
             zIndex: 10
           }}
         >
           <div className="flex items-center g12">
-            <Link href="/home" className="btn-icon" style={{ width: 38, height: 38 }}>
+            <Link href="/chats" className="btn-icon" style={{ width: 38, height: 38 }}>
               <ArrowLeft size={18} />
             </Link>
 
@@ -128,7 +179,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
 
           <div className="flex items-center g6">
             <span className="badge badge-glow tiny" style={{ padding: '4px 10px' }}>
-              <ShieldCheck size={12} /> Realtime
+              <ShieldCheck size={12} /> AI Protected
             </span>
           </div>
         </div>
@@ -142,7 +193,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
             padding: '20px 20px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 8
+            gap: 10
           }}
         >
           {messages.length === 0 && (
@@ -199,8 +250,59 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
 
             return (
               <div key={m.id} className={`msg-row ${isMe ? 'me' : ''}`}>
-                <div className={`msg-bubble ${isMe ? 'me' : 'them'}`}>
+                <div className={`msg-bubble ${isMe ? 'me' : 'them'}`} style={{ maxWidth: m.kind === 'image' || m.kind === 'video' ? '85%' : '78%' }}>
+                  
+                  {/* IMAGE ATTACHMENT */}
+                  {m.kind === 'image' && m.media_url && (
+                    <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 6, maxHeight: 260 }}>
+                      <img 
+                        src={m.media_url} 
+                        alt="Chat attachment" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                      />
+                    </div>
+                  )}
+
+                  {/* VIDEO ATTACHMENT */}
+                  {m.kind === 'video' && m.media_url && (
+                    <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 6, maxHeight: 280, background: '#000' }}>
+                      <video 
+                        src={m.media_url} 
+                        controls 
+                        playsInline 
+                        style={{ width: '100%', maxHeight: 280, display: 'block' }} 
+                      />
+                    </div>
+                  )}
+
+                  {/* FILE ATTACHMENT */}
+                  {m.kind === 'file' && m.media_url && (
+                    <a 
+                      href={m.media_url} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="flex items-center g10"
+                      style={{ 
+                        padding: '10px 14px', 
+                        background: 'rgba(0,0,0,0.25)', 
+                        borderRadius: 12, 
+                        marginBottom: 6,
+                        textDecoration: 'none',
+                        color: '#fff'
+                      }}
+                    >
+                      <FileText size={22} style={{ color: '#06b6d4' }} />
+                      <div className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="semi small" style={{ color: '#fff' }}>{m.file_name || 'Tập tin đính kèm'}</div>
+                        <div className="tiny faint">Bấm để tải xuống / mở xem</div>
+                      </div>
+                      <Download size={16} />
+                    </a>
+                  )}
+
+                  {/* Text Content */}
                   <div>{m.content}</div>
+
                   <div 
                     className="tiny" 
                     style={{ 
@@ -219,7 +321,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           })}
         </div>
 
-        {/* Sleek Bottom Input Bar */}
+        {/* Sleek Bottom Input Bar with Media Attachment */}
         <div 
           style={{ 
             padding: '14px 18px', 
@@ -228,6 +330,17 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           }}
         >
           <div className="flex items-center g10">
+            {/* Attachment Button */}
+            <button
+              type="button"
+              className="btn-icon"
+              style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }}
+              onClick={() => setShowMediaModal(true)}
+              title="Đăng Ảnh / Video / File"
+            >
+              <Paperclip size={18} style={{ color: '#ec4899' }} />
+            </button>
+
             <input
               className="input"
               style={{ 
@@ -250,8 +363,8 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
               type="button"
               className="btn btn-primary"
               style={{ 
-                width: 48, 
-                height: 48, 
+                width: 46, 
+                height: 46, 
                 borderRadius: '50%', 
                 padding: 0, 
                 flexShrink: 0 
@@ -264,6 +377,132 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           </div>
         </div>
       </div>
+
+      {/* SEND MEDIA / FILE MODAL */}
+      {showMediaModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20
+          }}
+          onClick={() => setShowMediaModal(false)}
+        >
+          <div 
+            className="card" 
+            style={{ width: '100%', maxWidth: 460, padding: 24, animation: 'msgPop 0.25s ease' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+              <h2 className="rm-title" style={{ fontSize: 18 }}>Đính Kèm Phương Tiện & Tệp</h2>
+              <button 
+                type="button" 
+                onClick={() => setShowMediaModal(false)}
+                className="btn-icon" 
+                style={{ width: 32, height: 32 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Media Type Tabs */}
+            <div className="flex g8" style={{ marginBottom: 16 }}>
+              <button
+                type="button"
+                className={`chip ${mediaType === 'image' ? 'selected' : ''}`}
+                onClick={() => setMediaType('image')}
+              >
+                <ImageIcon size={14} /> Gửi Hình Ảnh
+              </button>
+              <button
+                type="button"
+                className={`chip ${mediaType === 'video' ? 'selected' : ''}`}
+                onClick={() => setMediaType('video')}
+              >
+                <VideoIcon size={14} /> Gửi Video
+              </button>
+              <button
+                type="button"
+                className={`chip ${mediaType === 'file' ? 'selected' : ''}`}
+                onClick={() => setMediaType('file')}
+              >
+                <FileText size={14} /> Gửi File / PDF
+              </button>
+            </div>
+
+            <form onSubmit={sendMedia} className="flex col g14">
+              <div className="field-group">
+                <label className="field-label">
+                  {mediaType === 'image' ? 'Đường dẫn ảnh (URL .jpg, .png)' : mediaType === 'video' ? 'Đường dẫn video (URL .mp4)' : 'Đường dẫn tệp tài liệu (PDF, ZIP, DOCX)'}
+                </label>
+                <input 
+                  className="input" 
+                  placeholder="https://..."
+                  value={mediaUrl}
+                  onChange={(e) => setMediaUrl(e.target.value)}
+                  required
+                />
+              </div>
+
+              {mediaType === 'file' && (
+                <div className="field-group">
+                  <label className="field-label">Tên tệp hiển thị</label>
+                  <input 
+                    className="input" 
+                    placeholder="Bao_cao_hoc_tap.pdf"
+                    value={fileName}
+                    onChange={(e) => setFileName(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div className="field-group">
+                <label className="field-label">Lời nhắn kèm theo (Tùy chọn)</label>
+                <input 
+                  className="input" 
+                  placeholder="Gửi bạn xem nhé..."
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ marginTop: 6 }} disabled={!mediaUrl.trim() || isSending}>
+                <Send size={16} /> Gửi đính kèm vào phòng chat
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST */}
+      {toastMsg && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(18, 14, 28, 0.95)',
+            border: '1px solid rgba(236, 72, 153, 0.5)',
+            boxShadow: '0 8px 32px rgba(236, 72, 153, 0.3)',
+            padding: '10px 20px',
+            borderRadius: 999,
+            color: '#fff',
+            fontSize: 13.5,
+            fontWeight: 600,
+            zIndex: 1000,
+            animation: 'msgPop 0.25s ease'
+          }}
+        >
+          {toastMsg}
+        </div>
+      )}
     </AppShell>
   )
 }
