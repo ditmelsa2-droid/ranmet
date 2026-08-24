@@ -4,10 +4,11 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Heart, MessageCircle, Share2, Volume2, VolumeX, 
-  Play, Pause, Music, Sparkles, Flame, UserPlus, Check, Send, Plus, Video as VideoIcon, Clock, AlertCircle, ShieldCheck
+  Play, Pause, Music, Sparkles, Flame, UserPlus, Check, Send, Plus, Video as VideoIcon, Clock, AlertCircle, ShieldCheck, Upload
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent, checkTags } from '@/lib/moderation'
+import { readFileAsDataUrl } from '@/lib/upload'
 import AppShell from '../components/AppShell'
 
 export default function RanVideoPage() {
@@ -32,6 +33,7 @@ export default function RanVideoPage() {
   const [currentUserName, setCurrentUserName] = useState('Người dùng RanMet')
 
   const videoRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   function showToast(msg) {
     setToastMsg(msg)
@@ -113,6 +115,19 @@ export default function RanVideoPage() {
   const currentLikes = currentVideo ? likesCountMap[currentVideo.id] || 0 : 0
   const currentComments = currentVideo ? commentsMap[currentVideo.id] || [] : []
 
+  async function handleVideoFileUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      showToast('Đang xử lý tệp video từ thiết bị...')
+      const res = await readFileAsDataUrl(file, 80)
+      setNewVideoUrl(res.url)
+      showToast('Đã tải video từ thiết bị thành công! Sẵn sàng đăng tải. 🎬')
+    } catch (err) {
+      showToast(err.message)
+    }
+  }
+
   async function toggleLike(videoId) {
     if (!currentUserId) {
       showToast('Vui lòng đăng nhập để thả tim!')
@@ -138,7 +153,7 @@ export default function RanVideoPage() {
     const text = commentDraft.trim()
 
     // AI Moderation check
-    const modCheck = checkContent(text)
+    const modCheck = await checkContent(text)
     if (!modCheck.isSafe) {
       showToast('Bình luận vi phạm tiêu chuẩn cộng đồng, đã bị chặn!')
       return
@@ -168,7 +183,7 @@ export default function RanVideoPage() {
     if (!newVideoUrl.trim() || !newCaption.trim()) return
 
     // AI AUTO-MODERATION CHECK ON VIDEO CAPTION AND TAGS
-    const modCaption = checkContent(newCaption)
+    const modCaption = await checkContent(newCaption)
     if (!modCaption.isSafe) {
       setModerationError(`Mô tả video chứa nội dung không an toàn (${modCaption.flaggedWord}). Hãy điều chỉnh!`)
       return
@@ -179,7 +194,7 @@ export default function RanVideoPage() {
       .filter((t) => t.trim().length > 0)
       .map((t) => (t.startsWith('#') ? t : `#${t}`))
 
-    const modTags = checkTags(tagArray)
+    const modTags = await checkTags(tagArray)
     if (modTags.hasBlocked) {
       setModerationError(`Hashtags [${modTags.blockedWords.join(', ')}] bị hệ thống AI từ chối!`)
       return
@@ -452,14 +467,14 @@ export default function RanVideoPage() {
               </div>
             </div>
             <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 14 }}>
-              Chia sẻ các video ngắn, clip game, hướng dẫn lập trình hoặc âm nhạc của bạn lên RanVideo để kiếm tiền và kết nối với cộng đồng.
+              Chia sẻ các video ngắn trực tiếp từ máy tính/điện thoại lên RanVideo để xây dựng lượng người theo dõi và mở khóa kiếm tiền.
             </p>
             <button 
               type="button" 
               className="btn btn-primary"
               onClick={() => setShowPostModal(true)}
             >
-              <Plus size={16} /> Đăng Video Mới Ngay
+              <Plus size={16} /> Tải Lên Video Mới
             </button>
           </div>
 
@@ -562,7 +577,7 @@ export default function RanVideoPage() {
         </div>
       )}
 
-      {/* POST VIDEO MODAL WITH AI MODERATION */}
+      {/* POST VIDEO MODAL WITH DIRECT DEVICE UPLOAD */}
       {showPostModal && (
         <div 
           style={{
@@ -585,9 +600,9 @@ export default function RanVideoPage() {
           >
             <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
               <div className="flex items-center g8">
-                <h2 className="rm-title" style={{ fontSize: 20 }}>Đăng Video Lên RanVideo</h2>
+                <h2 className="rm-title" style={{ fontSize: 20 }}>Tải Lên Video Sáng Tạo</h2>
                 <span className="badge tiny flex items-center g4" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
-                  <ShieldCheck size={12} /> AI Mod
+                  <ShieldCheck size={12} /> Gemini Guard
                 </span>
               </div>
               <button 
@@ -608,13 +623,22 @@ export default function RanVideoPage() {
 
             <form onSubmit={handlePostVideo} className="flex col g16">
               <div className="field-group">
-                <label className="field-label">Đường dẫn Video (MP4 / Direct URL)</label>
+                <label className="field-label">Chọn tệp video từ thiết bị (MP4 / WebM)</label>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: 14, borderStyle: 'dashed' }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={18} style={{ color: '#ec4899' }} /> 
+                  {newVideoUrl ? '✓ Đã chọn tệp video từ máy' : 'Bấm để chọn video từ máy tính / điện thoại'}
+                </button>
                 <input 
-                  className="input" 
-                  placeholder="https://assets.mixkit.co/videos/preview/...mp4"
-                  value={newVideoUrl}
-                  onChange={(e) => setNewVideoUrl(e.target.value)}
-                  required
+                  type="file" 
+                  ref={fileInputRef} 
+                  accept="video/*" 
+                  style={{ display: 'none' }} 
+                  onChange={handleVideoFileUpload} 
                 />
               </div>
 
@@ -640,8 +664,8 @@ export default function RanVideoPage() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }}>
-                <Sparkles size={16} /> Đăng tải video lên hệ thống
+              <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }} disabled={!newVideoUrl.trim()}>
+                <Sparkles size={16} /> Đăng tải video lên RanVideo
               </button>
             </form>
           </div>

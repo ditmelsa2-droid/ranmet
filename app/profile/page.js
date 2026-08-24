@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
   User, ShieldCheck, Award, Heart, Sparkles, 
   Globe, Languages, Save, Plus, X, Share2, Copy, Check, MessageSquare, 
-  Image as ImageIcon, DollarSign, AlertCircle, Palette
+  Image as ImageIcon, DollarSign, AlertCircle, Palette, Upload, Camera
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { trustTier, nextTierInfo } from '@/lib/trust'
 import { checkContent, checkTags } from '@/lib/moderation'
+import { readFileAsDataUrl } from '@/lib/upload'
 import AppShell from '../components/AppShell'
 
 const BANNER_THEMES = [
@@ -49,6 +50,9 @@ export default function ProfilePage() {
   const [copiedLink, setCopiedLink] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [moderationError, setModerationError] = useState('')
+
+  const avatarFileRef = useRef(null)
+  const bannerFileRef = useRef(null)
 
   function showToast(msg) {
     setToastMsg(msg)
@@ -93,12 +97,40 @@ export default function ProfilePage() {
     loadProfile()
   }, [router, supabase])
 
-  function addInterest(tag) {
+  // Direct Device Avatar Upload
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      showToast('Đang tải ảnh đại diện lên...')
+      const res = await readFileAsDataUrl(file, 20)
+      setAvatarUrl(res.url)
+      showToast('Đã tải ảnh đại diện thành công! Bấm "Lưu hồ sơ" để hoàn tất.')
+    } catch (err) {
+      showToast(err.message)
+    }
+  }
+
+  // Direct Device Banner Upload
+  async function handleBannerUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      showToast('Đang tải ảnh nền lên...')
+      const res = await readFileAsDataUrl(file, 30)
+      setCustomBannerUrl(res.url)
+      showToast('Đã tải ảnh nền thành công! Bấm "Lưu hồ sơ" để hoàn tất.')
+    } catch (err) {
+      showToast(err.message)
+    }
+  }
+
+  async function addInterest(tag) {
     const clean = tag.trim()
     if (!clean) return
 
-    // AI MODERATION CHECK
-    const modCheck = checkContent(clean)
+    // GEMINI & DEEP VIETNAMESE SLANG MODERATION CHECK
+    const modCheck = await checkContent(clean)
     if (!modCheck.isSafe) {
       setModerationError(`Từ khóa "${clean}" bị từ chối: Vi phạm tiêu chuẩn an toàn cộng đồng! ⚠️`)
       showToast(`Từ khóa "${clean}" vi phạm tiêu chuẩn cộng đồng!`)
@@ -121,21 +153,21 @@ export default function ProfilePage() {
     if (!userId || saving) return
 
     // AI MODERATION CHECK ON ENTIRE FORM
-    const bioCheck = checkContent(bio)
+    const bioCheck = await checkContent(bio)
     if (!bioCheck.isSafe) {
       setModerationError(`Phần giới thiệu chứa từ khóa không phù hợp (${bioCheck.flaggedWord}). Vui lòng chỉnh sửa!`)
       showToast('Nội dung Bio vi phạm tiêu chuẩn an toàn!')
       return
     }
 
-    const nameCheck = checkContent(displayName)
+    const nameCheck = await checkContent(displayName)
     if (!nameCheck.isSafe) {
       setModerationError(`Tên hiển thị chứa từ ngữ vi phạm tiêu chuẩn cộng đồng!`)
       showToast('Tên hiển thị vi phạm tiêu chuẩn!')
       return
     }
 
-    const tagsCheck = checkTags(interests)
+    const tagsCheck = await checkTags(interests)
     if (tagsCheck.hasBlocked) {
       setModerationError(`Các tag [${tagsCheck.blockedWords.join(', ')}] bị hệ thống AI kiểm duyệt từ chối!`)
       showToast('Có tag sở thích vi phạm tiêu chuẩn!')
@@ -163,7 +195,7 @@ export default function ProfilePage() {
     if (error) {
       showToast('Lỗi cập nhật hồ sơ: ' + error.message)
     } else {
-      showToast('Đã lưu hồ sơ Discord-style thành công! ✨')
+      showToast('Đã lưu hồ sơ thành công! ✨')
     }
   }
 
@@ -208,10 +240,39 @@ export default function ProfilePage() {
             style={{ 
               background: bannerBackground,
               backgroundSize: 'cover',
-              backgroundPosition: 'center'
+              backgroundPosition: 'center',
+              position: 'relative'
             }}
           >
-            <div className="discord-avatar-wrap">
+            {/* Quick Banner Upload Button */}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{
+                position: 'absolute',
+                top: 14,
+                right: 14,
+                width: 'auto',
+                padding: '6px 12px',
+                fontSize: 11,
+                borderRadius: 999,
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(10px)'
+              }}
+              onClick={() => bannerFileRef.current?.click()}
+            >
+              <Upload size={12} /> Đổi ảnh nền từ máy
+            </button>
+            <input 
+              type="file" 
+              ref={bannerFileRef} 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+              onChange={handleBannerUpload} 
+            />
+
+            {/* Avatar Wrap */}
+            <div className="discord-avatar-wrap" style={{ position: 'absolute', bottom: -40, left: 28 }}>
               <div
                 className="avatar"
                 style={{
@@ -219,15 +280,44 @@ export default function ProfilePage() {
                   height: 80,
                   fontSize: 32,
                   background: 'var(--brand-gradient)',
-                  border: 'none'
+                  border: 'none',
+                  position: 'relative',
+                  cursor: 'pointer'
                 }}
+                onClick={() => avatarFileRef.current?.click()}
+                title="Bấm để đổi ảnh đại diện từ thiết bị"
               >
                 {avatarUrl.trim() ? (
                   <img src={avatarUrl} alt="Avatar" />
                 ) : (
                   (displayName || 'U').charAt(0).toUpperCase()
                 )}
+
+                <div 
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.4)',
+                    opacity: 0,
+                    transition: 'opacity 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
+                >
+                  <Camera size={20} style={{ color: '#fff' }} />
+                </div>
               </div>
+
+              <input 
+                type="file" 
+                ref={avatarFileRef} 
+                accept="image/*" 
+                style={{ display: 'none' }} 
+                onChange={handleAvatarUpload} 
+              />
             </div>
           </div>
 
@@ -251,7 +341,7 @@ export default function ProfilePage() {
 
               <div className="flex g10 items-center">
                 <Link href="/creator" className="btn btn-secondary" style={{ width: 'auto', padding: '10px 18px', fontSize: 13, background: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)', color: '#fbbf24' }}>
-                  <DollarSign size={16} /> Creator Studio
+                  <DollarSign size={16} /> Creator Studio {trustScore < 1000 ? '🔒' : '✨'}
                 </Link>
                 <button 
                   type="button" 
@@ -326,24 +416,34 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* CUSTOMIZE BANNER & AVATAR (DISCORD STYLE) */}
+        {/* CUSTOMIZE BANNER & AVATAR UPLOAD (DISCORD STYLE) */}
         <div className="card flex col g18" style={{ padding: 26 }}>
           <div className="rm-title flex items-center g8" style={{ fontSize: 18, color: '#fff', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-            <Palette size={18} style={{ color: '#ec4899' }} /> Tùy chỉnh Ảnh Đại Diện & Ảnh Bìa (Discord Style)
+            <Palette size={18} style={{ color: '#ec4899' }} /> Tải Lên Ảnh Đại Diện & Ảnh Bìa (Từ Thiết Bị)
+          </div>
+
+          <div className="flex g16" style={{ flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary grow"
+              style={{ padding: '14px', fontSize: 13 }}
+              onClick={() => avatarFileRef.current?.click()}
+            >
+              <Camera size={16} style={{ color: '#ec4899' }} /> Tải ảnh đại diện từ điện thoại / máy tính
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary grow"
+              style={{ padding: '14px', fontSize: 13 }}
+              onClick={() => bannerFileRef.current?.click()}
+            >
+              <Upload size={16} style={{ color: '#06b6d4' }} /> Tải ảnh bìa Discord từ thiết bị
+            </button>
           </div>
 
           <div className="field-group">
-            <label className="field-label"><ImageIcon size={14} /> Link Ảnh đại diện (URL ảnh online / Discord avatar)</label>
-            <input 
-              className="input" 
-              placeholder="https://images.unsplash.com/... hoặc link avatar online"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-            />
-          </div>
-
-          <div className="field-group">
-            <label className="field-label">Chọn Theme Màu Ảnh Bìa (Banner Presets)</label>
+            <label className="field-label">Hoặc chọn Theme màu ảnh bìa có sẵn:</label>
             <div className="flex" style={{ flexWrap: 'wrap', gap: 10 }}>
               {BANNER_THEMES.map((theme) => (
                 <button
@@ -354,28 +454,18 @@ export default function ProfilePage() {
                     padding: '10px 16px',
                     borderRadius: 14,
                     background: theme.bg,
-                    border: bannerTheme === theme.id ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)',
+                    border: (bannerTheme === theme.id && !customBannerUrl) ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)',
                     color: '#fff',
                     fontWeight: 700,
                     fontSize: 12,
                     cursor: 'pointer',
-                    boxShadow: bannerTheme === theme.id ? '0 0 16px rgba(255,255,255,0.5)' : 'none'
+                    boxShadow: (bannerTheme === theme.id && !customBannerUrl) ? '0 0 16px rgba(255,255,255,0.5)' : 'none'
                   }}
                 >
                   {theme.name}
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="field-group">
-            <label className="field-label">Hoặc Dán Link Ảnh Bìa Tùy Chọn (Custom Banner URL)</label>
-            <input 
-              className="input" 
-              placeholder="https://... ảnh bìa phong cảnh, anime..."
-              value={customBannerUrl}
-              onChange={(e) => setCustomBannerUrl(e.target.value)}
-            />
           </div>
         </div>
 
@@ -420,8 +510,8 @@ export default function ProfilePage() {
           {/* CUSTOM INTERESTS / HOBBIES */}
           <div className="field-group">
             <div className="flex justify-between items-center">
-              <label className="field-label"><Heart size={14} /> Sở thích & Chủ đề (AI Kiểm duyệt tự động)</label>
-              <span className="tiny faint flex items-center g4"><ShieldCheck size={12} style={{ color: '#10b981' }} /> AI Safe Guard</span>
+              <label className="field-label"><Heart size={14} /> Sở thích & Chủ đề (Gemini AI & Slang Guard)</label>
+              <span className="tiny faint flex items-center g4"><ShieldCheck size={12} style={{ color: '#10b981' }} /> AI Active</span>
             </div>
             
             <div className="flex g8 items-center" style={{ marginBottom: 10 }}>

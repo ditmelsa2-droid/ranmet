@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { 
   Newspaper, Heart, MessageCircle, Share2, Send, 
-  Sparkles, Image as ImageIcon, Plus, Flame, Clock, MoreHorizontal, AlertCircle, ShieldCheck
+  Sparkles, Image as ImageIcon, Plus, Flame, Clock, MoreHorizontal, AlertCircle, ShieldCheck, Upload
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent } from '@/lib/moderation'
+import { readFileAsDataUrl } from '@/lib/upload'
 import AppShell from '../components/AppShell'
 
 const INITIAL_SEED_POSTS = [
@@ -44,7 +45,6 @@ export default function RanNewsPage() {
   const [posts, setPosts] = useState(INITIAL_SEED_POSTS)
   const [postDraft, setPostDraft] = useState('')
   const [imageDraft, setImageDraft] = useState('')
-  const [showImageInput, setShowImageInput] = useState(false)
   const [likedPosts, setLikedPosts] = useState({})
   const [likesCountMap, setLikesCountMap] = useState({ 'post-seed-1': 18, 'post-seed-2': 34 })
   const [commentsMap, setCommentsMap] = useState({
@@ -57,6 +57,8 @@ export default function RanNewsPage() {
   const [currentUserName, setCurrentUserName] = useState('Người dùng RanMet')
   const [toastMsg, setToastMsg] = useState('')
   const [moderationWarning, setModerationWarning] = useState('')
+
+  const fileInputRef = useRef(null)
 
   function showToast(msg) {
     setToastMsg(msg)
@@ -130,14 +132,27 @@ export default function RanNewsPage() {
     }
   }, [supabase])
 
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      showToast('Đang tải hình ảnh từ thiết bị...')
+      const res = await readFileAsDataUrl(file, 20)
+      setImageDraft(res.url)
+      showToast('Đã đính kèm ảnh thành công! 🖼️')
+    } catch (err) {
+      showToast(err.message)
+    }
+  }
+
   async function handleCreatePost(e) {
     e.preventDefault()
     if (!postDraft.trim() || !currentUserId) return
 
-    // AI AUTO-MODERATION CHECK
-    const modCheck = checkContent(postDraft)
+    // GEMINI AI & SLANG AUTO-MODERATION CHECK
+    const modCheck = await checkContent(postDraft)
     if (!modCheck.isSafe) {
-      setModerationWarning(`Hệ thống AI từ chối: Bài viết chứa nội dung/từ khóa không phù hợp (${modCheck.flaggedWord}). Hãy điều chỉnh để bảo vệ cộng đồng!`)
+      setModerationWarning(`Hệ thống AI từ chối: Bài viết chứa nội dung không an toàn (${modCheck.flaggedWord}). Hãy điều chỉnh để bảo vệ cộng đồng!`)
       showToast('Nội dung bài viết vi phạm tiêu chuẩn an toàn!')
       return
     }
@@ -162,7 +177,6 @@ export default function RanNewsPage() {
 
     setPostDraft('')
     setImageDraft('')
-    setShowImageInput(false)
     showToast('Đã đăng bài viết lên RanNews! 🎉')
   }
 
@@ -191,7 +205,7 @@ export default function RanNewsPage() {
     if (!text || !currentUserId) return
 
     // AI MODERATION CHECK ON COMMENT
-    const modCheck = checkContent(text)
+    const modCheck = await checkContent(text)
     if (!modCheck.isSafe) {
       showToast('Bình luận chứa từ ngữ không phù hợp, đã bị chặn!')
       return
@@ -221,7 +235,7 @@ export default function RanNewsPage() {
       <div className="desktop-grid-2">
         {/* MAIN FEED COLUMN */}
         <div className="flex col g20">
-          {/* CREATE POST CARD (FACEBOOK-STYLE COMPOSER) */}
+          {/* CREATE POST CARD (FACEBOOK-STYLE COMPOSER WITH DEVICE UPLOAD) */}
           <div 
             className="card"
             style={{
@@ -242,7 +256,7 @@ export default function RanNewsPage() {
               </div>
 
               <span className="badge tiny flex items-center g4" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
-                <ShieldCheck size={12} /> AI Mod Active
+                <ShieldCheck size={12} /> Gemini Guard
               </span>
             </div>
 
@@ -263,20 +277,15 @@ export default function RanNewsPage() {
                 style={{ resize: 'none' }}
               />
 
-              {showImageInput && (
-                <div className="flex g8 items-center" style={{ animation: 'msgPop 0.2s ease' }}>
-                  <input
-                    className="input"
-                    placeholder="Dán link ảnh (https://...jpg, png)"
-                    value={imageDraft}
-                    onChange={(e) => setImageDraft(e.target.value)}
-                    style={{ padding: '8px 14px', fontSize: 13 }}
-                  />
-                  <button 
-                    type="button" 
-                    className="btn-icon" 
-                    style={{ width: 34, height: 34 }}
-                    onClick={() => setShowImageInput(false)}
+              {/* Image Preview if selected */}
+              {imageDraft && (
+                <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', maxHeight: 220, animation: 'msgPop 0.2s ease' }}>
+                  <img src={imageDraft} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    className="btn-icon"
+                    style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, background: 'rgba(0,0,0,0.7)' }}
+                    onClick={() => setImageDraft('')}
                   >
                     ✕
                   </button>
@@ -288,10 +297,17 @@ export default function RanNewsPage() {
                   type="button"
                   className="btn btn-secondary"
                   style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 999 }}
-                  onClick={() => setShowImageInput(!showImageInput)}
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  <ImageIcon size={14} style={{ color: '#06b6d4' }} /> Thêm hình ảnh
+                  <Upload size={14} style={{ color: '#06b6d4' }} /> Tải ảnh từ máy
                 </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                  onChange={handleImageUpload} 
+                />
 
                 <button
                   type="submit"
@@ -480,10 +496,10 @@ export default function RanNewsPage() {
           <div className="card" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <div className="flex items-center g8" style={{ marginBottom: 8 }}>
               <ShieldCheck size={16} style={{ color: '#10b981' }} />
-              <span className="semi small">Kiểm duyệt AI Tự Động</span>
+              <span className="semi small">Gemini AI Safe Guard</span>
             </div>
             <p className="tiny muted" style={{ lineHeight: 1.5 }}>
-              Mọi bài viết và bình luận trên RanMet đều được giám sát bởi hệ thống AI Content Moderator chống các hành vi xâm hại trực tuyến, quấy rối và nội dung độc hại.
+              Mọi bài viết và bình luận trên RanMet đều được giám sát bởi hệ thống Google Gemini AI chống các hành vi xâm hại trực tuyến, quấy rối và nội dung độc hại.
             </p>
           </div>
         </div>
