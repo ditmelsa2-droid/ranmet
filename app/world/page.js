@@ -7,65 +7,8 @@ import {
   Search, Sparkles, Flame, Shield, ArrowRight, Radio
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
-
-const INITIAL_ROOMS = [
-  ('minecraft-builders', {
-    id: 'minecraft-builders',
-    name: 'Thế Giới Minecraft & Builders ⛏️',
-    description: 'Cộng đồng chia sẻ công trình, server multiplayer và mẹo sinh tồn backrooms.',
-    category: 'Gaming',
-    members: 148,
-    is_voice: true,
-    tags: ['Minecraft', 'Survival', 'Redstone'],
-    host_name: 'Kaito_Gamer',
-    color: '#10b981'
-  }),
-  ('anime-lounge', {
-    id: 'anime-lounge',
-    name: 'Góc Wibu & Anime Mùa Mới ✨',
-    description: 'Thảo luận các bộ Anime hot, cosplay, manga và art phong cách Cyber.',
-    category: 'Anime',
-    members: 112,
-    is_voice: false,
-    tags: ['Anime', 'Manga', 'Cosplay'],
-    host_name: 'VyVy_Anime',
-    color: '#ec4899'
-  }),
-  ('dev-ai-hub', {
-    id: 'dev-ai-hub',
-    name: 'Dev & AI Creators Space 💻',
-    description: 'Nơi quy tụ các lập trình viên Next.js, Supabase, Python AI và Indie Hackers.',
-    category: 'Công nghệ',
-    members: 185,
-    is_voice: true,
-    tags: ['Next.js', 'AI', 'Fullstack'],
-    host_name: 'LinhChi_Dev',
-    color: '#06b6d4'
-  }),
-  ('chill-lofi-room', {
-    id: 'chill-lofi-room',
-    name: 'Tâm Sự Đêm Khuya & Lofi Beats ☕',
-    description: 'Phòng nghe nhạc chill, trò chuyện tâm sự nhẹ nhàng sau những giờ làm việc mệt mỏi.',
-    category: 'Âm nhạc',
-    members: 240,
-    is_voice: true,
-    tags: ['Lofi', 'Chill', 'TamSu'],
-    host_name: 'MinhQuan',
-    color: '#a855f7'
-  }),
-  ('travel-food', {
-    id: 'travel-food',
-    name: 'Hội Mê Du Lịch & Ẩm Thực 🍜',
-    description: 'Chia sẻ các địa điểm check-in, quán cafe đẹp và review đồ ăn ngon toàn quốc.',
-    category: 'Đời sống',
-    members: 76,
-    is_voice: false,
-    tags: ['Foodie', 'Travel', 'Cafe'],
-    host_name: 'HaMy',
-    color: '#f59e0b'
-  })
-]
 
 const DEFAULT_ROOMS_LIST = [
   {
@@ -94,7 +37,7 @@ const DEFAULT_ROOMS_LIST = [
     id: 'dev-ai-hub',
     name: 'Dev & AI Creators Space 💻',
     description: 'Nơi quy tụ các lập trình viên Next.js, Supabase, Python AI và Indie Hackers.',
-    category: 'Công nghệ',
+    category: 'Tech',
     members: 185,
     is_voice: true,
     tags: ['Next.js', 'AI', 'Fullstack'],
@@ -105,7 +48,7 @@ const DEFAULT_ROOMS_LIST = [
     id: 'chill-lofi-room',
     name: 'Tâm Sự Đêm Khuya & Lofi Beats ☕',
     description: 'Phòng nghe nhạc chill, trò chuyện tâm sự nhẹ nhàng sau những giờ làm việc mệt mỏi.',
-    category: 'Âm nhạc',
+    category: 'Music',
     members: 240,
     is_voice: true,
     tags: ['Lofi', 'Chill', 'TamSu'],
@@ -116,7 +59,7 @@ const DEFAULT_ROOMS_LIST = [
     id: 'travel-food',
     name: 'Hội Mê Du Lịch & Ẩm Thực 🍜',
     description: 'Chia sẻ các địa điểm check-in, quán cafe đẹp và review đồ ăn ngon toàn quốc.',
-    category: 'Đời sống',
+    category: 'Lifestyle',
     members: 76,
     is_voice: false,
     tags: ['Foodie', 'Travel', 'Cafe'],
@@ -125,12 +68,11 @@ const DEFAULT_ROOMS_LIST = [
   }
 ]
 
-const CATEGORIES = ['Tất cả', 'Gaming', 'Anime', 'Công nghệ', 'Âm nhạc', 'Đời sống']
-
 export default function RanWorldPage() {
+  const { t } = useLanguage()
   const [supabase] = useState(() => createClient())
   const [rooms, setRooms] = useState(DEFAULT_ROOMS_LIST)
-  const [selectedCat, setSelectedCat] = useState('Tất cả')
+  const [selectedCatKey, setSelectedCatKey] = useState('catAll')
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newRoomName, setNewRoomName] = useState('')
@@ -139,6 +81,15 @@ export default function RanWorldPage() {
   const [newRoomIsVoice, setNewRoomIsVoice] = useState(true)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [currentUserName, setCurrentUserName] = useState('Bạn')
+
+  const CATEGORY_ITEMS = [
+    { key: 'catAll', label: t('catAll'), filterVal: 'All' },
+    { key: 'catGaming', label: t('catGaming'), filterVal: 'Gaming' },
+    { key: 'catAnime', label: t('catAnime'), filterVal: 'Anime' },
+    { key: 'catTech', label: t('catTech'), filterVal: 'Tech' },
+    { key: 'catMusic', label: t('catMusic'), filterVal: 'Music' },
+    { key: 'catLife', label: t('catLife'), filterVal: 'Lifestyle' },
+  ]
 
   useEffect(() => {
     async function loadRooms() {
@@ -169,8 +120,15 @@ export default function RanWorldPage() {
     }
   }, [supabase])
 
+  const selectedCategoryObj = CATEGORY_ITEMS.find((c) => c.key === selectedCatKey) || CATEGORY_ITEMS[0]
+
   const filteredRooms = rooms.filter((r) => {
-    const matchCat = selectedCat === 'Tất cả' || r.category === selectedCat
+    const matchCat = selectedCategoryObj.filterVal === 'All' || 
+      (r.category || '').toLowerCase() === selectedCategoryObj.filterVal.toLowerCase() ||
+      (selectedCategoryObj.key === 'catTech' && (r.category === 'Công nghệ' || r.category === 'Tech')) ||
+      (selectedCategoryObj.key === 'catMusic' && (r.category === 'Âm nhạc' || r.category === 'Music')) ||
+      (selectedCategoryObj.key === 'catLife' && (r.category === 'Đời sống' || r.category === 'Lifestyle'))
+
     const nameStr = (r.name || '').toLowerCase()
     const descStr = (r.description || '').toLowerCase()
     const query = searchQuery.toLowerCase()
@@ -220,16 +178,16 @@ export default function RanWorldPage() {
             boxShadow: '0 16px 40px -10px rgba(168, 85, 247, 0.3)'
           }}
         >
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 16 }}>
             <div>
               <div className="badge badge-glow" style={{ marginBottom: 10 }}>
                 <Globe2 size={12} /> RANWORLD ECOSYSTEM
               </div>
               <h1 className="rm-title" style={{ fontSize: 26, marginBottom: 8, color: '#fff' }}>
-                Thế Giới Cộng Đồng Trực Tuyến 🌐
+                {t('worldTitle')}
               </h1>
               <p className="small" style={{ color: 'rgba(255, 255, 255, 0.85)', maxWidth: 620, lineHeight: 1.45 }}>
-                Tham gia các không gian thảo luận theo chủ đề yêu thích, trò chuyện bằng âm thanh (Voice Live) hoặc văn bản với hàng ngàn thành viên có cùng đam mê.
+                {t('worldDesc')}
               </p>
             </div>
 
@@ -239,7 +197,7 @@ export default function RanWorldPage() {
               style={{ width: 'auto', padding: '12px 20px', fontSize: 14 }}
               onClick={() => setShowCreateModal(true)}
             >
-              <Plus size={16} /> Tạo phòng mới
+              <Plus size={16} /> {t('createRoomBtn')}
             </button>
           </div>
         </div>
@@ -251,21 +209,21 @@ export default function RanWorldPage() {
               <input
                 className="input"
                 style={{ padding: '12px 18px', borderRadius: 999 }}
-                placeholder="🔍 Tìm kiếm phòng cộng đồng, chủ đề..."
+                placeholder={`🔍 ${t('searchRoomsPlaceholder')}`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="flex g8" style={{ flexWrap: 'wrap' }}>
-              {CATEGORIES.map((cat) => (
+              {CATEGORY_ITEMS.map((cat) => (
                 <button
-                  key={cat}
+                  key={cat.key}
                   type="button"
-                  className={`chip ${selectedCat === cat ? 'selected' : ''}`}
+                  className={`chip ${selectedCatKey === cat.key ? 'selected' : ''}`}
                   style={{ padding: '8px 16px', fontSize: 13 }}
-                  onClick={() => setSelectedCat(cat)}
+                  onClick={() => setSelectedCatKey(cat.key)}
                 >
-                  {cat}
+                  {cat.label}
                 </button>
               ))}
             </div>
@@ -312,9 +270,9 @@ export default function RanWorldPage() {
 
                 {/* Tags */}
                 <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                  {(room.tags || []).map((t) => (
+                  {(room.tags || []).map((tagItem) => (
                     <span 
-                      key={t} 
+                      key={tagItem} 
                       className="tiny" 
                       style={{ 
                         padding: '3px 8px', 
@@ -323,7 +281,7 @@ export default function RanWorldPage() {
                         color: 'var(--text-faint)' 
                       }}
                     >
-                      #{t}
+                      #{tagItem}
                     </span>
                   ))}
                 </div>
@@ -340,7 +298,7 @@ export default function RanWorldPage() {
               >
                 <span className="tiny faint">Host: <b style={{ color: '#fff' }}>{room.host_name || 'RanMet'}</b></span>
                 <span className="tiny bold flex items-center g4" style={{ color: '#ec4899' }}>
-                  Tham gia phòng <ArrowRight size={13} />
+                  {t('joinRoom')}
                 </span>
               </div>
             </Link>
@@ -350,8 +308,8 @@ export default function RanWorldPage() {
         {filteredRooms.length === 0 && (
           <div className="card center-text" style={{ padding: 40 }}>
             <Globe2 size={40} style={{ color: 'var(--text-faint)', marginBottom: 12 }} />
-            <h3 className="semi">Không tìm thấy phòng phù hợp</h3>
-            <p className="small muted">Hãy thử từ khóa khác hoặc tự tạo một thế giới mới của riêng bạn!</p>
+            <h3 className="semi">{t('noMatchTitle')}</h3>
+            <p className="small muted">{t('noMatchDesc')}</p>
           </div>
         )}
       </div>
@@ -378,7 +336,7 @@ export default function RanWorldPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
-              <h2 className="rm-title" style={{ fontSize: 20 }}>Tạo Phòng RanWorld Mới</h2>
+              <h2 className="rm-title" style={{ fontSize: 20 }}>{t('createRoomBtn')}</h2>
               <button 
                 type="button" 
                 onClick={() => setShowCreateModal(false)}
@@ -391,10 +349,10 @@ export default function RanWorldPage() {
 
             <form onSubmit={handleCreateRoom} className="flex col g16">
               <div className="field-group">
-                <label className="field-label">Tên phòng / Thế giới</label>
+                <label className="field-label">{t('displayNameLabel')}</label>
                 <input 
                   className="input" 
-                  placeholder="Ví dụ: Hội Lập Trình Game Unity & C#"
+                  placeholder="Ví dụ: Dev AI Hub & Next.js"
                   value={newRoomName}
                   onChange={(e) => setNewRoomName(e.target.value)}
                   required
@@ -402,43 +360,18 @@ export default function RanWorldPage() {
               </div>
 
               <div className="field-group">
-                <label className="field-label">Mô tả ngắn</label>
+                <label className="field-label">{t('captionLabel')}</label>
                 <textarea 
                   className="input" 
                   rows={3} 
-                  placeholder="Giới thiệu về mục đích và quy tắc của phòng..."
+                  placeholder={t('captionPlaceholder')}
                   value={newRoomDesc}
                   onChange={(e) => setNewRoomDesc(e.target.value)}
                 />
               </div>
 
-              <div className="field-group">
-                <label className="field-label">Chủ đề</label>
-                <select 
-                  className="input"
-                  value={newRoomCategory}
-                  onChange={(e) => setNewRoomCategory(e.target.value)}
-                >
-                  {CATEGORIES.filter((c) => c !== 'Tất cả').map((c) => (
-                    <option key={c} value={c} style={{ background: '#161320', color: '#fff' }}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between" style={{ padding: '10px 0' }}>
-                <span className="small semi">Bật kênh Voice Audio Live</span>
-                <input 
-                  type="checkbox" 
-                  checked={newRoomIsVoice} 
-                  onChange={(e) => setNewRoomIsVoice(e.target.checked)}
-                  style={{ width: 20, height: 20, accentColor: '#ec4899' }}
-                />
-              </div>
-
               <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }}>
-                <Sparkles size={16} /> Khởi tạo phòng ngay
+                <Sparkles size={16} /> {t('createRoomBtn')}
               </button>
             </form>
           </div>

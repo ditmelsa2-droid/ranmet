@@ -9,9 +9,11 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { checkContent, checkTags } from '@/lib/moderation'
 import { readFileAsDataUrl } from '@/lib/upload'
+import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
 
 export default function RanVideoPage() {
+  const { t } = useLanguage()
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -74,7 +76,6 @@ export default function RanVideoPage() {
     loadUser()
     fetchVideos()
 
-    // Realtime listener for new videos
     const channel = supabase
       .channel('ranvideo-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'videos' }, (payload) => {
@@ -205,7 +206,7 @@ export default function RanVideoPage() {
       return
     }
 
-    const authorName = userProfile?.display_name || 'Người dùng RanMet'
+    const authorName = userProfile?.display_name || 'User'
     const newCommentObj = {
       video_id: activeVideoId,
       user_id: currentUserId,
@@ -231,7 +232,7 @@ export default function RanVideoPage() {
       >
         <div className="flex items-center g8">
           <Flame size={20} style={{ color: '#f43f5e' }} />
-          <h1 className="rm-title" style={{ fontSize: 20, color: '#fff' }}>RanVideo TikTok-Feed</h1>
+          <h1 className="rm-title" style={{ fontSize: 20, color: '#fff' }}>{t('ranVideoTitle')}</h1>
           <span className="badge badge-glow tiny" style={{ fontSize: 9 }}>REALTIME</span>
         </div>
 
@@ -241,7 +242,7 @@ export default function RanVideoPage() {
           style={{ width: 'auto', padding: '8px 16px', fontSize: 12, borderRadius: 999 }}
           onClick={() => setShowUploadModal(true)}
         >
-          <Plus size={15} /> Đăng Video Mới
+          <Plus size={15} /> {t('uploadNewVideo')}
         </button>
       </div>
 
@@ -265,10 +266,9 @@ export default function RanVideoPage() {
       >
         {loading ? (
           <div className="flex col items-center justify-center" style={{ height: '100%', color: 'var(--text-muted)' }}>
-            <div className="tiny bold">Đang kết nối kho RanVideo...</div>
+            <div className="tiny bold">Connecting to RanVideo...</div>
           </div>
         ) : videos.length === 0 ? (
-          /* EMPTY STATE WITH ACTION TO POST FIRST VIDEO */
           <div className="flex col items-center justify-center center-text" style={{ height: '100%', padding: 24 }}>
             <div 
               style={{ 
@@ -284,9 +284,9 @@ export default function RanVideoPage() {
             >
               <VideoIcon size={30} style={{ color: '#f43f5e' }} />
             </div>
-            <h3 className="rm-title" style={{ fontSize: 18, marginBottom: 6 }}>Chưa có video nào trên hệ thống</h3>
+            <h3 className="rm-title" style={{ fontSize: 18, marginBottom: 6 }}>{t('noVideosYet')}</h3>
             <p className="tiny muted" style={{ maxWidth: 300, marginBottom: 20, lineHeight: 1.5 }}>
-              Hãy là người đầu tiên tải lên video ngắn từ điện thoại hoặc máy tính để nhận Trust và lượt tương tác!
+              {t('firstVideoPrompt')}
             </p>
             <button 
               type="button" 
@@ -294,7 +294,7 @@ export default function RanVideoPage() {
               style={{ width: 'auto', padding: '12px 24px' }}
               onClick={() => setShowUploadModal(true)}
             >
-              <Upload size={16} /> Tải lên video đầu tiên ngay
+              <Upload size={16} /> {t('uploadFirstVideoBtn')}
             </button>
           </div>
         ) : (
@@ -468,7 +468,7 @@ export default function RanVideoPage() {
                     >
                       <MessageCircle size={22} />
                     </div>
-                    <span className="tiny bold" style={{ color: '#fff' }}>Bình luận</span>
+                    <span className="tiny bold" style={{ color: '#fff' }}>{t('commentsLabel')}</span>
                   </button>
 
                   {/* Share Button */}
@@ -479,7 +479,7 @@ export default function RanVideoPage() {
                         navigator.share({ title: vid.caption, url: window.location.href })
                       } else {
                         navigator.clipboard.writeText(window.location.href)
-                        showToast('Đã sao chép liên kết video!')
+                        showToast('Link copied!')
                       }
                     }}
                     style={{
@@ -507,11 +507,11 @@ export default function RanVideoPage() {
                     >
                       <Share2 size={20} />
                     </div>
-                    <span className="tiny bold" style={{ color: '#fff' }}>Chia sẻ</span>
+                    <span className="tiny bold" style={{ color: '#fff' }}>{t('shareLabel')}</span>
                   </button>
                 </div>
 
-                {/* BOTTOM INFO (CREATOR & CAPTION) */}
+                {/* BOTTOM INFO */}
                 <div 
                   className="tiktok-meta"
                   style={{
@@ -548,7 +548,7 @@ export default function RanVideoPage() {
         )}
       </div>
 
-      {/* UPLOAD VIDEO MODAL WITH DIRECT DEVICE UPLOAD */}
+      {/* UPLOAD VIDEO MODAL */}
       {showUploadModal && (
         <div 
           style={{
@@ -572,7 +572,7 @@ export default function RanVideoPage() {
             <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
               <div className="flex items-center g8">
                 <Sparkles size={20} style={{ color: '#f43f5e' }} />
-                <h2 className="rm-title" style={{ fontSize: 18 }}>Tải Lên Video Ngắn RanVideo</h2>
+                <h2 className="rm-title" style={{ fontSize: 18 }}>{t('uploadNewVideo')}</h2>
               </div>
               <button 
                 type="button" 
@@ -584,7 +584,6 @@ export default function RanVideoPage() {
               </button>
             </div>
 
-            {/* Direct Device Video Upload Trigger */}
             <div style={{ marginBottom: 14 }}>
               <button
                 type="button"
@@ -593,7 +592,7 @@ export default function RanVideoPage() {
                 onClick={() => videoFileInputRef.current?.click()}
               >
                 <Upload size={22} style={{ color: '#f43f5e' }} /> 
-                {videoFileName ? `✓ Đã chọn: ${videoFileName}` : 'Bấm để chọn video (.mp4, .webm) từ máy'}
+                {videoFileName ? `✓ ${videoFileName}` : t('uploadPhotoBtn')}
               </button>
               <input 
                 type="file" 
@@ -604,7 +603,6 @@ export default function RanVideoPage() {
               />
             </div>
 
-            {/* Preview chosen video */}
             {videoUrl && (
               <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', maxHeight: 180, background: '#000' }}>
                 <video src={videoUrl} controls style={{ width: '100%', maxHeight: 180 }} />
@@ -613,11 +611,11 @@ export default function RanVideoPage() {
 
             <form onSubmit={handlePostVideo} className="flex col g14">
               <div className="field-group">
-                <label className="field-label">Mô tả video (Caption) *</label>
+                <label className="field-label">{t('captionLabel')}</label>
                 <textarea 
                   className="input" 
                   rows={2} 
-                  placeholder="Chia sẻ khoảnh khắc thú vị của bạn..."
+                  placeholder={t('captionPlaceholder')}
                   value={newCaption}
                   onChange={(e) => setNewCaption(e.target.value)}
                   required
@@ -625,7 +623,7 @@ export default function RanVideoPage() {
               </div>
 
               <div className="field-group">
-                <label className="field-label">Hashtags</label>
+                <label className="field-label">{t('hashtagsLabel')}</label>
                 <input 
                   className="input" 
                   placeholder="#gaming, #vlog, #music"
@@ -640,7 +638,7 @@ export default function RanVideoPage() {
                 style={{ marginTop: 6 }}
                 disabled={!videoUrl.trim() || isPosting}
               >
-                {isPosting ? 'Đang kiểm duyệt và đăng video...' : 'Đăng video lên RanVideo'}
+                {isPosting ? 'Posting...' : t('postVideoBtn')}
               </button>
             </form>
           </div>
@@ -677,19 +675,17 @@ export default function RanVideoPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Comments Header */}
             <div className="flex justify-between items-center" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-              <div className="semi" style={{ fontSize: 16 }}>Bình luận ({activeVideoComments.length})</div>
+              <div className="semi" style={{ fontSize: 16 }}>{t('commentsLabel')} ({activeVideoComments.length})</div>
               <button type="button" onClick={() => setShowComments(false)} className="btn-icon" style={{ width: 32, height: 32 }}>
                 <X size={16} />
               </button>
             </div>
 
-            {/* Comments List */}
             <div className="grow" style={{ overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {activeVideoComments.length === 0 ? (
                 <div className="center-text tiny faint" style={{ margin: 'auto 0' }}>
-                  Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
+                  No comments yet.
                 </div>
               ) : (
                 activeVideoComments.map((c) => (
@@ -707,17 +703,16 @@ export default function RanVideoPage() {
               )}
             </div>
 
-            {/* Comments Input */}
             <form onSubmit={handleSendComment} className="flex g10" style={{ padding: '12px 18px', borderTop: '1px solid var(--border)' }}>
               <input
                 className="input"
-                placeholder="Viết bình luận văn minh..."
+                placeholder={t('writeCommentPlaceholder')}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 style={{ borderRadius: 999 }}
               />
               <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 20px', borderRadius: 999 }}>
-                Gửi
+                Send
               </button>
             </form>
           </div>

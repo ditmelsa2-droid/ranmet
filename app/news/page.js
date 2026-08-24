@@ -63,7 +63,7 @@ export default function RanNewsPage() {
   const [commentTranslations, setCommentTranslations] = useState({})
 
   const [currentUserId, setCurrentUserId] = useState(null)
-  const [currentUserName, setCurrentUserName] = useState('Người dùng RanMet')
+  const [currentUserName, setCurrentUserName] = useState('User')
   const [toastMsg, setToastMsg] = useState('')
   const [moderationWarning, setModerationWarning] = useState('')
 
@@ -304,7 +304,7 @@ export default function RanNewsPage() {
                 </div>
                 <div>
                   <div className="semi small" style={{ color: '#fff' }}>{currentUserName}</div>
-                  <div className="tiny faint">Chia sẻ suy nghĩ của bạn với cộng đồng quốc tế</div>
+                  <div className="tiny faint">{t('composerSub')}</div>
                 </div>
               </div>
 
@@ -323,7 +323,7 @@ export default function RanNewsPage() {
               <textarea
                 className="input"
                 rows={3}
-                placeholder={`${currentUserName} ơi, bạn đang nghĩ gì thế? ✍️`}
+                placeholder={`${currentUserName} ${t('composerPlaceholder')}`}
                 value={postDraft}
                 onChange={(e) => setPostDraft(e.target.value)}
                 required
@@ -352,7 +352,7 @@ export default function RanNewsPage() {
                   style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 999 }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload size={14} style={{ color: '#06b6d4' }} /> {t('uploadPhoto')}
+                  <Upload size={14} style={{ color: '#06b6d4' }} /> {t('uploadPhotoBtn')}
                 </button>
                 <input 
                   type="file" 
@@ -368,7 +368,7 @@ export default function RanNewsPage() {
                   style={{ width: 'auto', padding: '8px 20px', fontSize: 13 }}
                   disabled={!postDraft.trim()}
                 >
-                  <Send size={14} /> {t('postNews')}
+                  <Send size={14} /> {t('postNewsBtn')}
                 </button>
               </div>
             </form>
@@ -395,7 +395,7 @@ export default function RanNewsPage() {
                       <div>
                         <div className="semi small" style={{ color: '#fff' }}>{post.author_name}</div>
                         <div className="tiny faint flex items-center g4">
-                          <Clock size={11} /> {timeStr} · Toàn cầu
+                          <Clock size={11} /> {timeStr} · Global
                         </div>
                       </div>
                     </div>
@@ -424,7 +424,7 @@ export default function RanNewsPage() {
                         <div style={{ borderLeft: '2px solid #a855f7', paddingLeft: 10, color: '#f3e8ff', marginBottom: 6 }}>
                           {postTrans.translated}
                         </div>
-                        <div className="tiny faint">(Bản gốc: {post.content})</div>
+                        <div className="tiny faint">(Original: {post.content})</div>
                       </div>
                     ) : (
                       post.content
@@ -445,9 +445,9 @@ export default function RanNewsPage() {
                   {/* Tags */}
                   {post.tags && post.tags.length > 0 && (
                     <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                      {post.tags.map((t) => (
-                        <span key={t} className="tiny" style={{ color: '#c084fc' }}>
-                          {t}
+                      {post.tags.map((tagItem) => (
+                        <span key={tagItem} className="tiny" style={{ color: '#c084fc' }}>
+                          {tagItem}
                         </span>
                       ))}
                     </div>
@@ -479,14 +479,14 @@ export default function RanNewsPage() {
                       onClick={() => setActiveCommentsPostId(showCommentsSection ? null : post.id)}
                     >
                       <MessageCircle size={16} />
-                      <span className="bold rm-num">{postComments.length} bình luận</span>
+                      <span className="bold rm-num">{postComments.length} {t('commentsCountSuffix')}</span>
                     </button>
 
                     <button
                       type="button"
                       className="btn-secondary flex items-center g6"
                       style={{ padding: '6px 14px', borderRadius: 999, fontSize: 13, border: 'none', background: 'transparent' }}
-                      onClick={() => showToast('Đã sao chép liên kết bài viết! 📋')}
+                      onClick={() => showToast('Link copied! 📋')}
                     >
                       <Share2 size={16} />
                     </button>
@@ -498,7 +498,7 @@ export default function RanNewsPage() {
                       {/* Comments Feed */}
                       <div className="flex col g10" style={{ marginBottom: 12 }}>
                         {postComments.length === 0 ? (
-                          <div className="tiny faint">Chưa có bình luận nào. Hãy gửi bình luận đầu tiên!</div>
+                          <div className="tiny faint">No comments yet. Be the first to comment!</div>
                         ) : (
                           postComments.map((c) => {
                             const cTrans = commentTranslations[c.id]
@@ -533,7 +533,7 @@ export default function RanNewsPage() {
                         <input
                           className="input"
                           style={{ padding: '8px 14px', fontSize: 13, borderRadius: 999 }}
-                          placeholder="Viết bình luận (AI tự dịch cho người nước ngoài)..."
+                          placeholder={t('writeCommentPlaceholder')}
                           value={commentDrafts[post.id] || ''}
                           onChange={(e) => setCommentDrafts({ ...commentDrafts, [post.id]: e.target.value })}
                           onKeyDown={(e) => {
@@ -564,20 +564,20 @@ export default function RanNewsPage() {
           <div className="card">
             <div className="flex items-center g8" style={{ marginBottom: 12 }}>
               <Flame size={16} style={{ color: '#f43f5e' }} />
-              <span className="semi small">Xu hướng RanNews</span>
+              <span className="semi small">{t('newsTrendsTitle')}</span>
             </div>
             <div className="flex col g10">
               <div className="flex justify-between items-center tiny">
                 <span className="bold" style={{ color: '#fff' }}>#RanMetLaunch</span>
-                <span className="faint">1.2k bài</span>
+                <span className="faint">1.2k {t('postsCountSuffix')}</span>
               </div>
               <div className="flex justify-between items-center tiny">
                 <span className="bold" style={{ color: '#fff' }}>#MinecraftBackrooms</span>
-                <span className="faint">840 bài</span>
+                <span className="faint">840 {t('postsCountSuffix')}</span>
               </div>
               <div className="flex justify-between items-center tiny">
                 <span className="bold" style={{ color: '#fff' }}>#AIMatchRealtime</span>
-                <span className="faint">520 bài</span>
+                <span className="faint">520 {t('postsCountSuffix')}</span>
               </div>
             </div>
           </div>
@@ -585,10 +585,10 @@ export default function RanNewsPage() {
           <div className="card" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <div className="flex items-center g8" style={{ marginBottom: 8 }}>
               <ShieldCheck size={16} style={{ color: '#10b981' }} />
-              <span className="semi small">Gemini AI Safe Guard & Translation</span>
+              <span className="semi small">{t('geminiGuardTitle')}</span>
             </div>
             <p className="tiny muted" style={{ lineHeight: 1.5 }}>
-              Mọi bài viết và bình luận trên RanMet đều được dịch thuật thời gian thực và giám sát bởi hệ thống Google Gemini AI chống các hành vi xâm hại trực tuyến.
+              {t('geminiGuardDesc')}
             </p>
           </div>
         </div>

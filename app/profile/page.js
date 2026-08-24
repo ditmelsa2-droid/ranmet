@@ -10,9 +10,9 @@ import {
   Trash2, Video as VideoIcon, Newspaper, Eye, Flame
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { trustTier, nextTierInfo } from '@/lib/trust'
 import { checkContent, checkTags } from '@/lib/moderation'
 import { readFileAsDataUrl } from '@/lib/upload'
+import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
 
 const BANNER_THEMES = [
@@ -29,6 +29,7 @@ const SUGGESTED_INTERESTS = [
 
 export default function ProfilePage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [supabase] = useState(() => createClient())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -248,7 +249,7 @@ export default function ProfilePage() {
     const link = `${window.location.origin}/register?ref=${userId}`
     navigator.clipboard.writeText(link)
     setCopiedLink(true)
-    showToast('Đã sao chép link mời bạn bè nhận Trust! 🎁')
+    showToast(t('copiedInviteLink'))
     setTimeout(() => setCopiedLink(false), 3000)
   }
 
@@ -259,7 +260,7 @@ export default function ProfilePage() {
     return (
       <AppShell>
         <div className="card center-text" style={{ padding: 40, maxWidth: 600, margin: '40px auto' }}>
-          <div className="tiny bold muted">Đang tải thông tin hồ sơ...</div>
+          <div className="tiny bold muted">Connecting to Profile...</div>
         </div>
       </AppShell>
     )
@@ -305,7 +306,7 @@ export default function ProfilePage() {
               }}
               onClick={() => bannerFileRef.current?.click()}
             >
-              <Upload size={12} /> Đổi ảnh nền từ máy
+              <Upload size={12} /> {t('changeBannerDevice')}
             </button>
             <input 
               type="file" 
@@ -370,11 +371,11 @@ export default function ProfilePage() {
             <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 16 }}>
               <div>
                 <div className="flex items-center g10">
-                  <h1 className="rm-title" style={{ fontSize: 26, color: '#fff' }}>{displayName || 'Chưa đặt tên'}</h1>
-                  <span className="badge badge-success tiny" style={{ fontSize: 10 }}>Đã xác thực</span>
+                  <h1 className="rm-title" style={{ fontSize: 26, color: '#fff' }}>{displayName || 'User'}</h1>
+                  <span className="badge badge-success tiny" style={{ fontSize: 10 }}>{t('verifiedBadge')}</span>
                 </div>
                 <div className="tiny muted" style={{ marginTop: 4 }}>
-                  {country} · {interests.length} sở thích · <span style={{ color: '#c084fc' }}>Phong cách: {style || 'Tự do'}</span>
+                  {country} · {interests.length} {t('interestsCount')} · <span style={{ color: '#c084fc' }}>{t('styleLabel')}: {style || 'Casual'}</span>
                 </div>
                 {bio && (
                   <p className="small" style={{ color: 'rgba(255,255,255,0.85)', marginTop: 8, maxWidth: 540 }}>
@@ -394,7 +395,7 @@ export default function ProfilePage() {
                   onClick={handleSaveProfile}
                   disabled={saving}
                 >
-                  <Save size={16} /> {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}
+                  <Save size={16} /> {saving ? 'Saving...' : t('saveProfileBtn')}
                 </button>
               </div>
             </div>
@@ -406,7 +407,7 @@ export default function ProfilePage() {
           <div className="err-text" style={{ padding: '14px 18px', borderRadius: 14 }}>
             <AlertCircle size={18} style={{ flexShrink: 0 }} />
             <div>
-              <b style={{ color: '#fff' }}>Hệ thống AI Kiểm duyệt:</b> {moderationError}
+              <b style={{ color: '#fff' }}>AI Moderation:</b> {moderationError}
             </div>
           </div>
         )}
@@ -417,7 +418,7 @@ export default function ProfilePage() {
             <div className="flex items-center g10">
               <Sparkles size={18} style={{ color: '#06b6d4' }} />
               <h2 className="rm-title" style={{ fontSize: 18, color: '#fff' }}>
-                Quản Lý Nội Dung Đăng Tải Của Tôi ({myVideos.length + myPosts.length})
+                {t('myContentTitle')} ({myVideos.length + myPosts.length})
               </h2>
             </div>
 
@@ -429,7 +430,7 @@ export default function ProfilePage() {
                 onClick={() => setActiveContentTab('videos')}
                 style={{ padding: '6px 14px', fontSize: 12 }}
               >
-                <VideoIcon size={13} /> Video ({myVideos.length})
+                <VideoIcon size={13} /> {t('videosTab')} ({myVideos.length})
               </button>
               <button
                 type="button"
@@ -437,7 +438,7 @@ export default function ProfilePage() {
                 onClick={() => setActiveContentTab('posts')}
                 style={{ padding: '6px 14px', fontSize: 12 }}
               >
-                <Newspaper size={13} /> Bài viết ({myPosts.length})
+                <Newspaper size={13} /> {t('postsTab')} ({myPosts.length})
               </button>
             </div>
           </div>
@@ -447,7 +448,7 @@ export default function ProfilePage() {
             <div>
               {myVideos.length === 0 ? (
                 <div className="center-text tiny faint" style={{ padding: 24 }}>
-                  Bạn chưa đăng video nào lên RanVideo.
+                  {t('noMyVideos')}
                 </div>
               ) : (
                 <div className="flex col g12">
@@ -468,7 +469,7 @@ export default function ProfilePage() {
                         className="btn-icon"
                         style={{ width: 34, height: 34, color: '#fb7185' }}
                         onClick={() => handleDeleteVideo(v.id)}
-                        title="Xóa video"
+                        title="Delete video"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -484,7 +485,7 @@ export default function ProfilePage() {
             <div>
               {myPosts.length === 0 ? (
                 <div className="center-text tiny faint" style={{ padding: 24 }}>
-                  Bạn chưa đăng bài viết nào lên RanNews.
+                  {t('noMyPosts')}
                 </div>
               ) : (
                 <div className="flex col g12">
@@ -505,7 +506,7 @@ export default function ProfilePage() {
                         className="btn-icon"
                         style={{ width: 34, height: 34, color: '#fb7185' }}
                         onClick={() => handleDeletePost(p.id)}
-                        title="Xóa bài viết"
+                        title="Delete post"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -529,13 +530,13 @@ export default function ProfilePage() {
           <div className="flex justify-between items-start" style={{ marginBottom: 14 }}>
             <div>
               <div className="badge tiny" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid #f59e0b50', marginBottom: 6 }}>
-                🎁 CHƯƠNG TRÌNH MỜI BẠN BÈ TÍCH ĐIỂM TRUST
+                {t('referralProgramBadge')}
               </div>
               <h3 className="rm-title" style={{ fontSize: 18, color: '#fff' }}>
-                Mời bạn bè đăng ký RanMet nhận đến +100 Trust!
+                {t('referralProgramTitle')}
               </h3>
               <p className="tiny muted" style={{ marginTop: 4 }}>
-                • 3 bạn: <b>+25 Trust</b> · 5 bạn: <b>+50 Trust</b> · 10 bạn (Max): <b>+100 Trust</b>
+                {t('referralTiers')}
               </p>
             </div>
 
@@ -545,14 +546,14 @@ export default function ProfilePage() {
               style={{ width: 'auto', padding: '8px 16px', fontSize: 12, borderRadius: 999 }}
               onClick={copyReferralLink}
             >
-              {copiedLink ? <><Check size={14} style={{ color: '#10b981' }} /> Đã chép link</> : <><Copy size={14} /> Sao chép link mời</>}
+              {copiedLink ? <><Check size={14} style={{ color: '#10b981' }} /> {t('copiedInviteLink')}</> : <><Copy size={14} /> {t('copyInviteLink')}</>}
             </button>
           </div>
 
           <div style={{ marginTop: 12 }}>
             <div className="flex justify-between tiny bold" style={{ marginBottom: 6 }}>
-              <span>Tiến độ: <b style={{ color: '#f59e0b' }}>{referralCount} người</b></span>
-              <span className="muted">Tối đa 10 bạn</span>
+              <span>{t('progressLabel')} <b style={{ color: '#f59e0b' }}>{referralCount} {t('friendsCountSuffix')}</b></span>
+              <span className="muted">{t('max10Friends')}</span>
             </div>
             <div className="compat-bar-track" style={{ height: 8 }}>
               <div 
@@ -569,52 +570,52 @@ export default function ProfilePage() {
         {/* EDIT PROFILE DETAILS & TAGS WITH AI MODERATION */}
         <form onSubmit={handleSaveProfile} className="card flex col g20" style={{ padding: 26 }}>
           <div className="rm-title" style={{ fontSize: 18, color: '#fff', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-            Thông tin chi tiết & Sở thích tự do
+            {t('profileFormTitle')}
           </div>
 
           <div className="field-group">
-            <label className="field-label"><User size={14} /> Tên hiển thị</label>
+            <label className="field-label"><User size={14} /> {t('displayNameLabel')}</label>
             <input 
               className="input" 
               value={displayName} 
               onChange={(e) => setDisplayName(e.target.value)} 
-              placeholder="Nhập tên hoặc biệt danh..."
+              placeholder="Display name..."
               required
             />
           </div>
 
           <div className="field-group">
-            <label className="field-label"><Globe size={14} /> Quốc gia / Khu vực</label>
+            <label className="field-label"><Globe size={14} /> {t('countryLabel')}</label>
             <input 
               className="input" 
               value={country} 
               onChange={(e) => setCountry(e.target.value)} 
-              placeholder="Việt Nam"
+              placeholder="Country..."
             />
           </div>
 
           <div className="field-group">
-            <label className="field-label"><MessageSquare size={14} /> Giới thiệu bản thân (Bio)</label>
+            <label className="field-label"><MessageSquare size={14} /> {t('bioLabel')}</label>
             <textarea 
               className="input" 
               rows={3} 
               value={bio} 
               onChange={(e) => setBio(e.target.value)} 
-              placeholder="Chia sẻ đôi điều về bạn..."
+              placeholder="Tell something about yourself..."
             />
           </div>
 
           {/* CUSTOM INTERESTS / HOBBIES */}
           <div className="field-group">
             <div className="flex justify-between items-center">
-              <label className="field-label"><Heart size={14} /> Sở thích & Chủ đề (Gemini AI & Slang Guard)</label>
+              <label className="field-label"><Heart size={14} /> {t('interestsLabel')}</label>
               <span className="tiny faint flex items-center g4"><ShieldCheck size={12} style={{ color: '#10b981' }} /> AI Active</span>
             </div>
             
             <div className="flex g8 items-center" style={{ marginBottom: 10 }}>
               <input 
                 className="input" 
-                placeholder="Nhập sở thích (Ví dụ: Thích ngắm mưa, Nuôi mèo, Code dạo...) rồi bấm Thêm tag"
+                placeholder="Enter interest tag..."
                 value={customInterest}
                 onChange={(e) => setCustomInterest(e.target.value)}
                 onKeyDown={(e) => {
@@ -630,23 +631,23 @@ export default function ProfilePage() {
                 style={{ width: 'auto', padding: '12px 18px', flexShrink: 0 }}
                 onClick={() => addInterest(customInterest)}
               >
-                <Plus size={16} /> Thêm tag
+                <Plus size={16} /> {t('addTagBtn')}
               </button>
             </div>
 
             {/* Current Selected Tags */}
             <div className="flex" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-              {interests.map((t) => (
+              {interests.map((tItem) => (
                 <span 
-                  key={t} 
+                  key={tItem} 
                   className="chip selected" 
                   style={{ padding: '6px 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 8 }}
                 >
-                  <span>{t}</span>
+                  <span>{tItem}</span>
                   <X 
                     size={14} 
                     style={{ cursor: 'pointer', opacity: 0.8 }} 
-                    onClick={() => removeInterest(t)}
+                    onClick={() => removeInterest(tItem)}
                   />
                 </span>
               ))}
@@ -654,7 +655,7 @@ export default function ProfilePage() {
 
             {/* Quick Suggestions */}
             <div>
-              <div className="tiny faint" style={{ marginBottom: 6 }}>Gợi ý nhanh (Bấm để thêm):</div>
+              <div className="tiny faint" style={{ marginBottom: 6 }}>{t('quickSuggestLabel')}</div>
               <div className="flex" style={{ flexWrap: 'wrap', gap: 6 }}>
                 {SUGGESTED_INTERESTS.filter(s => !interests.includes(s)).map((s) => (
                   <button
@@ -673,17 +674,17 @@ export default function ProfilePage() {
 
           {/* CUSTOM CONVERSATION STYLE / PERSONALITY */}
           <div className="field-group">
-            <label className="field-label"><Sparkles size={14} /> Phong cách trò chuyện & Tính cách (Tự do mô tả)</label>
+            <label className="field-label"><Sparkles size={14} /> {t('personalityLabel')}</label>
             <input 
               className="input" 
               value={style} 
               onChange={(e) => setStyle(e.target.value)} 
-              placeholder="Ví dụ: Vui vẻ hài hước, Hướng nội thích lắng nghe, Đam mê công nghệ..."
+              placeholder="e.g. Chill, Friendly, Anime Lover, Tech Geek..."
             />
           </div>
 
           <button type="submit" className="btn btn-primary" style={{ marginTop: 10, padding: 15 }} disabled={saving}>
-            <Save size={18} /> {saving ? 'Đang lưu cập nhật...' : 'Lưu và cập nhật hồ sơ'}
+            <Save size={18} /> {saving ? 'Saving...' : t('saveAllChangesBtn')}
           </button>
         </form>
       </div>

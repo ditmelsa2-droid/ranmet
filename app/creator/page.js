@@ -7,11 +7,13 @@ import {
   TrendingUp, ArrowUpRight, Award, Plus, CheckCircle, CreditCard, ShieldCheck, Download, Lock, ArrowLeft
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
 
 const MIN_TRUST_REQUIRED = 1000
 
 export default function CreatorStudioPage() {
+  const { t } = useLanguage()
   const [supabase] = useState(() => createClient())
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState(null)
@@ -44,7 +46,6 @@ export default function CreatorStudioPage() {
 
       if (prof) {
         setProfile(prof)
-        // STRICT REAL EARNINGS (0 VNĐ default, no mockup numbers)
         setEarnings(Number(prof.creator_earnings || 0))
       }
       if (trust) {
@@ -74,7 +75,7 @@ export default function CreatorStudioPage() {
     return (
       <AppShell>
         <div className="card center-text" style={{ padding: 40, maxWidth: 600, margin: '40px auto' }}>
-          <div className="tiny bold muted">Đang tải dữ liệu Creator Studio...</div>
+          <div className="tiny bold muted">Connecting to Creator Studio...</div>
         </div>
       </AppShell>
     )
@@ -115,21 +116,21 @@ export default function CreatorStudioPage() {
             </div>
 
             <div className="badge tiny" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid #f59e0b50', marginBottom: 10 }}>
-              YÊU CẦU ĐIỂM TRUST: 1,000 PTS
+              {t('creatorLockedBadge')}
             </div>
 
             <h1 className="rm-title" style={{ fontSize: 24, color: '#fff', marginBottom: 8 }}>
-              Creator Studio Đang Bị Khóa
+              {t('creatorLockedTitle')}
             </h1>
             <p className="small muted" style={{ lineHeight: 1.55, marginBottom: 24 }}>
-              Để kích hoạt tính năng Nhà Sáng Tạo và Bật Kiếm Tiền, tài khoản của bạn cần đạt tối thiểu <b>1,000 Điểm Trust</b> để chứng minh mức độ uy tín và chất lượng trong cộng đồng.
+              {t('creatorLockedDesc')}
             </p>
 
             {/* TRUST PROGRESS TRACK */}
             <div style={{ background: 'rgba(255,255,255,0.04)', padding: 18, borderRadius: 16, marginBottom: 24 }}>
               <div className="flex justify-between tiny bold" style={{ marginBottom: 8 }}>
-                <span>Điểm Trust hiện tại của bạn: <b style={{ color: '#ec4899' }}>{trustScore} pts</b></span>
-                <span className="muted">Mục tiêu: 1,000 pts ({progressPct.toFixed(0)}%)</span>
+                <span>{t('currentTrustLabel')} <b style={{ color: '#ec4899' }}>{trustScore} pts</b></span>
+                <span className="muted">{t('targetLabel')} ({progressPct.toFixed(0)}%)</span>
               </div>
               <div className="compat-bar-track" style={{ height: 10 }}>
                 <div 
@@ -138,26 +139,26 @@ export default function CreatorStudioPage() {
                 />
               </div>
               <div className="tiny faint" style={{ marginTop: 10, textAlign: 'left' }}>
-                Cần thêm <b style={{ color: '#f59e0b' }}>{Math.max(0, MIN_TRUST_REQUIRED - trustScore)} pts</b> nữa để mở khóa Studio.
+                {t('needMoreTrustPart1')} <b style={{ color: '#f59e0b' }}>{Math.max(0, MIN_TRUST_REQUIRED - trustScore)} pts</b> {t('needMoreTrustPart2')}
               </div>
             </div>
 
             {/* HOW TO EARN TRUST */}
             <div style={{ textAlign: 'left', marginBottom: 24 }}>
-              <div className="tiny bold" style={{ color: '#fff', marginBottom: 8 }}>Cách tích lũy thêm điểm Trust nhanh nhất:</div>
+              <div className="tiny bold" style={{ color: '#fff', marginBottom: 8 }}>{t('howToEarnTitle')}</div>
               <div className="flex col g8 tiny muted">
-                <div>• <b>Mời bạn bè:</b> Nhận tới <b>+100 Trust</b> khi mời đủ mốc 10 người đăng ký.</div>
-                <div>• <b>Hoàn tất hồ sơ:</b> Nhận <b>+15 Trust</b> khi thiết lập đầy đủ thông tin.</div>
-                <div>• <b>Trò chuyện lịch sự:</b> Ghép đôi trò chuyện vui vẻ, nhận đánh giá tích cực từ bạn bè.</div>
+                <div>{t('earnTip1')}</div>
+                <div>{t('earnTip2')}</div>
+                <div>{t('earnTip3')}</div>
               </div>
             </div>
 
             <div className="flex g12">
               <Link href="/profile" className="btn btn-primary grow">
-                Xem link mời bạn bè nhận Trust
+                {t('viewReferralLinkBtn')}
               </Link>
               <Link href="/home" className="btn btn-secondary" style={{ width: 'auto' }}>
-                <ArrowLeft size={16} /> Quay lại
+                <ArrowLeft size={16} /> {t('backBtn')}
               </Link>
             </div>
           </div>
@@ -185,13 +186,13 @@ export default function CreatorStudioPage() {
           <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 16 }}>
             <div>
               <div className="badge badge-glow" style={{ color: '#f59e0b', borderColor: '#f59e0b80', marginBottom: 10 }}>
-                <Award size={13} /> RANMET CREATOR STUDIO (ĐÃ MỞ KHÓA)
+                <Award size={13} /> RANMET CREATOR STUDIO
               </div>
               <h1 className="rm-title" style={{ fontSize: 26, color: '#fff', marginBottom: 6 }}>
-                Trung Tâm Nhà Sáng Tạo & Kiếm Tiền 🚀
+                Creator Studio 🚀
               </h1>
               <p className="small" style={{ color: 'rgba(255, 255, 255, 0.88)', maxWidth: 600, lineHeight: 1.5 }}>
-                Tạo video ngắn RanVideo, viết bài RanNews chất lượng để nhận thưởng tiền mặt thật từ cộng đồng.
+                RanVideo, RanNews Creator Monetization System
               </p>
             </div>
 
@@ -202,7 +203,7 @@ export default function CreatorStudioPage() {
                 style={{ width: 'auto', padding: '12px 22px', fontSize: 13, background: 'var(--gold-gradient)' }}
                 onClick={() => setShowWithdrawModal(true)}
               >
-                <DollarSign size={16} /> Rút tiền doanh thu
+                <DollarSign size={16} /> {t('withdrawMoneyBtn')}
               </button>
             </div>
           </div>
@@ -214,15 +215,15 @@ export default function CreatorStudioPage() {
           <div className="card">
             <div className="flex justify-between items-center" style={{ marginBottom: 10 }}>
               <span className="tiny faint flex items-center g6">
-                <DollarSign size={14} style={{ color: '#f59e0b' }} /> Số Dư Khả Dụng
+                <DollarSign size={14} style={{ color: '#f59e0b' }} /> {t('walletBalanceTitle')}
               </span>
-              <span className="badge badge-success tiny" style={{ fontSize: 10 }}>Ví tiền thật</span>
+              <span className="badge badge-success tiny" style={{ fontSize: 10 }}>Live</span>
             </div>
             <div className="rm-num bold" style={{ fontSize: 32, color: '#f59e0b' }}>
-              {Number(earnings).toLocaleString('vi-VN')} <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>VNĐ</span>
+              {Number(earnings).toLocaleString()} <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>VNĐ</span>
             </div>
             <div className="tiny faint" style={{ marginTop: 6 }}>
-              Thu nhập từ tương tác thật trên video & bài viết
+              {t('totalInteractionsLabel')}
             </div>
           </div>
 
@@ -230,15 +231,15 @@ export default function CreatorStudioPage() {
           <div className="card">
             <div className="flex justify-between items-center" style={{ marginBottom: 10 }}>
               <span className="tiny faint flex items-center g6">
-                <Eye size={14} style={{ color: '#06b6d4' }} /> Nội Dung Đã Đăng
+                <Eye size={14} style={{ color: '#06b6d4' }} /> {t('myContentTitle')}
               </span>
-              <span className="badge tiny" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4' }}>Thực tế</span>
+              <span className="badge tiny" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4' }}>Active</span>
             </div>
             <div className="rm-num bold" style={{ fontSize: 32, color: '#06b6d4' }}>
-              {totalContentCount} <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>mục</span>
+              {totalContentCount}
             </div>
             <div className="tiny faint" style={{ marginTop: 6 }}>
-              {myVideos.length} video · {myPosts.length} bài viết
+              {myVideos.length} videos · {myPosts.length} posts
             </div>
           </div>
 
@@ -246,15 +247,15 @@ export default function CreatorStudioPage() {
           <div className="card">
             <div className="flex justify-between items-center" style={{ marginBottom: 10 }}>
               <span className="tiny faint flex items-center g6">
-                <ShieldCheck size={14} style={{ color: '#ec4899' }} /> Điểm Tin Cậy
+                <ShieldCheck size={14} style={{ color: '#ec4899' }} /> {t('trustScore')}
               </span>
-              <span className="badge badge-glow tiny">Đủ chuẩn</span>
+              <span className="badge badge-glow tiny">Eligible</span>
             </div>
             <div className="rm-num bold" style={{ fontSize: 32, color: '#ec4899' }}>
               {trustScore} <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>pts</span>
             </div>
             <div className="tiny faint" style={{ marginTop: 6 }}>
-              Tài khoản đạt chuẩn đối tác sáng tạo
+              Verified Creator Partner
             </div>
           </div>
         </div>
@@ -263,21 +264,21 @@ export default function CreatorStudioPage() {
         <div className="card" style={{ padding: 24 }}>
           <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
             <h3 className="rm-title" style={{ fontSize: 18, color: '#fff' }}>
-              Nội dung đã đăng tải của bạn ({totalContentCount})
+              {t('myContentTitle')} ({totalContentCount})
             </h3>
             <div className="flex g8">
               <Link href="/videos" className="btn btn-secondary" style={{ width: 'auto', padding: '6px 14px', fontSize: 12 }}>
-                + Đăng video
+                {t('uploadNewVideo')}
               </Link>
               <Link href="/news" className="btn btn-secondary" style={{ width: 'auto', padding: '6px 14px', fontSize: 12 }}>
-                + Đăng bài viết
+                {t('postNewsBtn')}
               </Link>
             </div>
           </div>
 
           {totalContentCount === 0 ? (
             <div className="center-text tiny faint" style={{ padding: 30 }}>
-              Bạn chưa có video hoặc bài viết nào. Hãy đăng tải nội dung đầu tiên để bắt đầu tích lũy doanh thu!
+              {t('noMyVideos')}
             </div>
           ) : (
             <div className="flex col g10">
@@ -290,7 +291,7 @@ export default function CreatorStudioPage() {
                       <div className="tiny faint">{v.tags?.join(' ')}</div>
                     </div>
                   </div>
-                  <span className="badge badge-success tiny">Đang hiển thị</span>
+                  <span className="badge badge-success tiny">Active</span>
                 </div>
               ))}
 
@@ -300,10 +301,10 @@ export default function CreatorStudioPage() {
                     <Sparkles size={18} style={{ color: '#06b6d4' }} />
                     <div>
                       <div className="semi small" style={{ color: '#fff' }}>{p.content?.slice(0, 40)}...</div>
-                      <div className="tiny faint">Bài viết RanNews</div>
+                      <div className="tiny faint">RanNews Post</div>
                     </div>
                   </div>
-                  <span className="badge badge-success tiny">Đang hiển thị</span>
+                  <span className="badge badge-success tiny">Active</span>
                 </div>
               ))}
             </div>
@@ -333,7 +334,7 @@ export default function CreatorStudioPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
-              <h2 className="rm-title" style={{ fontSize: 20 }}>Rút Doanh Thu Sáng Tạo</h2>
+              <h2 className="rm-title" style={{ fontSize: 20 }}>{t('withdrawMoneyBtn')}</h2>
               <button 
                 type="button" 
                 onClick={() => setShowWithdrawModal(false)}
@@ -346,7 +347,7 @@ export default function CreatorStudioPage() {
 
             <form onSubmit={handleWithdraw} className="flex col g16">
               <div className="field-group">
-                <label className="field-label">Số tiền muốn rút (VNĐ)</label>
+                <label className="field-label">Amount (VNĐ)</label>
                 <select 
                   className="input"
                   value={withdrawAmount}
@@ -360,10 +361,10 @@ export default function CreatorStudioPage() {
               </div>
 
               <div className="field-group">
-                <label className="field-label">Thông tin nhận tiền (STK Ngân hàng / SĐT Ví MoMo)</label>
+                <label className="field-label">Payout Account (Bank / MoMo / Wallet)</label>
                 <input 
                   className="input" 
-                  placeholder="Ví dụ: MB Bank - 0987654321 - NGUYEN VAN A"
+                  placeholder="MB Bank / MoMo / PayPal info..."
                   value={bankInfo}
                   onChange={(e) => setBankInfo(e.target.value)}
                   required
@@ -371,34 +372,10 @@ export default function CreatorStudioPage() {
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ marginTop: 8, background: 'var(--gold-gradient)' }}>
-                <DollarSign size={16} /> Xác nhận rút tiền ngay
+                <DollarSign size={16} /> {t('withdrawMoneyBtn')}
               </button>
             </form>
           </div>
-        </div>
-      )}
-
-      {/* TOAST */}
-      {toastMsg && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 24,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(18, 14, 28, 0.95)',
-            border: '1px solid rgba(245, 158, 11, 0.6)',
-            boxShadow: '0 8px 32px rgba(245, 158, 11, 0.4)',
-            padding: '10px 20px',
-            borderRadius: 999,
-            color: '#fff',
-            fontSize: 13.5,
-            fontWeight: 600,
-            zIndex: 1000,
-            animation: 'msgPop 0.25s ease'
-          }}
-        >
-          {toastMsg}
         </div>
       )}
     </AppShell>
