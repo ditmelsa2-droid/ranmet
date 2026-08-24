@@ -1,0 +1,16 @@
+{
+  "name": "RanMet - AI Match & Realtime Social",
+  "short_name": "RanMet",
+  "description": "Nền tảng kết nối ngẫu nhiên thông minh dựa trên AI Matching và Trust Engine",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07060c",
+  "theme_color": "#07060c",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

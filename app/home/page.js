@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { 
   ShieldCheck, Sparkles, Compass, LogOut, Video, 
-  Globe2, Lock, ArrowUpRight, Zap, Award, User
+  Globe2, Lock, ArrowUpRight, Zap, Award, Home, MessageSquare, User
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { trustTier, nextTierInfo } from '@/lib/trust'
@@ -58,7 +58,7 @@ export default async function HomePage() {
               title="Đăng xuất"
               type="submit"
             >
-              <LogOut size={17} style={{ color: 'var(--text-dim)' }} />
+              <LogOut size={17} style={{ color: 'var(--text-muted)' }} />
             </button>
           </form>
         </div>
@@ -69,7 +69,7 @@ export default async function HomePage() {
           style={{ 
             background: 'linear-gradient(135deg, rgba(26, 20, 48, 0.9) 0%, rgba(16, 13, 28, 0.95) 100%)',
             border: '1px solid rgba(168, 85, 247, 0.25)',
-            boxShadow: '0 12px 32px -8px rgba(168, 85, 247, 0.2)'
+            boxShadow: '0 12px 32px -8px rgba(168, 85, 247, 0.25)'
           }}
         >
           <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
@@ -88,7 +88,7 @@ export default async function HomePage() {
                 {score}
               </div>
               <div className="tiny muted" style={{ marginTop: 4 }}>
-                {score >= 200 ? 'Hồ sơ uy tín cao, ghép đôi ưu tiên' : 'Hoàn tất thêm hoạt động để tăng điểm'}
+                {score >= 200 ? 'Hồ sơ uy tín cao, ưu tiên ghép đôi' : 'Tương tác lịch sự để tăng điểm Trust'}
               </div>
             </div>
 
@@ -118,15 +118,15 @@ export default async function HomePage() {
           <div
             className="card card-interactive"
             style={{
-              background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.18) 0%, rgba(139, 92, 246, 0.25) 50%, rgba(6, 182, 212, 0.15) 100%)',
-              border: '1px solid rgba(236, 72, 153, 0.4)',
-              boxShadow: '0 16px 40px -10px rgba(236, 72, 153, 0.35)',
+              background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(139, 92, 246, 0.28) 50%, rgba(6, 182, 212, 0.18) 100%)',
+              border: '1px solid rgba(236, 72, 153, 0.45)',
+              boxShadow: '0 16px 40px -10px rgba(236, 72, 153, 0.38)',
               padding: 24,
               overflow: 'hidden',
             }}
           >
             <div className="flex justify-between items-start" style={{ marginBottom: 16 }}>
-              <div className="badge" style={{ background: 'rgba(236, 72, 153, 0.25)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}>
+              <div className="badge" style={{ background: 'rgba(236, 72, 153, 0.28)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}>
                 <Zap size={12} style={{ color: '#facc15' }} /> RANCHAT · AI MATCHING
               </div>
               <div 
@@ -134,7 +134,7 @@ export default async function HomePage() {
                   width: 36, 
                   height: 36, 
                   borderRadius: '50%', 
-                  background: 'rgba(255,255,255,0.1)', 
+                  background: 'rgba(255,255,255,0.12)', 
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center' 
@@ -145,16 +145,16 @@ export default async function HomePage() {
             </div>
 
             <div style={{ marginBottom: 12 }}>
-              <h2 className="rm-title" style={{ fontSize: 23, marginBottom: 6, color: '#fff' }}>
+              <h2 className="rm-title" style={{ fontSize: 24, marginBottom: 6, color: '#fff' }}>
                 Ghép ngẫu nhiên ngay
               </h2>
-              <p className="small" style={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.4 }}>
-                Thuật toán thông minh tự động tìm người phù hợp nhất dựa trên sở thích và phong cách trò chuyện.
+              <p className="small" style={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.45 }}>
+                Thuật toán AI tự động tìm người phù hợp nhất dựa trên sở thích và phong cách trò chuyện.
               </p>
             </div>
 
             <div className="flex items-center g8 tiny bold" style={{ color: '#fbcfe8', marginTop: 16 }}>
-              <Compass size={16} className="radar-spin" /> Bắt đầu tìm kiếm người lạ có gu
+              <Compass size={16} /> Bắt đầu tìm kiếm người lạ có gu ✨
             </div>
           </div>
         </Link>
@@ -205,6 +205,22 @@ export default async function HomePage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Bottom Dock Navigation Bar */}
+      <div className="bottom-nav">
+        <Link href="/home" className="nav-item active">
+          <Home size={20} className="nav-icon" />
+          <span>Trang chủ</span>
+        </Link>
+        <Link href="/match" className="nav-item">
+          <Compass size={20} className="nav-icon" />
+          <span>Ghép đôi</span>
+        </Link>
+        <Link href="/onboarding" className="nav-item">
+          <User size={20} className="nav-icon" />
+          <span>Hồ sơ</span>
+        </Link>
       </div>
     </div>
   )
