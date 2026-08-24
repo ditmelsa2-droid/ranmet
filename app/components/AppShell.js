@@ -15,12 +15,12 @@ export default function AppShell({ children, userProfile, trustScore }) {
 
   const navItems = [
     { href: '/home', label: t('home'), icon: Home },
-    { href: '/chats', label: t('chats'), icon: MessageSquare, badge: 'Live' },
-    { href: '/news', label: t('news'), icon: Newspaper, badge: 'New' },
-    { href: '/videos', label: t('videos'), icon: Video, badge: 'Hot' },
+    { href: '/chats', label: t('chats'), icon: MessageSquare, badge: t('liveBadge'), badgeType: 'live' },
+    { href: '/news', label: t('news'), icon: Newspaper, badge: t('newBadge'), badgeType: 'new' },
+    { href: '/videos', label: t('videos'), icon: Video, badge: t('hotBadge'), badgeType: 'hot' },
     { href: '/match', label: t('match'), icon: Compass },
     { href: '/world', label: t('world'), icon: Globe },
-    { href: '/creator', label: t('creator'), icon: DollarSign, badge: 'Kiếm tiền' },
+    { href: '/creator', label: t('creator'), icon: DollarSign, badge: t('monetizeBadge'), badgeType: 'earn' },
     { href: '/profile', label: t('profile'), icon: User },
   ]
 
@@ -35,7 +35,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
       {/* DESKTOP SIDEBAR (Visible on screens >= 960px) */}
       <aside className="rm-desktop-sidebar">
         <div>
-          {/* Brand Logo & Language Switcher */}
+          {/* Brand Logo & Global Language Switcher */}
           <div className="flex justify-between items-center" style={{ marginBottom: 20 }}>
             <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none' }}>
               <div className="rm-logo" style={{ fontSize: 24 }}>
@@ -89,8 +89,8 @@ export default function AppShell({ children, userProfile, trustScore }) {
                         fontSize: 10, 
                         padding: '1px 6px', 
                         borderRadius: 6, 
-                        background: item.badge === 'Hot' ? 'rgba(244, 63, 94, 0.2)' : item.badge === 'Kiếm tiền' ? 'rgba(245, 158, 11, 0.2)' : item.badge === 'New' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                        color: item.badge === 'Hot' ? '#fb7185' : item.badge === 'Kiếm tiền' ? '#f59e0b' : item.badge === 'New' ? '#22d3ee' : '#34d399'
+                        background: item.badgeType === 'hot' ? 'rgba(244, 63, 94, 0.2)' : item.badgeType === 'earn' ? 'rgba(245, 158, 11, 0.2)' : item.badgeType === 'new' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                        color: item.badgeType === 'hot' ? '#fb7185' : item.badgeType === 'earn' ? '#f59e0b' : item.badgeType === 'new' ? '#22d3ee' : '#34d399'
                       }}
                     >
                       {item.badge}

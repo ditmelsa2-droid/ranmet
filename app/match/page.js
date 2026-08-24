@@ -7,28 +7,29 @@ import {
   Heart, Zap, RefreshCw, AlertCircle, ShieldCheck, Globe, ArrowRight
 } from 'lucide-react'
 import { findMatchAction } from './actions'
+import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
-
-const SEARCHING_TIPS = [
-  'Đang quét tần số radar kết nối...',
-  'Phân tích sở thích tương đồng...',
-  'Kiểm tra múi giờ và ngôn ngữ phù hợp...',
-  'Tính toán chỉ số tương thích bằng AI...'
-]
 
 export default function MatchPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [stage, setStage] = useState('searching') // searching | error | reveal
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [tipIndex, setTipIndex] = useState(0)
+
+  const SEARCHING_TIPS = [
+    t('scanning1'),
+    t('scanning2'),
+    t('scanning3')
+  ]
 
   useEffect(() => {
     const tipInterval = setInterval(() => {
       setTipIndex((prev) => (prev + 1) % SEARCHING_TIPS.length)
     }, 1200)
     return () => clearInterval(tipInterval)
-  }, [])
+  }, [SEARCHING_TIPS.length])
 
   function runMatch() {
     setStage('searching')
@@ -65,7 +66,7 @@ export default function MatchPage() {
             <ArrowLeft size={18} />
           </button>
           <div className="tiny bold flex items-center g6" style={{ letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            <Sparkles size={14} style={{ color: '#ec4899' }} /> AI Matching Radar
+            <Sparkles size={14} style={{ color: '#ec4899' }} /> {t('matchingTitle')}
           </div>
           <div style={{ width: 42 }} />
         </div>
@@ -85,16 +86,16 @@ export default function MatchPage() {
 
             <div style={{ marginTop: 24 }}>
               <h2 className="rm-title" style={{ fontSize: 22, marginBottom: 8, color: '#f8fafc' }}>
-                Đang tìm kiếm người có gu phù hợp
+                {t('matchingTitle')}
               </h2>
               <div className="small muted" style={{ minHeight: 24, transition: 'all 0.3s ease' }}>
-                {SEARCHING_TIPS[tipIndex]}
+                {SEARCHING_TIPS[tipIndex] || t('scanning1')}
               </div>
             </div>
           </div>
         )}
 
-        {/* ERROR STATE */}
+        {/* ERROR / NO MATCH STATE */}
         {stage === 'error' && (
           <div className="card flex col items-center center-text" style={{ padding: 32, animation: 'msgPop 0.3s ease', width: '100%' }}>
             <div 
@@ -112,17 +113,17 @@ export default function MatchPage() {
               <AlertCircle size={32} style={{ color: '#f43f5e' }} />
             </div>
 
-            <h2 className="rm-title" style={{ fontSize: 22, marginBottom: 8 }}>Chưa tìm thấy người phù hợp</h2>
+            <h2 className="rm-title" style={{ fontSize: 22, marginBottom: 8 }}>{t('noMatchTitle')}</h2>
             <p className="small muted" style={{ marginBottom: 24, lineHeight: 1.5, maxWidth: 440 }}>
-              {error || 'Hiện tại cần có thêm tài khoản khác đã hoàn tất Onboarding trên hệ thống để ghép đôi.'}
+              {t('noMatchDesc')}
             </p>
 
             <div className="flex g12" style={{ width: '100%', maxWidth: 360 }}>
               <button className="btn btn-primary grow" onClick={runMatch}>
-                <RefreshCw size={16} /> Thử quét lại
+                <RefreshCw size={16} /> {t('rescanBtn')}
               </button>
               <button className="btn btn-secondary" onClick={() => router.push('/home')}>
-                Về trang chủ
+                {t('backHomeBtn')}
               </button>
             </div>
           </div>
@@ -158,7 +159,7 @@ export default function MatchPage() {
                     {result.candidate.name || 'Người dùng bí ẩn'}
                   </div>
                   <div className="tiny muted flex items-center g6" style={{ marginTop: 4 }}>
-                    <Globe size={14} style={{ color: '#06b6d4' }} /> {result.candidate.country || 'Toàn cầu'}
+                    <Globe size={14} style={{ color: '#06b6d4' }} /> {result.candidate.country || 'Global'}
                   </div>
                 </div>
               </div>
@@ -175,9 +176,9 @@ export default function MatchPage() {
               >
                 <div>
                   <div className="tiny bold" style={{ color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Độ tương thích AI
+                    {t('matchingTitle')}
                   </div>
-                  <div className="small faint">Dựa trên sở thích & phong cách</div>
+                  <div className="small faint">AI Compatibility Match</div>
                 </div>
                 <div className="rm-num bold" style={{ fontSize: 42, background: 'var(--brand-gradient)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
                   {result.compat.total}%
@@ -206,7 +207,7 @@ export default function MatchPage() {
               style={{ padding: '16px 24px', fontSize: 16 }}
               onClick={() => router.push('/chat/' + result.chatId)}
             >
-              <MessageCircle size={20} /> Bắt đầu trò chuyện ngay <ArrowRight size={18} />
+              <MessageCircle size={20} /> {t('startChatBtn')} <ArrowRight size={18} />
             </button>
           </div>
         )}

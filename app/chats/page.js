@@ -8,10 +8,12 @@ import {
   Search, Clock, ChevronRight, User, MoreVertical, X
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
 
 export default function ChatsInboxPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [supabase] = useState(() => createClient())
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState(null)
@@ -78,7 +80,7 @@ export default function ChatsInboxPage() {
 
       const formatted = uniqueChats.map((c) => {
         const partnerId = c.user_a === user.id ? c.user_b : c.user_a
-        const partner = profileMap.get(partnerId) || { display_name: 'Người bạn mới', country: 'Việt Nam' }
+        const partner = profileMap.get(partnerId) || { display_name: 'Friend', country: 'Global' }
         const lastMsg = lastMsgMap.get(c.id)
 
         return {
@@ -90,7 +92,7 @@ export default function ChatsInboxPage() {
           compatibility: c.compatibility || 75,
           isLocked: c.is_locked,
           disconnectType: c.disconnect_type,
-          lastMessage: lastMsg ? (lastMsg.kind === 'image' ? '[Hình ảnh]' : lastMsg.kind === 'video' ? '[Video]' : lastMsg.kind === 'file' ? '[Tập tin]' : lastMsg.content) : 'Chưa có tin nhắn nào',
+          lastMessage: lastMsg ? (lastMsg.kind === 'image' ? '[Image]' : lastMsg.kind === 'video' ? '[Video]' : lastMsg.kind === 'file' ? '[File]' : lastMsg.content) : null,
           lastTime: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       })
@@ -101,7 +103,6 @@ export default function ChatsInboxPage() {
 
     loadChats()
 
-    // Realtime changes on chats & messages
     const channel = supabase
       .channel('inbox-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
@@ -119,7 +120,7 @@ export default function ChatsInboxPage() {
 
   const filteredConversations = conversations.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    (c.lastMessage && c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
   return (
@@ -132,12 +133,12 @@ export default function ChatsInboxPage() {
               <ShieldCheck size={13} style={{ color: '#10b981' }} /> Realtime Messenger
             </div>
             <h1 className="rm-title" style={{ fontSize: 24, color: '#fff', marginTop: 4 }}>
-              Hộp Thư & Cuộc Trò Chuyện 💬
+              {t('inboxTitle')}
             </h1>
           </div>
 
           <Link href="/match" className="btn btn-primary" style={{ width: 'auto', padding: '10px 20px', fontSize: 13, borderRadius: 999 }}>
-            <Compass size={16} /> Ghép bạn mới
+            <Compass size={16} /> {t('newMatchBtn')}
           </Link>
         </div>
 
@@ -147,16 +148,16 @@ export default function ChatsInboxPage() {
           <input
             className="input"
             style={{ paddingLeft: 44, borderRadius: 14, background: 'rgba(255,255,255,0.03)' }}
-            placeholder="Tìm kiếm người trò chuyện hoặc tin nhắn..."
+            placeholder={t('searchChatsPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {/* CONVERSATION LIST (DEDUPLICATED) */}
+        {/* CONVERSATION LIST */}
         {loading ? (
           <div className="card center-text" style={{ padding: 40 }}>
-            <div className="tiny bold muted">Đang tải danh sách tin nhắn...</div>
+            <div className="tiny bold muted">Loading conversations...</div>
           </div>
         ) : filteredConversations.length === 0 ? (
           <div className="card flex col items-center center-text" style={{ padding: '48px 24px' }}>
@@ -174,12 +175,12 @@ export default function ChatsInboxPage() {
             >
               <MessageSquare size={30} style={{ color: '#ec4899' }} />
             </div>
-            <h2 className="rm-title" style={{ fontSize: 20, marginBottom: 8 }}>Chưa có cuộc trò chuyện nào</h2>
+            <h2 className="rm-title" style={{ fontSize: 20, marginBottom: 8 }}>{t('noChatsTitle')}</h2>
             <p className="small muted" style={{ marginBottom: 20, maxWidth: 360, lineHeight: 1.5 }}>
-              Hãy bắt đầu ghép đôi qua AI Match Radar để kết nối với những người bạn có cùng gu và sở thích!
+              {t('noChatsDesc')}
             </p>
             <Link href="/match" className="btn btn-primary" style={{ width: 'auto', padding: '12px 28px' }}>
-              <Compass size={16} /> Bắt đầu ghép đôi ngay
+              <Compass size={16} /> {t('newMatchBtn')}
             </Link>
           </div>
         ) : (
@@ -233,11 +234,11 @@ export default function ChatsInboxPage() {
                     <div className="flex items-center g8" style={{ marginBottom: 4 }}>
                       <span className="semi" style={{ fontSize: 16, color: '#fff' }}>{conv.name}</span>
                       <span className="badge tiny" style={{ fontSize: 10, padding: '2px 7px', background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' }}>
-                        {conv.compatibility}% tương thích
+                        {conv.compatibility}% {t('compatibilityScore')}
                       </span>
                       {conv.isLocked && (
                         <span className="badge tiny" style={{ background: 'rgba(244, 63, 94, 0.25)', color: '#fb7185', fontSize: 9 }}>
-                          🔒 AI Khóa
+                          🔒 AI Lock
                         </span>
                       )}
                     </div>
@@ -250,7 +251,7 @@ export default function ChatsInboxPage() {
                         whiteSpace: 'nowrap' 
                       }}
                     >
-                      {conv.isLocked ? 'Cuộc trò chuyện đang được AI xem xét an toàn' : conv.lastMessage}
+                      {conv.isLocked ? t('aiReviewingMsg') : (conv.lastMessage || t('noMessagesYet'))}
                     </div>
                   </div>
                 </div>
