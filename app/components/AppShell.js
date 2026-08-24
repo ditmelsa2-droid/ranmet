@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   Home, Compass, Video, Globe, User, Zap, 
-  LogOut, ShieldCheck, Sparkles, MessageCircle
+  LogOut, ShieldCheck, Sparkles, MessageCircle, MessageSquare
 } from 'lucide-react'
 
 export default function AppShell({ children, userProfile, trustScore }) {
@@ -12,9 +12,10 @@ export default function AppShell({ children, userProfile, trustScore }) {
 
   const navItems = [
     { href: '/home', label: 'Trang chủ', icon: Home },
+    { href: '/chats', label: 'Tin nhắn', icon: MessageSquare, badge: 'Live' },
     { href: '/videos', label: 'RanVideo', icon: Video, badge: 'Hot' },
     { href: '/match', label: 'Ghép đôi', icon: Compass },
-    { href: '/world', label: 'RanWorld', icon: Globe, badge: 'Live' },
+    { href: '/world', label: 'RanWorld', icon: Globe },
     { href: '/onboarding', label: 'Hồ sơ', icon: User },
   ]
 
@@ -30,7 +31,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
       <aside className="rm-desktop-sidebar">
         <div>
           {/* Brand Logo */}
-          <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none', marginBottom: 32 }}>
+          <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none', marginBottom: 28 }}>
             <div className="rm-logo" style={{ fontSize: 24 }}>
               <Zap size={24} style={{ color: '#ec4899' }} /> RanMet
             </div>
@@ -40,7 +41,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
           </Link>
 
           {/* Nav List */}
-          <nav className="flex col g8">
+          <nav className="flex col g6">
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href))
@@ -50,7 +51,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
                   href={item.href}
                   className={`sidebar-link ${isActive ? 'active' : ''}`}
                 >
-                  <Icon size={20} />
+                  <Icon size={19} />
                   <span className="grow">{item.label}</span>
                   {item.badge && (
                     <span 
@@ -59,8 +60,8 @@ export default function AppShell({ children, userProfile, trustScore }) {
                         fontSize: 10, 
                         padding: '2px 6px', 
                         borderRadius: 6, 
-                        background: item.badge === 'Hot' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(6, 182, 212, 0.2)',
-                        color: item.badge === 'Hot' ? '#fb7185' : '#22d3ee'
+                        background: item.badge === 'Hot' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                        color: item.badge === 'Hot' ? '#fb7185' : '#34d399'
                       }}
                     >
                       {item.badge}
@@ -135,7 +136,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
 
       {/* MOBILE BOTTOM NAVIGATION DOCK (Visible on screens < 960px) */}
       <nav className="rm-mobile-bottom-nav">
-        {navItems.map((item) => {
+        {navItems.filter(i => i.href !== '/onboarding').map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href))
           return (
@@ -144,11 +145,18 @@ export default function AppShell({ children, userProfile, trustScore }) {
               href={item.href}
               className={`mobile-nav-item ${isActive ? 'active' : ''}`}
             >
-              <Icon size={20} />
+              <Icon size={19} />
               <span>{item.label}</span>
             </Link>
           )
         })}
+        <Link
+          href="/onboarding"
+          className={`mobile-nav-item ${pathname === '/onboarding' ? 'active' : ''}`}
+        >
+          <User size={19} />
+          <span>Hồ sơ</span>
+        </Link>
       </nav>
     </div>
   )

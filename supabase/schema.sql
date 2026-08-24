@@ -1,9 +1,9 @@
 -- ============================================================
--- RanMet — Full Fix & Schema for Supabase (Postgres)
--- Chạy toàn bộ file này trong Supabase -> SQL Editor -> Run
+-- RanMet — Full Production Schema for Supabase (Postgres)
+-- Chạy toàn bộ file này trong Supabase Dashboard -> SQL Editor -> Run
 -- ============================================================
 
--- Cấp quyền truy cập Schema và Bảng cho các role của Supabase
+-- 1. Cấp quyền truy cập Schema và Bảng cho các role của Supabase
 grant usage on schema public to postgres, anon, authenticated, service_role;
 grant all on all tables in schema public to postgres, anon, authenticated, service_role;
 grant all on all functions in schema public to postgres, anon, authenticated, service_role;
@@ -194,18 +194,130 @@ create policy "participants can send messages in their chats"
     )
   );
 
--- Bật Realtime cho messages
+-- ---------- RANVIDEO REAL DATABASE ----------
+create table if not exists public.videos (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid references public.profiles(id) on delete set null,
+  creator_name text not null default 'RanMet Creator',
+  creator_handle text not null default '@creator',
+  avatar_letter text not null default 'R',
+  caption text not null,
+  video_url text not null,
+  song_title text not null default 'Original Sound - RanMet',
+  tags text[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+alter table public.videos enable row level security;
+
+drop policy if exists "videos viewable by everyone" on public.videos;
+create policy "videos viewable by everyone" on public.videos for select to authenticated using (true);
+
+drop policy if exists "users can post videos" on public.videos;
+create policy "users can post videos" on public.videos for insert to authenticated with check (auth.uid() = creator_id);
+
+create table if not exists public.video_likes (
+  video_id uuid not null references public.videos(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (video_id, user_id)
+);
+alter table public.video_likes enable row level security;
+
+drop policy if exists "video likes viewable by everyone" on public.video_likes;
+create policy "video likes viewable by everyone" on public.video_likes for select to authenticated using (true);
+
+drop policy if exists "users can toggle likes" on public.video_likes;
+create policy "users can toggle likes" on public.video_likes for insert to authenticated with check (auth.uid() = user_id);
+
+drop policy if exists "users can delete own likes" on public.video_likes;
+create policy "users can delete own likes" on public.video_likes for delete to authenticated using (auth.uid() = user_id);
+
+create table if not exists public.video_comments (
+  id bigserial primary key,
+  video_id uuid not null references public.videos(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  user_name text not null,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.video_comments enable row level security;
+
+drop policy if exists "comments viewable by everyone" on public.video_comments;
+create policy "comments viewable by everyone" on public.video_comments for select to authenticated using (true);
+
+drop policy if exists "users can comment" on public.video_comments;
+create policy "users can comment" on public.video_comments for insert to authenticated with check (auth.uid() = user_id);
+
+-- ---------- RANWORLD REAL DATABASE ----------
+create table if not exists public.world_rooms (
+  id text primary key,
+  name text not null,
+  description text not null default '',
+  category text not null default 'Gaming',
+  creator_id uuid references public.profiles(id) on delete set null,
+  host_name text not null default 'RanMet Host',
+  is_voice boolean not null default true,
+  tags text[] not null default '{}',
+  color text not null default '#ec4899',
+  created_at timestamptz not null default now()
+);
+alter table public.world_rooms enable row level security;
+
+drop policy if exists "world rooms viewable by everyone" on public.world_rooms;
+create policy "world rooms viewable by everyone" on public.world_rooms for select to authenticated using (true);
+
+drop policy if exists "users can create rooms" on public.world_rooms;
+create policy "users can create rooms" on public.world_rooms for insert to authenticated with check (true);
+
+create table if not exists public.world_messages (
+  id bigserial primary key,
+  room_id text not null references public.world_rooms(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  sender_name text not null,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.world_messages enable row level security;
+
+drop policy if exists "world messages viewable by everyone" on public.world_messages;
+create policy "world messages viewable by everyone" on public.world_messages for select to authenticated using (true);
+
+drop policy if exists "users can post world messages" on public.world_messages;
+create policy "users can post world messages" on public.world_messages for insert to authenticated with check (auth.uid() = sender_id);
+
+-- ---------- REALTIME ENABLING ----------
+-- Bật Realtime cho tất cả các bảng tương tác thời gian thực
 do $$
 begin
-  if not exists (
-    select 1 from pg_publication_tables 
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'messages'
-  ) then
-    alter publication supabase_realtime add table public.messages;
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
   end if;
 end $$;
 
--- Đồng bộ dữ liệu cho các tài khoản tạo trước đó
+alter publication supabase_realtime add table public.messages;
+alter publication supabase_realtime add table public.chats;
+alter publication supabase_realtime add table public.world_messages;
+alter publication supabase_realtime add table public.video_comments;
+alter publication supabase_realtime add table public.video_likes;
+
+-- ---------- SEED DATA CHÍNH THỨC VÀO DATABASE ----------
+insert into public.world_rooms (id, name, description, category, host_name, is_voice, tags, color)
+values
+  ('minecraft-builders', 'Thế Giới Minecraft & Builders ⛏️', 'Cộng đồng chia sẻ công trình, server multiplayer và mẹo sinh tồn backrooms.', 'Gaming', 'Kaito_Gamer', true, array['Minecraft', 'Survival', 'Redstone'], '#10b981'),
+  ('anime-lounge', 'Góc Wibu & Anime Mùa Mới ✨', 'Thảo luận các bộ Anime hot, cosplay, manga và art phong cách Cyber.', 'Anime', 'VyVy_Anime', false, array['Anime', 'Manga', 'Cosplay'], '#ec4899'),
+  ('dev-ai-hub', 'Dev & AI Creators Space 💻', 'Nơi quy tụ các lập trình viên Next.js, Supabase, Python AI và Indie Hackers.', 'Công nghệ', 'LinhChi_Dev', true, array['Next.js', 'AI', 'Fullstack'], '#06b6d4'),
+  ('chill-lofi-room', 'Tâm Sự Đêm Khuya & Lofi Beats ☕', 'Phòng nghe nhạc chill, trò chuyện tâm sự nhẹ nhàng sau những giờ làm việc mệt mỏi.', 'Âm nhạc', 'MinhQuan', true, array['Lofi', 'Chill', 'TamSu'], '#a855f7'),
+  ('travel-food', 'Hội Mê Du Lịch & Ẩm Thực 🍜', 'Chia sẻ các địa điểm check-in, quán cafe đẹp và review đồ ăn ngon toàn quốc.', 'Đời sống', 'HaMy', false, array['Foodie', 'Travel', 'Cafe'], '#f59e0b')
+on conflict (id) do nothing;
+
+insert into public.videos (id, creator_name, creator_handle, avatar_letter, caption, video_url, song_title, tags)
+values
+  ('11111111-1111-1111-1111-111111111111', 'LinhChi_Dev', '@linhchi.codes', 'L', 'Setup góc làm việc lập trình cyberpunk ban đêm cực chill ✨💻 #developer #cyberpunk #setup', 'https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-city-at-night-42247-large.mp4', 'Lofi Chill Beats - RanMet Audio', array['#setup', '#coding', '#chill']),
+  ('22222222-2222-2222-2222-222222222222', 'Kaito_Gamer', '@kaito.gaming', 'K', 'Thử thách sinh tồn Minecraft 100 ngày trong thế giới ngầm Backrooms! ⛏️👹 #minecraft #gaming', 'https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1188-large.mp4', 'Epic Gaming Synthwave - Kaito Sound', array['#minecraft', '#survival', '#backrooms']),
+  ('33333333-3333-3333-3333-333333333333', 'VyVy_Anime', '@vyvy.art', 'V', 'Vẽ nhân vật anime theo phong cách Cyber Neon 3D trong 1 tiếng 🎨✨ #anime #digitalart', 'https://assets.mixkit.co/videos/preview/mixkit-futuristic-city-with-flying-cars-and-skyscrapers-41584-large.mp4', 'Anime Future Bass - VyVy Track', array['#anime', '#drawing', '#art'])
+on conflict (id) do nothing;
+
+-- Đồng bộ dữ liệu profiles cho các tài khoản hiện có
 insert into public.profiles (id)
 select id from auth.users
 on conflict (id) do nothing;

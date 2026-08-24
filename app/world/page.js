@@ -1,67 +1,126 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Globe2, Users, MessageSquare, Volume2, Plus, 
   Search, Sparkles, Flame, Shield, ArrowRight, Radio
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import AppShell from '../components/AppShell'
 
 const INITIAL_ROOMS = [
+  ('minecraft-builders', {
+    id: 'minecraft-builders',
+    name: 'Thế Giới Minecraft & Builders ⛏️',
+    description: 'Cộng đồng chia sẻ công trình, server multiplayer và mẹo sinh tồn backrooms.',
+    category: 'Gaming',
+    members: 148,
+    is_voice: true,
+    tags: ['Minecraft', 'Survival', 'Redstone'],
+    host_name: 'Kaito_Gamer',
+    color: '#10b981'
+  }),
+  ('anime-lounge', {
+    id: 'anime-lounge',
+    name: 'Góc Wibu & Anime Mùa Mới ✨',
+    description: 'Thảo luận các bộ Anime hot, cosplay, manga và art phong cách Cyber.',
+    category: 'Anime',
+    members: 112,
+    is_voice: false,
+    tags: ['Anime', 'Manga', 'Cosplay'],
+    host_name: 'VyVy_Anime',
+    color: '#ec4899'
+  }),
+  ('dev-ai-hub', {
+    id: 'dev-ai-hub',
+    name: 'Dev & AI Creators Space 💻',
+    description: 'Nơi quy tụ các lập trình viên Next.js, Supabase, Python AI và Indie Hackers.',
+    category: 'Công nghệ',
+    members: 185,
+    is_voice: true,
+    tags: ['Next.js', 'AI', 'Fullstack'],
+    host_name: 'LinhChi_Dev',
+    color: '#06b6d4'
+  }),
+  ('chill-lofi-room', {
+    id: 'chill-lofi-room',
+    name: 'Tâm Sự Đêm Khuya & Lofi Beats ☕',
+    description: 'Phòng nghe nhạc chill, trò chuyện tâm sự nhẹ nhàng sau những giờ làm việc mệt mỏi.',
+    category: 'Âm nhạc',
+    members: 240,
+    is_voice: true,
+    tags: ['Lofi', 'Chill', 'TamSu'],
+    host_name: 'MinhQuan',
+    color: '#a855f7'
+  }),
+  ('travel-food', {
+    id: 'travel-food',
+    name: 'Hội Mê Du Lịch & Ẩm Thực 🍜',
+    description: 'Chia sẻ các địa điểm check-in, quán cafe đẹp và review đồ ăn ngon toàn quốc.',
+    category: 'Đời sống',
+    members: 76,
+    is_voice: false,
+    tags: ['Foodie', 'Travel', 'Cafe'],
+    host_name: 'HaMy',
+    color: '#f59e0b'
+  })
+]
+
+const DEFAULT_ROOMS_LIST = [
   {
     id: 'minecraft-builders',
     name: 'Thế Giới Minecraft & Builders ⛏️',
-    desc: 'Cộng đồng chia sẻ công trình, server multiplayer và mẹo sinh tồn backrooms.',
+    description: 'Cộng đồng chia sẻ công trình, server multiplayer và mẹo sinh tồn backrooms.',
     category: 'Gaming',
     members: 148,
-    isVoice: true,
+    is_voice: true,
     tags: ['Minecraft', 'Survival', 'Redstone'],
-    host: 'Kaito_Gamer',
+    host_name: 'Kaito_Gamer',
     color: '#10b981'
   },
   {
     id: 'anime-lounge',
     name: 'Góc Wibu & Anime Mùa Mới ✨',
-    desc: 'Thảo luận các bộ Anime hot, cosplay, manga và art phong cách Cyber.',
+    description: 'Thảo luận các bộ Anime hot, cosplay, manga và art phong cách Cyber.',
     category: 'Anime',
     members: 112,
-    isVoice: false,
+    is_voice: false,
     tags: ['Anime', 'Manga', 'Cosplay'],
-    host: 'VyVy_Anime',
+    host_name: 'VyVy_Anime',
     color: '#ec4899'
   },
   {
     id: 'dev-ai-hub',
     name: 'Dev & AI Creators Space 💻',
-    desc: 'Nơi quy tụ các lập trình viên Next.js, Supabase, Python AI và Indie Hackers.',
+    description: 'Nơi quy tụ các lập trình viên Next.js, Supabase, Python AI và Indie Hackers.',
     category: 'Công nghệ',
     members: 185,
-    isVoice: true,
+    is_voice: true,
     tags: ['Next.js', 'AI', 'Fullstack'],
-    host: 'LinhChi_Dev',
+    host_name: 'LinhChi_Dev',
     color: '#06b6d4'
   },
   {
     id: 'chill-lofi-room',
     name: 'Tâm Sự Đêm Khuya & Lofi Beats ☕',
-    desc: 'Phòng nghe nhạc chill, trò chuyện tâm sự nhẹ nhàng sau những giờ làm việc mệt mỏi.',
+    description: 'Phòng nghe nhạc chill, trò chuyện tâm sự nhẹ nhàng sau những giờ làm việc mệt mỏi.',
     category: 'Âm nhạc',
     members: 240,
-    isVoice: true,
+    is_voice: true,
     tags: ['Lofi', 'Chill', 'TamSu'],
-    host: 'MinhQuan',
+    host_name: 'MinhQuan',
     color: '#a855f7'
   },
   {
     id: 'travel-food',
     name: 'Hội Mê Du Lịch & Ẩm Thực 🍜',
-    desc: 'Chia sẻ các địa điểm check-in, quán cafe đẹp và review đồ ăn ngon toàn quốc.',
+    description: 'Chia sẻ các địa điểm check-in, quán cafe đẹp và review đồ ăn ngon toàn quốc.',
     category: 'Đời sống',
     members: 76,
-    isVoice: false,
+    is_voice: false,
     tags: ['Foodie', 'Travel', 'Cafe'],
-    host: 'HaMy',
+    host_name: 'HaMy',
     color: '#f59e0b'
   }
 ]
@@ -69,7 +128,8 @@ const INITIAL_ROOMS = [
 const CATEGORIES = ['Tất cả', 'Gaming', 'Anime', 'Công nghệ', 'Âm nhạc', 'Đời sống']
 
 export default function RanWorldPage() {
-  const [rooms, setRooms] = useState(INITIAL_ROOMS)
+  const [supabase] = useState(() => createClient())
+  const [rooms, setRooms] = useState(DEFAULT_ROOMS_LIST)
   const [selectedCat, setSelectedCat] = useState('Tất cả')
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -77,30 +137,71 @@ export default function RanWorldPage() {
   const [newRoomDesc, setNewRoomDesc] = useState('')
   const [newRoomCategory, setNewRoomCategory] = useState('Gaming')
   const [newRoomIsVoice, setNewRoomIsVoice] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState(null)
+  const [currentUserName, setCurrentUserName] = useState('Bạn')
+
+  useEffect(() => {
+    async function loadRooms() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUserId(user.id)
+        const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
+        if (profile?.display_name) setCurrentUserName(profile.display_name)
+      }
+
+      const { data: dbRooms } = await supabase.from('world_rooms').select('*').order('created_at', { ascending: false })
+      if (dbRooms && dbRooms.length > 0) {
+        setRooms(dbRooms)
+      }
+    }
+
+    loadRooms()
+
+    const channel = supabase
+      .channel('world-rooms-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'world_rooms' }, () => {
+        loadRooms()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase])
 
   const filteredRooms = rooms.filter((r) => {
     const matchCat = selectedCat === 'Tất cả' || r.category === selectedCat
-    const matchSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.desc.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchCat && matchSearch
+    const nameStr = (r.name || '').toLowerCase()
+    const descStr = (r.description || '').toLowerCase()
+    const query = searchQuery.toLowerCase()
+    return matchCat && (nameStr.includes(query) || descStr.includes(query))
   })
 
-  function handleCreateRoom(e) {
+  async function handleCreateRoom(e) {
     e.preventDefault()
     if (!newRoomName.trim()) return
 
+    const roomId = 'room-' + Date.now()
     const newRoom = {
-      id: 'room-' + Date.now(),
+      id: roomId,
       name: newRoomName.trim(),
-      desc: newRoomDesc.trim() || 'Phòng thảo luận cộng đồng RanWorld.',
+      description: newRoomDesc.trim() || 'Phòng thảo luận cộng đồng RanWorld.',
       category: newRoomCategory,
-      members: 1,
-      isVoice: newRoomIsVoice,
-      tags: [newRoomCategory, 'Mới tạo'],
-      host: 'Bạn',
+      creator_id: currentUserId,
+      host_name: currentUserName,
+      is_voice: newRoomIsVoice,
+      tags: [newRoomCategory, 'Live'],
       color: '#ec4899'
     }
 
-    setRooms([newRoom, ...rooms])
+    const { error } = await supabase.from('world_rooms').insert(newRoom)
+    if (!error) {
+      setRooms([newRoom, ...rooms])
+    } else {
+      console.error('Error creating room:', error)
+      setRooms([newRoom, ...rooms])
+    }
+
     setShowCreateModal(false)
     setNewRoomName('')
     setNewRoomDesc('')
@@ -128,7 +229,7 @@ export default function RanWorldPage() {
                 Thế Giới Cộng Đồng Trực Tuyến 🌐
               </h1>
               <p className="small" style={{ color: 'rgba(255, 255, 255, 0.85)', maxWidth: 620, lineHeight: 1.45 }}>
-                Tham gia các không gian thảo luận theo chủ đề yêu thích, trò chuyện bằng âm thanh (Voice Lounge) hoặc văn bản với hàng ngàn thành viên có cùng đam mê.
+                Tham gia các không gian thảo luận theo chủ đề yêu thích, trò chuyện bằng âm thanh (Voice Live) hoặc văn bản với hàng ngàn thành viên có cùng đam mê.
               </p>
             </div>
 
@@ -182,21 +283,21 @@ export default function RanWorldPage() {
                     className="badge tiny" 
                     style={{ 
                       background: 'rgba(255, 255, 255, 0.06)',
-                      color: room.color,
-                      border: `1px solid ${room.color}40`
+                      color: room.color || '#ec4899',
+                      border: `1px solid ${room.color || '#ec4899'}40`
                     }}
                   >
                     {room.category}
                   </span>
 
                   <div className="flex items-center g8">
-                    {room.isVoice && (
+                    {room.is_voice && (
                       <span className="badge badge-success tiny" style={{ fontSize: 10, padding: '2px 8px' }}>
                         <Radio size={10} /> Voice Live
                       </span>
                     )}
                     <span className="tiny faint flex items-center g4">
-                      <Users size={12} /> {room.members}
+                      <Users size={12} /> {room.members || 1}
                     </span>
                   </div>
                 </div>
@@ -206,12 +307,12 @@ export default function RanWorldPage() {
                   {room.name}
                 </h3>
                 <p className="small muted" style={{ marginBottom: 16, lineHeight: 1.45 }}>
-                  {room.desc}
+                  {room.description}
                 </p>
 
                 {/* Tags */}
                 <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                  {room.tags.map((t) => (
+                  {(room.tags || []).map((t) => (
                     <span 
                       key={t} 
                       className="tiny" 
@@ -237,7 +338,7 @@ export default function RanWorldPage() {
                   marginTop: 6
                 }}
               >
-                <span className="tiny faint">Host: <b style={{ color: '#fff' }}>{room.host}</b></span>
+                <span className="tiny faint">Host: <b style={{ color: '#fff' }}>{room.host_name || 'RanMet'}</b></span>
                 <span className="tiny bold flex items-center g4" style={{ color: '#ec4899' }}>
                   Tham gia phòng <ArrowRight size={13} />
                 </span>

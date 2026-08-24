@@ -6,72 +6,102 @@ import {
   ArrowLeft, Users, Mic, MicOff, Volume2, 
   Send, Sparkles, MessageSquare, Radio, ShieldCheck, Heart, Smile
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import AppShell from '../../components/AppShell'
-
-const SAMPLE_ROOM_DATA = {
-  'minecraft-builders': {
-    name: 'Thế Giới Minecraft & Builders ⛏️',
-    desc: 'Cộng đồng chia sẻ công trình, server multiplayer và mẹo sinh tồn backrooms.',
-    category: 'Gaming',
-    members: 148,
-    isVoice: true,
-    host: 'Kaito_Gamer',
-    speakers: [
-      { id: 1, name: 'Kaito_Gamer', isSpeaking: true, role: 'Host' },
-      { id: 2, name: 'LinhChi_Dev', isSpeaking: false, role: 'Speaker' },
-      { id: 3, name: 'MinhQuan', isSpeaking: false, role: 'Member' },
-    ],
-    initialMessages: [
-      { id: 1, user: 'Kaito_Gamer', text: 'Chào mừng anh em vào phòng Minecraft RanWorld! Ai đang chơi server mới không?', time: '16:20' },
-      { id: 2, user: 'LinhChi_Dev', text: 'Mình vừa xây xong elevator redstone 3 tầng nè! 🚀', time: '16:21' },
-      { id: 3, user: 'Alex', text: 'Chia sẻ tọa độ với bác ơi!', time: '16:22' },
-    ]
-  }
-}
 
 export default function RoomDetailPage({ params }) {
   const unwrappedParams = use(params)
   const roomId = unwrappedParams.roomId
 
-  const room = SAMPLE_ROOM_DATA[roomId] || {
-    name: `Phòng Cộng Đồng: ${roomId}`,
-    desc: 'Không gian giao lưu, trò chuyện và kết nối cùng các thành viên RanMet.',
+  const [supabase] = useState(() => createClient())
+  const [roomInfo, setRoomInfo] = useState({
+    name: 'Phòng Thảo Luận RanWorld',
+    description: 'Không gian giao lưu cộng đồng',
     category: 'Cộng đồng',
-    members: 42,
-    isVoice: true,
-    host: 'RanMet Host',
-    speakers: [
-      { id: 1, name: 'Host_User', isSpeaking: true, role: 'Host' },
-      { id: 2, name: 'Guest_99', isSpeaking: false, role: 'Speaker' },
-    ],
-    initialMessages: [
-      { id: 1, user: 'Host_User', text: 'Chào mừng bạn đã tham gia phòng thảo luận! Hãy cùng trò chuyện nhé.', time: '16:20' }
-    ]
-  }
-
-  const [messages, setMessages] = useState(room.initialMessages || [])
+    is_voice: true,
+    host_name: 'Host'
+  })
+  const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [isMicOn, setIsMicOn] = useState(false)
   const [reactionMsg, setReactionMsg] = useState('')
+  const [currentUserId, setCurrentUserId] = useState(null)
+  const [currentUserName, setCurrentUserName] = useState('Bạn')
   const scrollRef = useRef(null)
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [messages.length])
+    async function loadRoomAndMessages() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUserId(user.id)
+        const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
+        if (profile?.display_name) setCurrentUserName(profile.display_name)
+      }
 
-  function sendMessage(e) {
-    e?.preventDefault()
-    if (!draft.trim()) return
+      // Fetch room metadata
+      const { data: room } = await supabase.from('world_rooms').select('*').eq('id', roomId).single()
+      if (room) {
+        setRoomInfo(room)
+      } else {
+        setRoomInfo({
+          name: roomId === 'minecraft-builders' ? 'Thế Giới Minecraft & Builders ⛏️' : `Phòng: ${roomId}`,
+          category: 'Cộng đồng',
+          is_voice: true,
+          host_name: 'RanMet'
+        })
+      }
 
-    const newMsg = {
-      id: Date.now(),
-      user: 'Bạn',
-      text: draft.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      // Fetch existing room messages
+      const { data: msgs } = await supabase
+        .from('world_messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+
+      if (msgs && msgs.length > 0) {
+        setMessages(msgs)
+      }
     }
 
-    setMessages((prev) => [...prev, newMsg])
+    loadRoomAndMessages()
+
+    // Realtime channel for this specific room
+    const channel = supabase
+      .channel(`room:${roomId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'world_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
+        setMessages((prev) => (prev.some((m) => m.id === payload.new.id) ? prev : [...prev, payload.new]))
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [roomId, supabase])
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+  }, [messages])
+
+  async function sendMessage(e) {
+    e?.preventDefault()
+    if (!draft.trim() || !currentUserId) return
+
+    const text = draft.trim()
     setDraft('')
+
+    const newMsg = {
+      room_id: roomId,
+      sender_id: currentUserId,
+      sender_name: currentUserName,
+      content: text
+    }
+
+    const { error } = await supabase.from('world_messages').insert(newMsg)
+    if (error) {
+      console.error('Error inserting message:', error)
+      // optimistic
+      setMessages((prev) => [...prev, { id: Date.now(), ...newMsg, created_at: new Date().toISOString() }])
+    }
   }
 
   function triggerReaction(emoji) {
@@ -97,14 +127,14 @@ export default function RoomDetailPage({ params }) {
             </Link>
             <div>
               <h2 className="rm-title" style={{ fontSize: 19, color: '#fff' }}>
-                {room.name}
+                {roomInfo.name}
               </h2>
               <div className="flex items-center g8 tiny muted">
                 <span className="badge badge-success tiny" style={{ fontSize: 10, padding: '2px 8px' }}>
                   <Radio size={10} /> Live
                 </span>
-                <span>{room.category}</span> · 
-                <span className="flex items-center g4"><Users size={12} /> {room.members} thành viên</span>
+                <span>{roomInfo.category}</span> · 
+                <span className="flex items-center g4"><Users size={12} /> Host: {roomInfo.host_name}</span>
               </div>
             </div>
           </div>
@@ -114,8 +144,8 @@ export default function RoomDetailPage({ params }) {
           </Link>
         </div>
 
-        {/* VOICE STAGE (Live Speakers Grid) */}
-        {room.isVoice && (
+        {/* VOICE STAGE */}
+        {roomInfo.is_voice && (
           <div 
             className="card" 
             style={{ 
@@ -139,7 +169,6 @@ export default function RoomDetailPage({ params }) {
             </div>
 
             <div className="flex g16" style={{ flexWrap: 'wrap' }}>
-              {/* Me / Current user */}
               <div className="flex col items-center g6">
                 <div 
                   className="avatar" 
@@ -152,32 +181,11 @@ export default function RoomDetailPage({ params }) {
                     border: isMicOn ? '2px solid #ec4899' : '2px solid rgba(255,255,255,0.2)'
                   }}
                 >
-                  B
+                  {currentUserName.charAt(0).toUpperCase()}
                 </div>
-                <span className="tiny bold" style={{ color: '#fff' }}>Bạn</span>
+                <span className="tiny bold" style={{ color: '#fff' }}>{currentUserName}</span>
                 <span className="tiny faint" style={{ fontSize: 10 }}>{isMicOn ? 'Đang nói 🎙️' : 'Muted'}</span>
               </div>
-
-              {/* Speakers list */}
-              {room.speakers?.map((s) => (
-                <div key={s.id} className="flex col items-center g6">
-                  <div 
-                    className="avatar" 
-                    style={{ 
-                      width: 52, 
-                      height: 52, 
-                      fontSize: 18, 
-                      background: 'rgba(255,255,255,0.08)',
-                      boxShadow: s.isSpeaking ? '0 0 16px #10b981' : 'none',
-                      border: s.isSpeaking ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.1)'
-                    }}
-                  >
-                    {s.name.charAt(0)}
-                  </div>
-                  <span className="tiny bold" style={{ color: '#fff' }}>{s.name}</span>
-                  <span className="tiny faint" style={{ fontSize: 10 }}>{s.role}</span>
-                </div>
-              ))}
             </div>
           </div>
         )}
@@ -203,36 +211,43 @@ export default function RoomDetailPage({ params }) {
               gap: 12 
             }}
           >
-            {messages.map((m) => {
-              const isMe = m.user === 'Bạn'
-              return (
-                <div key={m.id} className={`flex g10 ${isMe ? 'justify-end' : ''}`}>
-                  {!isMe && (
-                    <div className="avatar" style={{ width: 34, height: 34, fontSize: 13, background: 'var(--brand-gradient)' }}>
-                      {m.user.charAt(0)}
-                    </div>
-                  )}
-                  <div style={{ maxWidth: '75%' }}>
-                    {!isMe && <div className="tiny bold" style={{ color: '#c084fc', marginBottom: 2 }}>{m.user}</div>}
-                    <div 
-                      style={{ 
-                        padding: '10px 14px', 
-                        borderRadius: 16, 
-                        background: isMe ? 'var(--brand-gradient)' : 'rgba(255,255,255,0.06)',
-                        color: '#fff',
-                        fontSize: 14,
-                        lineHeight: 1.4
-                      }}
-                    >
-                      {m.text}
-                    </div>
-                    <div className="tiny faint" style={{ fontSize: 10, marginTop: 2, textAlign: isMe ? 'right' : 'left' }}>
-                      {m.time}
+            {messages.length === 0 ? (
+              <div className="tiny faint center-text" style={{ padding: 30 }}>
+                Chào mừng bạn vào phòng! Hãy gửi tin nhắn đầu tiên để cùng thảo luận nhé ✨
+              </div>
+            ) : (
+              messages.map((m) => {
+                const isMe = m.sender_id === currentUserId
+                const time = new Date(m.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                return (
+                  <div key={m.id} className={`flex g10 ${isMe ? 'justify-end' : ''}`}>
+                    {!isMe && (
+                      <div className="avatar" style={{ width: 34, height: 34, fontSize: 13, background: 'var(--brand-gradient)' }}>
+                        {(m.sender_name || 'U').charAt(0)}
+                      </div>
+                    )}
+                    <div style={{ maxWidth: '75%' }}>
+                      {!isMe && <div className="tiny bold" style={{ color: '#c084fc', marginBottom: 2 }}>{m.sender_name}</div>}
+                      <div 
+                        style={{ 
+                          padding: '10px 14px', 
+                          borderRadius: 16, 
+                          background: isMe ? 'var(--brand-gradient)' : 'rgba(255,255,255,0.06)',
+                          color: '#fff',
+                          fontSize: 14,
+                          lineHeight: 1.4
+                        }}
+                      >
+                        {m.content}
+                      </div>
+                      <div className="tiny faint" style={{ fontSize: 10, marginTop: 2, textAlign: isMe ? 'right' : 'left' }}>
+                        {time}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
 
           {/* Quick Emoji Reactions */}
