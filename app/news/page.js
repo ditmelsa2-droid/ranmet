@@ -4,11 +4,14 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { 
   Newspaper, Heart, MessageCircle, Share2, Send, 
-  Sparkles, Image as ImageIcon, Plus, Flame, Clock, MoreHorizontal, AlertCircle, ShieldCheck, Upload
+  Sparkles, Image as ImageIcon, Plus, Flame, Clock, MoreHorizontal, AlertCircle, ShieldCheck, Upload,
+  Languages, Loader2
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent } from '@/lib/moderation'
 import { readFileAsDataUrl } from '@/lib/upload'
+import { translateText } from '@/lib/translate'
+import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
 
 const INITIAL_SEED_POSTS = [
@@ -41,6 +44,7 @@ const INITIAL_SEED_POSTS = [
 ]
 
 export default function RanNewsPage() {
+  const { lang, t } = useLanguage()
   const [supabase] = useState(() => createClient())
   const [posts, setPosts] = useState(INITIAL_SEED_POSTS)
   const [postDraft, setPostDraft] = useState('')
@@ -53,6 +57,11 @@ export default function RanNewsPage() {
   })
   const [commentDrafts, setCommentDrafts] = useState({})
   const [activeCommentsPostId, setActiveCommentsPostId] = useState(null)
+  
+  // Translation state for posts & comments: { [id]: { translated: string, isTranslating: boolean, show: boolean } }
+  const [postTranslations, setPostTranslations] = useState({})
+  const [commentTranslations, setCommentTranslations] = useState({})
+
   const [currentUserId, setCurrentUserId] = useState(null)
   const [currentUserName, setCurrentUserName] = useState('Người dùng RanMet')
   const [toastMsg, setToastMsg] = useState('')
@@ -63,6 +72,50 @@ export default function RanNewsPage() {
   function showToast(msg) {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(''), 3000)
+  }
+
+  // Handle AI Post Translation
+  async function handleTranslatePost(postId, originalText) {
+    if (postTranslations[postId]?.translated) {
+      setPostTranslations((prev) => ({
+        ...prev,
+        [postId]: { ...prev[postId], show: !prev[postId].show }
+      }))
+      return
+    }
+
+    setPostTranslations((prev) => ({
+      ...prev,
+      [postId]: { isTranslating: true, show: true }
+    }))
+
+    const translated = await translateText(originalText, lang)
+    setPostTranslations((prev) => ({
+      ...prev,
+      [postId]: { translated, isTranslating: false, show: true }
+    }))
+  }
+
+  // Handle AI Comment Translation
+  async function handleTranslateComment(commentId, originalText) {
+    if (commentTranslations[commentId]?.translated) {
+      setCommentTranslations((prev) => ({
+        ...prev,
+        [commentId]: { ...prev[commentId], show: !prev[commentId].show }
+      }))
+      return
+    }
+
+    setCommentTranslations((prev) => ({
+      ...prev,
+      [commentId]: { isTranslating: true, show: true }
+    }))
+
+    const translated = await translateText(originalText, lang)
+    setCommentTranslations((prev) => ({
+      ...prev,
+      [commentId]: { translated, isTranslating: false, show: true }
+    }))
   }
 
   useEffect(() => {
@@ -251,7 +304,7 @@ export default function RanNewsPage() {
                 </div>
                 <div>
                   <div className="semi small" style={{ color: '#fff' }}>{currentUserName}</div>
-                  <div className="tiny faint">Chia sẻ suy nghĩ của bạn với cộng đồng RanMet</div>
+                  <div className="tiny faint">Chia sẻ suy nghĩ của bạn với cộng đồng quốc tế</div>
                 </div>
               </div>
 
@@ -299,7 +352,7 @@ export default function RanNewsPage() {
                   style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 999 }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload size={14} style={{ color: '#06b6d4' }} /> Tải ảnh từ máy
+                  <Upload size={14} style={{ color: '#06b6d4' }} /> {t('uploadPhoto')}
                 </button>
                 <input 
                   type="file" 
@@ -315,7 +368,7 @@ export default function RanNewsPage() {
                   style={{ width: 'auto', padding: '8px 20px', fontSize: 13 }}
                   disabled={!postDraft.trim()}
                 >
-                  <Send size={14} /> Đăng bài
+                  <Send size={14} /> {t('postNews')}
                 </button>
               </div>
             </form>
@@ -329,6 +382,7 @@ export default function RanNewsPage() {
               const postComments = commentsMap[post.id] || []
               const showCommentsSection = activeCommentsPostId === post.id
               const timeStr = new Date(post.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              const postTrans = postTranslations[post.id]
 
               return (
                 <div key={post.id} className="card" style={{ padding: 22 }}>
@@ -346,15 +400,36 @@ export default function RanNewsPage() {
                       </div>
                     </div>
 
-                    <button type="button" className="btn-icon" style={{ width: 32, height: 32 }}>
-                      <MoreHorizontal size={16} />
+                    {/* AI Translation 1-tap button */}
+                    <button 
+                      type="button" 
+                      className="btn-secondary flex items-center g4" 
+                      style={{ padding: '4px 10px', fontSize: 11, borderRadius: 999, color: '#c084fc' }}
+                      onClick={() => handleTranslatePost(post.id, post.content)}
+                    >
+                      {postTrans?.isTranslating ? (
+                        <><Loader2 size={11} className="spin" /> {t('aiTranslating')}</>
+                      ) : postTrans?.show ? (
+                        <><Languages size={11} /> {t('showOriginal')}</>
+                      ) : (
+                        <><Sparkles size={11} /> {t('aiTranslate')}</>
+                      )}
                     </button>
                   </div>
 
-                  {/* Post Content */}
-                  <p className="small" style={{ color: '#f8fafc', lineHeight: 1.55, marginBottom: 14, whiteSpace: 'pre-line' }}>
-                    {post.content}
-                  </p>
+                  {/* Post Content with AI Translation */}
+                  <div className="small" style={{ color: '#f8fafc', lineHeight: 1.55, marginBottom: 14, whiteSpace: 'pre-line' }}>
+                    {postTrans?.show && postTrans?.translated ? (
+                      <div>
+                        <div style={{ borderLeft: '2px solid #a855f7', paddingLeft: 10, color: '#f3e8ff', marginBottom: 6 }}>
+                          {postTrans.translated}
+                        </div>
+                        <div className="tiny faint">(Bản gốc: {post.content})</div>
+                      </div>
+                    ) : (
+                      post.content
+                    )}
+                  </div>
 
                   {/* Attached Image if any */}
                   {post.image_url && (
@@ -393,7 +468,7 @@ export default function RanNewsPage() {
                       }}
                       onClick={() => handleToggleLike(post.id)}
                     >
-                      <Heart size={16} style={{ fill: isLiked ? '#ec4899' : 'transparent' }} />
+                      <Heart size={16} style={{ fill: isLiked ? '#ec4899' : 'none' }} />
                       <span className="bold rm-num">{likesCount}</span>
                     </button>
 
@@ -425,17 +500,31 @@ export default function RanNewsPage() {
                         {postComments.length === 0 ? (
                           <div className="tiny faint">Chưa có bình luận nào. Hãy gửi bình luận đầu tiên!</div>
                         ) : (
-                          postComments.map((c) => (
-                            <div key={c.id} className="flex g8 items-start">
-                              <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, background: 'var(--brand-gradient)' }}>
-                                {(c.user_name || 'U').charAt(0).toUpperCase()}
+                          postComments.map((c) => {
+                            const cTrans = commentTranslations[c.id]
+                            return (
+                              <div key={c.id} className="flex g8 items-start">
+                                <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, background: 'var(--brand-gradient)' }}>
+                                  {(c.user_name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <div style={{ background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: 12, grow: 1, width: '100%' }}>
+                                  <div className="flex justify-between items-center">
+                                    <span className="semi tiny" style={{ color: '#c084fc' }}>{c.user_name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTranslateComment(c.id, c.content)}
+                                      style={{ background: 'none', border: 'none', color: '#a855f7', fontSize: 10, cursor: 'pointer' }}
+                                    >
+                                      {cTrans?.isTranslating ? '...' : cTrans?.show ? t('showOriginal') : t('aiTranslate')}
+                                    </button>
+                                  </div>
+                                  <div className="small" style={{ color: '#fff', marginTop: 2 }}>
+                                    {cTrans?.show && cTrans?.translated ? cTrans.translated : c.content}
+                                  </div>
+                                </div>
                               </div>
-                              <div style={{ background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: 12, grow: 1 }}>
-                                <div className="semi tiny" style={{ color: '#c084fc' }}>{c.user_name}</div>
-                                <div className="small" style={{ color: '#fff', marginTop: 2 }}>{c.content}</div>
-                              </div>
-                            </div>
-                          ))
+                            )
+                          })
                         )}
                       </div>
 
@@ -444,7 +533,7 @@ export default function RanNewsPage() {
                         <input
                           className="input"
                           style={{ padding: '8px 14px', fontSize: 13, borderRadius: 999 }}
-                          placeholder="Viết bình luận..."
+                          placeholder="Viết bình luận (AI tự dịch cho người nước ngoài)..."
                           value={commentDrafts[post.id] || ''}
                           onChange={(e) => setCommentDrafts({ ...commentDrafts, [post.id]: e.target.value })}
                           onKeyDown={(e) => {
@@ -496,10 +585,10 @@ export default function RanNewsPage() {
           <div className="card" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <div className="flex items-center g8" style={{ marginBottom: 8 }}>
               <ShieldCheck size={16} style={{ color: '#10b981' }} />
-              <span className="semi small">Gemini AI Safe Guard</span>
+              <span className="semi small">Gemini AI Safe Guard & Translation</span>
             </div>
             <p className="tiny muted" style={{ lineHeight: 1.5 }}>
-              Mọi bài viết và bình luận trên RanMet đều được giám sát bởi hệ thống Google Gemini AI chống các hành vi xâm hại trực tuyến, quấy rối và nội dung độc hại.
+              Mọi bài viết và bình luận trên RanMet đều được dịch thuật thời gian thực và giám sát bởi hệ thống Google Gemini AI chống các hành vi xâm hại trực tuyến.
             </p>
           </div>
         </div>

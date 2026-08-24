@@ -1,4 +1,5 @@
 import "./globals.css";
+import { LanguageProvider } from "@/lib/LanguageContext";
 
 export const metadata = {
   title: "RanMet — AI Match & Realtime Social",
@@ -28,14 +29,16 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body>
-        <div className="bg-ambient">
-          <div className="orb orb-1" />
-          <div className="orb orb-2" />
-          <div className="orb orb-3" />
-        </div>
-        <div className="rm-container">
-          {children}
-        </div>
+        <LanguageProvider>
+          <div className="bg-ambient">
+            <div className="orb orb-1" />
+            <div className="orb orb-2" />
+            <div className="orb orb-3" />
+          </div>
+          <div className="rm-container">
+            {children}
+          </div>
+        </LanguageProvider>
       </body>
     </html>
   );

@@ -7,11 +7,13 @@ import {
   ArrowLeft, Send, Sparkles, ShieldCheck, 
   MessageCircle, Heart, Flame, Image as ImageIcon, Video as VideoIcon, 
   FileText, Paperclip, Plus, X, Download, Play, Upload, Camera,
-  AlertTriangle, UserX, Lock, ShieldAlert, CheckCircle
+  AlertTriangle, UserX, Lock, ShieldAlert, CheckCircle, Languages, Loader2
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent } from '@/lib/moderation'
 import { readFileAsDataUrl } from '@/lib/upload'
+import { translateText } from '@/lib/translate'
+import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../../components/AppShell'
 
 const ICE_BREAKERS = [
@@ -22,11 +24,15 @@ const ICE_BREAKERS = [
 
 export default function ChatRoom({ chatId, myId, otherName, compatibility, initialMessages }) {
   const router = useRouter()
+  const { lang, t } = useLanguage()
   const [messages, setMessages] = useState(initialMessages || [])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [lockedReason, setLockedReason] = useState('')
+  
+  // Translation state: { [msgId]: { translatedText: string, isTranslating: boolean } }
+  const [translatedMap, setTranslatedMap] = useState({})
   
   // Modals
   const [showMediaModal, setShowMediaModal] = useState(false)
@@ -48,6 +54,29 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
   function showToast(msg) {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(''), 3000)
+  }
+
+  // Handle AI Message Translation
+  async function handleTranslateMessage(msgId, originalContent) {
+    if (translatedMap[msgId]?.translatedText) {
+      // Toggle off
+      setTranslatedMap((prev) => ({
+        ...prev,
+        [msgId]: { ...prev[msgId], showTranslated: !prev[msgId].showTranslated }
+      }))
+      return
+    }
+
+    setTranslatedMap((prev) => ({
+      ...prev,
+      [msgId]: { isTranslating: true, showTranslated: true }
+    }))
+
+    const translated = await translateText(originalContent, lang)
+    setTranslatedMap((prev) => ({
+      ...prev,
+      [msgId]: { translatedText: translated, isTranslating: false, showTranslated: true }
+    }))
   }
 
   // Load chat status (check if locked)
@@ -193,17 +222,15 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
     setLockedReason(reportReason)
     setShowReportModal(false)
 
-    // Update chat in DB to lock from both sides
     await supabase.from('chats').update({
       is_locked: true,
       locked_reason: `Báo cáo: ${reportReason}`
     }).eq('id', chatId)
 
-    // Insert into reports table
     await supabase.from('chat_reports').insert({
       chat_id: chatId,
       reporter_id: myId,
-      reported_user_id: myId, // placeholder partner reference
+      reported_user_id: myId,
       reason: reportReason,
       ai_verdict: 'AI Auto-Locked for Safety Review'
     })
@@ -297,7 +324,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
               onClick={() => setShowReportModal(true)}
               title="Báo cáo vi phạm"
             >
-              <AlertTriangle size={14} /> Báo cáo
+              <AlertTriangle size={14} /> {t('reportAbuse')}
             </button>
 
             <button
@@ -307,7 +334,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
               onClick={() => setShowDisconnectModal(true)}
               title="Ngắt kết nối trò chuyện"
             >
-              <UserX size={14} /> Ngắt kết nối
+              <UserX size={14} /> {t('disconnect')}
             </button>
           </div>
         </div>
@@ -397,6 +424,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           {messages.map((m) => {
             const isMe = m.sender_id === myId
             const time = new Date(m.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            const translation = translatedMap[m.id]
 
             return (
               <div key={m.id} className={`msg-row ${isMe ? 'me' : ''}`}>
@@ -450,20 +478,63 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                     </a>
                   )}
 
-                  {/* Text Content */}
-                  <div>{m.content}</div>
+                  {/* Text Content with AI Translation Display */}
+                  <div>
+                    {translation?.showTranslated && translation?.translatedText ? (
+                      <div>
+                        <div style={{ borderLeft: '2px solid #a855f7', paddingLeft: 8, marginBottom: 4, color: '#f3e8ff' }}>
+                          {translation.translatedText}
+                        </div>
+                        <div className="tiny faint" style={{ fontSize: 10, opacity: 0.6 }}>
+                          (Bản gốc: {m.content})
+                        </div>
+                      </div>
+                    ) : (
+                      m.content
+                    )}
+                  </div>
 
-                  <div 
-                    className="tiny" 
-                    style={{ 
-                      fontSize: 10, 
-                      opacity: 0.65, 
-                      textAlign: 'right', 
-                      marginTop: 4,
-                      fontWeight: 500
-                    }}
-                  >
-                    {time}
+                  {/* Bottom Message Row: Timestamp & AI Translate Action */}
+                  <div className="flex justify-between items-center" style={{ marginTop: 6, gap: 10 }}>
+                    {/* 1-Tap AI Translate Button */}
+                    {m.kind === 'text' && m.content && (
+                      <button
+                        type="button"
+                        onClick={() => handleTranslateMessage(m.id, m.content)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#c084fc',
+                          fontSize: 10.5,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          padding: 0,
+                          opacity: 0.85
+                        }}
+                      >
+                        {translation?.isTranslating ? (
+                          <><Loader2 size={10} className="spin" /> {t('aiTranslating')}</>
+                        ) : translation?.showTranslated ? (
+                          <><Languages size={10} /> {t('showOriginal')}</>
+                        ) : (
+                          <><Sparkles size={10} /> {t('aiTranslate')}</>
+                        )}
+                      </button>
+                    )}
+
+                    <div 
+                      className="tiny" 
+                      style={{ 
+                        fontSize: 10, 
+                        opacity: 0.65, 
+                        marginLeft: 'auto',
+                        fontWeight: 500
+                      }}
+                    >
+                      {time}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -504,7 +575,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                   fontSize: 15,
                   background: 'rgba(255, 255, 255, 0.05)'
                 }}
-                placeholder="Nhập tin nhắn..."
+                placeholder="Nhập tin nhắn (Tự động dịch cho đối phương)..."
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { 
