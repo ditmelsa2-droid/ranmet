@@ -213,7 +213,7 @@ drop policy if exists "videos viewable by everyone" on public.videos;
 create policy "videos viewable by everyone" on public.videos for select to authenticated using (true);
 
 drop policy if exists "users can post videos" on public.videos;
-create policy "users can post videos" on public.videos for insert to authenticated with check (auth.uid() = creator_id);
+create policy "users can post videos" on public.videos for insert to authenticated with check (true);
 
 create table if not exists public.video_likes (
   video_id uuid not null references public.videos(id) on delete cascade,
@@ -285,20 +285,33 @@ create policy "world messages viewable by everyone" on public.world_messages for
 drop policy if exists "users can post world messages" on public.world_messages;
 create policy "users can post world messages" on public.world_messages for insert to authenticated with check (auth.uid() = sender_id);
 
--- ---------- REALTIME ENABLING ----------
--- Bật Realtime cho tất cả các bảng tương tác thời gian thực
+-- ---------- REALTIME ENABLING (IDEMPOTENT CHECK) ----------
 do $$
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     create publication supabase_realtime;
   end if;
-end $$;
 
-alter publication supabase_realtime add table public.messages;
-alter publication supabase_realtime add table public.chats;
-alter publication supabase_realtime add table public.world_messages;
-alter publication supabase_realtime add table public.video_comments;
-alter publication supabase_realtime add table public.video_likes;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'messages') then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'chats') then
+    alter publication supabase_realtime add table public.chats;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'world_messages') then
+    alter publication supabase_realtime add table public.world_messages;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'video_comments') then
+    alter publication supabase_realtime add table public.video_comments;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'video_likes') then
+    alter publication supabase_realtime add table public.video_likes;
+  end if;
+end $$;
 
 -- ---------- SEED DATA CHÍNH THỨC VÀO DATABASE ----------
 insert into public.world_rooms (id, name, description, category, host_name, is_voice, tags, color)
