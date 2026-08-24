@@ -34,21 +34,15 @@ alter table public.profiles enable row level security;
 
 drop policy if exists "profiles are viewable by authenticated users" on public.profiles;
 create policy "profiles are viewable by authenticated users"
-  on public.profiles for select
-  to authenticated
-  using (true);
+  on public.profiles for select to authenticated using (true);
 
 drop policy if exists "users can update own profile" on public.profiles;
 create policy "users can update own profile"
-  on public.profiles for update
-  to authenticated
-  using (auth.uid() = id);
+  on public.profiles for update to authenticated using (auth.uid() = id);
 
 drop policy if exists "users can insert own profile" on public.profiles;
 create policy "users can insert own profile"
-  on public.profiles for insert
-  to authenticated
-  with check (auth.uid() = id);
+  on public.profiles for insert to authenticated with check (auth.uid() = id);
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -98,15 +92,11 @@ alter table public.trust_log enable row level security;
 
 drop policy if exists "users view own trust log" on public.trust_log;
 create policy "users view own trust log"
-  on public.trust_log for select
-  to authenticated
-  using (auth.uid() = user_id);
+  on public.trust_log for select to authenticated using (auth.uid() = user_id);
 
 drop policy if exists "users insert own trust log" on public.trust_log;
 create policy "users insert own trust log"
-  on public.trust_log for insert
-  to authenticated
-  with check (auth.uid() = user_id);
+  on public.trust_log for insert to authenticated with check (auth.uid() = user_id);
 
 create or replace function public.handle_new_user_trust()
 returns trigger
@@ -141,6 +131,25 @@ begin
   insert into public.trust_log (user_id, delta, reason) values (p_user_id, p_delta, p_reason);
 end;
 $$;
+
+-- ---------- REFERRALS / ADS SYSTEM ----------
+create table if not exists public.referrals (
+  id bigserial primary key,
+  referrer_id uuid not null references public.profiles(id) on delete cascade,
+  referred_user_id uuid not null references public.profiles(id) on delete cascade,
+  reward_claimed boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (referrer_id, referred_user_id)
+);
+alter table public.referrals enable row level security;
+
+drop policy if exists "referrals viewable by authenticated users" on public.referrals;
+create policy "referrals viewable by authenticated users"
+  on public.referrals for select to authenticated using (true);
+
+drop policy if exists "users can record referrals" on public.referrals;
+create policy "users can record referrals"
+  on public.referrals for insert to authenticated with check (auth.uid() = referred_user_id or auth.uid() = referrer_id);
 
 -- ---------- CHAT ----------
 create table if not exists public.chats (
@@ -193,6 +202,60 @@ create policy "participants can send messages in their chats"
       where c.id = chat_id and (c.user_a = auth.uid() or c.user_b = auth.uid())
     )
   );
+
+-- ---------- RANNEWS SOCIAL FEED (FACEBOOK-STYLE) ----------
+create table if not exists public.rannews_posts (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  author_name text not null default 'Người dùng RanMet',
+  author_avatar text,
+  content text not null,
+  image_url text,
+  tags text[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+alter table public.rannews_posts enable row level security;
+
+drop policy if exists "posts viewable by authenticated users" on public.rannews_posts;
+create policy "posts viewable by authenticated users"
+  on public.rannews_posts for select to authenticated using (true);
+
+drop policy if exists "users can create posts" on public.rannews_posts;
+create policy "users can create posts"
+  on public.rannews_posts for insert to authenticated with check (auth.uid() = author_id);
+
+create table if not exists public.rannews_likes (
+  post_id uuid not null references public.rannews_posts(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+alter table public.rannews_likes enable row level security;
+
+drop policy if exists "post likes viewable by everyone" on public.rannews_likes;
+create policy "post likes viewable by everyone" on public.rannews_likes for select to authenticated using (true);
+
+drop policy if exists "users can toggle post likes" on public.rannews_likes;
+create policy "users can toggle post likes" on public.rannews_likes for insert to authenticated with check (auth.uid() = user_id);
+
+drop policy if exists "users can delete post likes" on public.rannews_likes;
+create policy "users can delete post likes" on public.rannews_likes for delete to authenticated using (auth.uid() = user_id);
+
+create table if not exists public.rannews_comments (
+  id bigserial primary key,
+  post_id uuid not null references public.rannews_posts(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  user_name text not null,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.rannews_comments enable row level security;
+
+drop policy if exists "post comments viewable by everyone" on public.rannews_comments;
+create policy "post comments viewable by everyone" on public.rannews_comments for select to authenticated using (true);
+
+drop policy if exists "users can comment on posts" on public.rannews_comments;
+create policy "users can comment on posts" on public.rannews_comments for insert to authenticated with check (auth.uid() = user_id);
 
 -- ---------- RANVIDEO REAL DATABASE ----------
 create table if not exists public.videos (
@@ -311,6 +374,18 @@ begin
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'video_likes') then
     alter publication supabase_realtime add table public.video_likes;
   end if;
+
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'rannews_posts') then
+    alter publication supabase_realtime add table public.rannews_posts;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'rannews_comments') then
+    alter publication supabase_realtime add table public.rannews_comments;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'rannews_likes') then
+    alter publication supabase_realtime add table public.rannews_likes;
+  end if;
 end $$;
 
 -- ---------- SEED DATA CHÍNH THỨC VÀO DATABASE ----------
@@ -321,13 +396,6 @@ values
   ('dev-ai-hub', 'Dev & AI Creators Space 💻', 'Nơi quy tụ các lập trình viên Next.js, Supabase, Python AI và Indie Hackers.', 'Công nghệ', 'LinhChi_Dev', true, array['Next.js', 'AI', 'Fullstack'], '#06b6d4'),
   ('chill-lofi-room', 'Tâm Sự Đêm Khuya & Lofi Beats ☕', 'Phòng nghe nhạc chill, trò chuyện tâm sự nhẹ nhàng sau những giờ làm việc mệt mỏi.', 'Âm nhạc', 'MinhQuan', true, array['Lofi', 'Chill', 'TamSu'], '#a855f7'),
   ('travel-food', 'Hội Mê Du Lịch & Ẩm Thực 🍜', 'Chia sẻ các địa điểm check-in, quán cafe đẹp và review đồ ăn ngon toàn quốc.', 'Đời sống', 'HaMy', false, array['Foodie', 'Travel', 'Cafe'], '#f59e0b')
-on conflict (id) do nothing;
-
-insert into public.videos (id, creator_name, creator_handle, avatar_letter, caption, video_url, song_title, tags)
-values
-  ('11111111-1111-1111-1111-111111111111', 'LinhChi_Dev', '@linhchi.codes', 'L', 'Setup góc làm việc lập trình cyberpunk ban đêm cực chill ✨💻 #developer #cyberpunk #setup', 'https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-city-at-night-42247-large.mp4', 'Lofi Chill Beats - RanMet Audio', array['#setup', '#coding', '#chill']),
-  ('22222222-2222-2222-2222-222222222222', 'Kaito_Gamer', '@kaito.gaming', 'K', 'Thử thách sinh tồn Minecraft 100 ngày trong thế giới ngầm Backrooms! ⛏️👹 #minecraft #gaming', 'https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1188-large.mp4', 'Epic Gaming Synthwave - Kaito Sound', array['#minecraft', '#survival', '#backrooms']),
-  ('33333333-3333-3333-3333-333333333333', 'VyVy_Anime', '@vyvy.art', 'V', 'Vẽ nhân vật anime theo phong cách Cyber Neon 3D trong 1 tiếng 🎨✨ #anime #digitalart', 'https://assets.mixkit.co/videos/preview/mixkit-futuristic-city-with-flying-cars-and-skyscrapers-41584-large.mp4', 'Anime Future Bass - VyVy Track', array['#anime', '#drawing', '#art'])
 on conflict (id) do nothing;
 
 -- Đồng bộ dữ liệu profiles cho các tài khoản hiện có

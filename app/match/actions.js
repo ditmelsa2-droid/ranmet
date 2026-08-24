@@ -11,8 +11,17 @@ export async function findMatchAction() {
   const { data: me } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!me) return { error: 'Không tìm thấy hồ sơ.' }
 
-  // Candidates: everyone except me who has finished onboarding, with their
-  // current Trust score joined in (used by the compatibility formula).
+  // 1. Fetch all existing chats of current user to prevent duplicate matches
+  const { data: existingChats } = await supabase
+    .from('chats')
+    .select('user_a, user_b')
+    .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+
+  const matchedUserIds = new Set(
+    (existingChats || []).map((c) => (c.user_a === user.id ? c.user_b : c.user_a))
+  )
+
+  // 2. Fetch candidates: everyone who has completed onboarding, excluding me
   const { data: pool, error: poolError } = await supabase
     .from('profiles')
     .select('*, trust_scores(score)')
@@ -20,12 +29,20 @@ export async function findMatchAction() {
     .neq('id', user.id)
 
   if (poolError) return { error: poolError.message }
-  if (!pool || pool.length === 0) {
-    return { error: 'Chưa có người dùng nào khác để ghép. Hãy mời bạn bè đăng ký thử!' }
+
+  // 3. Filter out anyone who has already been matched before
+  const availablePool = (pool || []).filter((p) => !matchedUserIds.has(p.id))
+
+  if (availablePool.length === 0) {
+    return { 
+      error: 'Chưa có người dùng mới phù hợp với bạn lúc này. Bạn đã kết nối với tất cả người dùng hiện có! Vui lòng thử lại sau hoặc mời thêm bạn bè.' 
+    }
   }
 
-  const picked = pickCandidate(me, pool)
-  if (!picked) return { error: 'Không tìm được ai phù hợp lúc này.' }
+  const picked = pickCandidate(me, availablePool)
+  if (!picked) {
+    return { error: 'Chưa có người dùng phù hợp với bạn lúc này. Vui lòng thử lại sau.' }
+  }
 
   const { data: chat, error: chatError } = await supabase
     .from('chats')

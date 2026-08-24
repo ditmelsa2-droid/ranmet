@@ -4,47 +4,15 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Heart, MessageCircle, Share2, Volume2, VolumeX, 
-  Play, Pause, Music, Sparkles, Flame, UserPlus, Check, Send, Plus, Video as VideoIcon
+  Play, Pause, Music, Sparkles, Flame, UserPlus, Check, Send, Plus, Video as VideoIcon, Clock
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import AppShell from '../components/AppShell'
 
-const FALLBACK_VIDEOS = [
-  {
-    id: '11111111-1111-1111-1111-111111111111',
-    creator_name: 'LinhChi_Dev',
-    creator_handle: '@linhchi.codes',
-    avatar_letter: 'L',
-    caption: 'Setup góc làm việc lập trình cyberpunk ban đêm cực chill ✨💻 #developer #cyberpunk #setup',
-    song_title: 'Lofi Chill Beats - RanMet Audio',
-    video_url: 'https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-city-at-night-42247-large.mp4',
-    tags: ['#setup', '#coding', '#chill'],
-  },
-  {
-    id: '22222222-2222-2222-2222-222222222222',
-    creator_name: 'Kaito_Gamer',
-    creator_handle: '@kaito.gaming',
-    avatar_letter: 'K',
-    caption: 'Thử thách sinh tồn Minecraft 100 ngày trong thế giới ngầm Backrooms! ⛏️👹 #minecraft #gaming',
-    song_title: 'Epic Gaming Synthwave - Kaito Sound',
-    video_url: 'https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1188-large.mp4',
-    tags: ['#minecraft', '#survival', '#backrooms'],
-  },
-  {
-    id: '33333333-3333-3333-3333-333333333333',
-    creator_name: 'VyVy_Anime',
-    creator_handle: '@vyvy.art',
-    avatar_letter: 'V',
-    caption: 'Vẽ nhân vật anime theo phong cách Cyber Neon 3D trong 1 tiếng 🎨✨ #anime #digitalart',
-    song_title: 'Anime Future Bass - VyVy Track',
-    video_url: 'https://assets.mixkit.co/videos/preview/mixkit-futuristic-city-with-flying-cars-and-skyscrapers-41584-large.mp4',
-    tags: ['#anime', '#drawing', '#art'],
-  }
-]
-
 export default function RanVideoPage() {
   const [supabase] = useState(() => createClient())
-  const [videos, setVideos] = useState(FALLBACK_VIDEOS)
+  const [videos, setVideos] = useState([])
+  const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [likedMap, setLikedMap] = useState({})
   const [likesCountMap, setLikesCountMap] = useState({})
@@ -68,7 +36,7 @@ export default function RanVideoPage() {
     setTimeout(() => setToastMsg(''), 2500)
   }
 
-  // Load videos and user from Supabase
+  // Load real videos and user from Supabase
   useEffect(() => {
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -84,7 +52,7 @@ export default function RanVideoPage() {
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (dbVideos && dbVideos.length > 0) {
+      if (dbVideos) {
         setVideos(dbVideos)
       }
 
@@ -113,11 +81,13 @@ export default function RanVideoPage() {
         })
         setCommentsMap(cm)
       }
+
+      setLoading(false)
     }
 
     loadData()
 
-    // Realtime listeners for comments and likes
+    // Realtime listeners
     const channel = supabase
       .channel('videos-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'video_comments' }, (payload) => {
@@ -126,6 +96,9 @@ export default function RanVideoPage() {
           [payload.new.video_id]: [...(prev[payload.new.video_id] || []), payload.new]
         }))
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'videos' }, (payload) => {
+        setVideos((prev) => [payload.new, ...prev])
+      })
       .subscribe()
 
     return () => {
@@ -133,10 +106,10 @@ export default function RanVideoPage() {
     }
   }, [supabase])
 
-  const currentVideo = videos[currentIndex] || FALLBACK_VIDEOS[0]
-  const isLiked = !!likedMap[currentVideo.id]
-  const currentLikes = likesCountMap[currentVideo.id] || 0
-  const currentComments = commentsMap[currentVideo.id] || []
+  const currentVideo = videos[currentIndex]
+  const isLiked = currentVideo ? !!likedMap[currentVideo.id] : false
+  const currentLikes = currentVideo ? likesCountMap[currentVideo.id] || 0 : 0
+  const currentComments = currentVideo ? commentsMap[currentVideo.id] || [] : []
 
   async function toggleLike(videoId) {
     if (!currentUserId) {
@@ -159,7 +132,7 @@ export default function RanVideoPage() {
   }
 
   async function handleAddComment() {
-    if (!commentDraft.trim() || !currentUserId) return
+    if (!commentDraft.trim() || !currentUserId || !currentVideo) return
     const text = commentDraft.trim()
     setCommentDraft('')
 
@@ -172,8 +145,6 @@ export default function RanVideoPage() {
 
     const { error } = await supabase.from('video_comments').insert(newComment)
     if (error) {
-      console.error('Error adding comment:', error)
-      // optimistic update
       setCommentsMap((prev) => ({
         ...prev,
         [currentVideo.id]: [...(prev[currentVideo.id] || []), { id: Date.now(), ...newComment }]
@@ -239,9 +210,6 @@ export default function RanVideoPage() {
               <span className="badge badge-glow" style={{ padding: '6px 14px', cursor: 'pointer' }}>
                 <Flame size={13} /> Thịnh hành
               </span>
-              <span className="chip" style={{ padding: '6px 14px', fontSize: 12 }}>
-                Cộng đồng
-              </span>
             </div>
 
             <button
@@ -254,163 +222,199 @@ export default function RanVideoPage() {
             </button>
           </div>
 
-          {/* Short-form Video Card */}
-          <div className="ranvid-card">
-            <video
-              ref={videoRef}
-              className="ranvid-video"
-              src={currentVideo.video_url}
-              loop
-              autoPlay
-              muted={isMuted}
-              playsInline
-              onClick={togglePlay}
-            />
-
-            {/* Play/Pause Overlay indicator */}
-            {!isPlaying && (
+          {loading ? (
+            <div className="card center-text" style={{ padding: 40, width: '100%', maxWidth: 420 }}>
+              <div className="tiny bold muted">Đang tải video RanVideo...</div>
+            </div>
+          ) : videos.length === 0 ? (
+            /* EMPTY STATE WHEN NO VIDEOS */
+            <div className="card flex col items-center center-text" style={{ padding: '48px 24px', width: '100%', maxWidth: 420 }}>
               <div 
                 style={{ 
-                  position: 'absolute', 
-                  inset: 0, 
+                  width: 64, 
+                  height: 64, 
+                  borderRadius: '50%', 
+                  background: 'rgba(244, 63, 94, 0.15)', 
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center',
-                  background: 'rgba(0,0,0,0.35)',
-                  pointerEvents: 'none'
+                  marginBottom: 16
                 }}
               >
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Play size={32} style={{ color: '#fff', marginLeft: 4 }} />
-                </div>
+                <VideoIcon size={30} style={{ color: '#f43f5e' }} />
               </div>
-            )}
-
-            {/* Right Action Icons */}
-            <div className="ranvid-actions">
-              {/* Creator Avatar */}
-              <div style={{ position: 'relative', marginBottom: 6 }}>
-                <div 
-                  className="avatar" 
-                  style={{ width: 46, height: 46, fontSize: 18, background: 'var(--brand-gradient)' }}
-                >
-                  {currentVideo.avatar_letter || (currentVideo.creator_name || 'R').charAt(0)}
-                </div>
-              </div>
-
-              {/* Like (Real DB synced) */}
+              <h2 className="rm-title" style={{ fontSize: 20, marginBottom: 8 }}>Chưa có video nào</h2>
+              <p className="small muted" style={{ marginBottom: 20, lineHeight: 1.5 }}>
+                Hiện tại chưa có video nào được đăng tải. Vui lòng quay lại sau hoặc là người đầu tiên chia sẻ video của bạn!
+              </p>
               <button 
                 type="button" 
-                className="ranvid-action-btn"
-                onClick={() => toggleLike(currentVideo.id)}
+                className="btn btn-primary"
+                onClick={() => setShowPostModal(true)}
               >
-                <div 
-                  className="ranvid-icon-wrap"
-                  style={{ 
-                    background: isLiked ? 'rgba(236, 72, 153, 0.25)' : 'rgba(20, 16, 32, 0.65)',
-                    borderColor: isLiked ? '#ec4899' : 'rgba(255,255,255,0.15)'
+                <Plus size={16} /> Đăng video đầu tiên
+              </button>
+            </div>
+          ) : (
+            /* Short-form Video Card */
+            <>
+              <div className="ranvid-card">
+                <video
+                  ref={videoRef}
+                  className="ranvid-video"
+                  src={currentVideo.video_url}
+                  loop
+                  autoPlay
+                  muted={isMuted}
+                  playsInline
+                  onClick={togglePlay}
+                />
+
+                {/* Play/Pause Overlay indicator */}
+                {!isPlaying && (
+                  <div 
+                    style={{ 
+                      position: 'absolute', 
+                      inset: 0, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: 'rgba(0,0,0,0.35)',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Play size={32} style={{ color: '#fff', marginLeft: 4 }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Right Action Icons */}
+                <div className="ranvid-actions">
+                  <div style={{ position: 'relative', marginBottom: 6 }}>
+                    <div 
+                      className="avatar" 
+                      style={{ width: 46, height: 46, fontSize: 18, background: 'var(--brand-gradient)' }}
+                    >
+                      {currentVideo.avatar_letter || (currentVideo.creator_name || 'R').charAt(0)}
+                    </div>
+                  </div>
+
+                  {/* Like */}
+                  <button 
+                    type="button" 
+                    className="ranvid-action-btn"
+                    onClick={() => toggleLike(currentVideo.id)}
+                  >
+                    <div 
+                      className="ranvid-icon-wrap"
+                      style={{ 
+                        background: isLiked ? 'rgba(236, 72, 153, 0.25)' : 'rgba(20, 16, 32, 0.65)',
+                        borderColor: isLiked ? '#ec4899' : 'rgba(255,255,255,0.15)'
+                      }}
+                    >
+                      <Heart 
+                        size={24} 
+                        style={{ 
+                          color: isLiked ? '#ec4899' : '#fff',
+                          fill: isLiked ? '#ec4899' : 'transparent',
+                          transition: 'all 0.2s ease'
+                        }} 
+                      />
+                    </div>
+                    <span className="tiny bold rm-num">{currentLikes}</span>
+                  </button>
+
+                  {/* Comment */}
+                  <button 
+                    type="button" 
+                    className="ranvid-action-btn"
+                    onClick={() => setShowComments(true)}
+                  >
+                    <div className="ranvid-icon-wrap">
+                      <MessageCircle size={24} style={{ color: '#fff' }} />
+                    </div>
+                    <span className="tiny bold rm-num">{currentComments.length}</span>
+                  </button>
+
+                  {/* Share */}
+                  <button 
+                    type="button" 
+                    className="ranvid-action-btn"
+                    onClick={() => showToast('Đã sao chép link video vào bộ nhớ tạm! 📋')}
+                  >
+                    <div className="ranvid-icon-wrap">
+                      <Share2 size={22} style={{ color: '#fff' }} />
+                    </div>
+                  </button>
+
+                  {/* Mute/Unmute */}
+                  <button 
+                    type="button" 
+                    className="ranvid-action-btn"
+                    onClick={() => setIsMuted(!isMuted)}
+                  >
+                    <div className="ranvid-icon-wrap">
+                      {isMuted ? <VolumeX size={20} style={{ color: '#fff' }} /> : <Volume2 size={20} style={{ color: '#06b6d4' }} />}
+                    </div>
+                  </button>
+                </div>
+
+                {/* Bottom Overlay Info */}
+                <div className="ranvid-overlay">
+                  <div />
+                  <div>
+                    <div className="flex items-center g8" style={{ marginBottom: 6 }}>
+                      <span className="bold" style={{ fontSize: 16, color: '#fff' }}>
+                        {currentVideo.creator_name}
+                      </span>
+                      <span className="tiny muted">{currentVideo.creator_handle}</span>
+                    </div>
+
+                    <p className="small" style={{ color: '#f8fafc', marginBottom: 10, lineHeight: 1.4 }}>
+                      {currentVideo.caption}
+                    </p>
+
+                    <div className="flex items-center g8 tiny muted">
+                      <Music size={13} style={{ color: '#ec4899' }} />
+                      <span>{currentVideo.song_title}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Controls */}
+              <div className="flex items-center g16" style={{ marginTop: 16 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ width: 'auto', padding: '10px 18px', fontSize: 13 }}
+                  disabled={currentIndex === 0}
+                  onClick={() => {
+                    setCurrentIndex((prev) => Math.max(0, prev - 1))
+                    setIsPlaying(true)
                   }}
                 >
-                  <Heart 
-                    size={24} 
-                    style={{ 
-                      color: isLiked ? '#ec4899' : '#fff',
-                      fill: isLiked ? '#ec4899' : 'transparent',
-                      transition: 'all 0.2s ease'
-                    }} 
-                  />
-                </div>
-                <span className="tiny bold rm-num">{currentLikes}</span>
-              </button>
-
-              {/* Comment (Real DB synced) */}
-              <button 
-                type="button" 
-                className="ranvid-action-btn"
-                onClick={() => setShowComments(true)}
-              >
-                <div className="ranvid-icon-wrap">
-                  <MessageCircle size={24} style={{ color: '#fff' }} />
-                </div>
-                <span className="tiny bold rm-num">{currentComments.length}</span>
-              </button>
-
-              {/* Share */}
-              <button 
-                type="button" 
-                className="ranvid-action-btn"
-                onClick={() => showToast('Đã sao chép link video vào bộ nhớ tạm! 📋')}
-              >
-                <div className="ranvid-icon-wrap">
-                  <Share2 size={22} style={{ color: '#fff' }} />
-                </div>
-              </button>
-
-              {/* Mute/Unmute */}
-              <button 
-                type="button" 
-                className="ranvid-action-btn"
-                onClick={() => setIsMuted(!isMuted)}
-              >
-                <div className="ranvid-icon-wrap">
-                  {isMuted ? <VolumeX size={20} style={{ color: '#fff' }} /> : <Volume2 size={20} style={{ color: '#06b6d4' }} />}
-                </div>
-              </button>
-            </div>
-
-            {/* Bottom Overlay Info (Caption, Song) */}
-            <div className="ranvid-overlay">
-              <div />
-              <div>
-                <div className="flex items-center g8" style={{ marginBottom: 6 }}>
-                  <span className="bold" style={{ fontSize: 16, color: '#fff' }}>
-                    {currentVideo.creator_name}
-                  </span>
-                  <span className="tiny muted">{currentVideo.creator_handle}</span>
-                </div>
-
-                <p className="small" style={{ color: '#f8fafc', marginBottom: 10, lineHeight: 1.4 }}>
-                  {currentVideo.caption}
-                </p>
-
-                <div className="flex items-center g8 tiny muted">
-                  <Music size={13} style={{ color: '#ec4899' }} />
-                  <span>{currentVideo.song_title}</span>
-                </div>
+                  ← Trước
+                </button>
+                <span className="tiny faint rm-num">
+                  {currentIndex + 1} / {videos.length}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ width: 'auto', padding: '10px 18px', fontSize: 13 }}
+                  disabled={currentIndex === videos.length - 1}
+                  onClick={() => {
+                    setCurrentIndex((prev) => Math.min(videos.length - 1, prev + 1))
+                    setIsPlaying(true)
+                  }}
+                >
+                  Tiếp theo →
+                </button>
               </div>
-            </div>
-          </div>
-
-          {/* Navigation Controls */}
-          <div className="flex items-center g16" style={{ marginTop: 16 }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ width: 'auto', padding: '10px 18px', fontSize: 13 }}
-              disabled={currentIndex === 0}
-              onClick={() => {
-                setCurrentIndex((prev) => Math.max(0, prev - 1))
-                setIsPlaying(true)
-              }}
-            >
-              ← Trước
-            </button>
-            <span className="tiny faint rm-num">
-              {currentIndex + 1} / {videos.length}
-            </span>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ width: 'auto', padding: '10px 18px', fontSize: 13 }}
-              disabled={currentIndex === videos.length - 1}
-              onClick={() => {
-                setCurrentIndex((prev) => Math.min(videos.length - 1, prev + 1))
-                setIsPlaying(true)
-              }}
-            >
-              Tiếp theo →
-            </button>
-          </div>
+            </>
+          )}
         </div>
 
         {/* RIGHT DESKTOP SIDEBAR */}
@@ -451,7 +455,7 @@ export default function RanVideoPage() {
       </div>
 
       {/* COMMENTS MODAL / DRAWER */}
-      {showComments && (
+      {showComments && currentVideo && (
         <div 
           style={{
             position: 'fixed',
