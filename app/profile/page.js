@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { 
   User, ShieldCheck, Award, Heart, Sparkles, 
   Globe, Languages, Save, Plus, X, Share2, Copy, Check, MessageSquare, 
-  Image as ImageIcon, DollarSign, AlertCircle, Palette, Upload, Camera
+  Image as ImageIcon, DollarSign, AlertCircle, Palette, Upload, Camera,
+  Trash2, Video as VideoIcon, Newspaper, Eye, Flame
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { trustTier, nextTierInfo } from '@/lib/trust'
@@ -45,6 +46,11 @@ export default function ProfilePage() {
   const [style, setStyle] = useState('')
   const [trustScore, setTrustScore] = useState(100)
   
+  // My Uploaded Content State
+  const [myVideos, setMyVideos] = useState([])
+  const [myPosts, setMyPosts] = useState([])
+  const [activeContentTab, setActiveContentTab] = useState('videos') // 'videos' | 'posts'
+  
   // Referral State
   const [referralCount, setReferralCount] = useState(0)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -57,6 +63,15 @@ export default function ProfilePage() {
   function showToast(msg) {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(''), 2500)
+  }
+
+  async function loadMyContent(uid) {
+    const [{ data: vids }, { data: posts }] = await Promise.all([
+      supabase.from('videos').select('*').eq('creator_id', uid).order('created_at', { ascending: false }),
+      supabase.from('rannews_posts').select('*').eq('author_id', uid).order('created_at', { ascending: false })
+    ])
+    if (vids) setMyVideos(vids)
+    if (posts) setMyPosts(posts)
   }
 
   useEffect(() => {
@@ -91,6 +106,7 @@ export default function ProfilePage() {
         setReferralCount(refCount)
       }
 
+      await loadMyContent(user.id)
       setLoading(false)
     }
 
@@ -105,7 +121,7 @@ export default function ProfilePage() {
       showToast('Đang tải ảnh đại diện lên...')
       const res = await readFileAsDataUrl(file, 20)
       setAvatarUrl(res.url)
-      showToast('Đã tải ảnh đại diện thành công! Bấm "Lưu hồ sơ" để hoàn tất.')
+      showToast('Đã chọn ảnh đại diện! Bấm "Lưu hồ sơ" để hoàn tất.')
     } catch (err) {
       showToast(err.message)
     }
@@ -119,9 +135,37 @@ export default function ProfilePage() {
       showToast('Đang tải ảnh nền lên...')
       const res = await readFileAsDataUrl(file, 30)
       setCustomBannerUrl(res.url)
-      showToast('Đã tải ảnh nền thành công! Bấm "Lưu hồ sơ" để hoàn tất.')
+      showToast('Đã chọn ảnh nền! Bấm "Lưu hồ sơ" để hoàn tất.')
     } catch (err) {
       showToast(err.message)
+    }
+  }
+
+  // Delete My Video
+  async function handleDeleteVideo(videoId) {
+    const confirm = window.confirm('Bạn có chắc chắn muốn xóa video này khỏi hệ thống?')
+    if (!confirm) return
+
+    setMyVideos(myVideos.filter((v) => v.id !== videoId))
+    const { error } = await supabase.from('videos').delete().eq('id', videoId)
+    if (error) {
+      showToast('Lỗi khi xóa video: ' + error.message)
+    } else {
+      showToast('Đã xóa video thành công!')
+    }
+  }
+
+  // Delete My News Post
+  async function handleDeletePost(postId) {
+    const confirm = window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')
+    if (!confirm) return
+
+    setMyPosts(myPosts.filter((p) => p.id !== postId))
+    const { error } = await supabase.from('rannews_posts').delete().eq('id', postId)
+    if (error) {
+      showToast('Lỗi khi xóa bài viết: ' + error.message)
+    } else {
+      showToast('Đã xóa bài viết thành công!')
     }
   }
 
@@ -367,6 +411,112 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* MY UPLOADED CONTENT MANAGER (QUẢN LÝ VIDEO, ẢNH, BÀI VIẾT) */}
+        <div className="card" style={{ padding: 26 }}>
+          <div className="flex justify-between items-center" style={{ marginBottom: 18, borderBottom: '1px solid var(--border)', paddingBottom: 14 }}>
+            <div className="flex items-center g10">
+              <Sparkles size={18} style={{ color: '#06b6d4' }} />
+              <h2 className="rm-title" style={{ fontSize: 18, color: '#fff' }}>
+                Quản Lý Nội Dung Đăng Tải Của Tôi ({myVideos.length + myPosts.length})
+              </h2>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex g8">
+              <button
+                type="button"
+                className={`chip ${activeContentTab === 'videos' ? 'selected' : ''}`}
+                onClick={() => setActiveContentTab('videos')}
+                style={{ padding: '6px 14px', fontSize: 12 }}
+              >
+                <VideoIcon size={13} /> Video ({myVideos.length})
+              </button>
+              <button
+                type="button"
+                className={`chip ${activeContentTab === 'posts' ? 'selected' : ''}`}
+                onClick={() => setActiveContentTab('posts')}
+                style={{ padding: '6px 14px', fontSize: 12 }}
+              >
+                <Newspaper size={13} /> Bài viết ({myPosts.length})
+              </button>
+            </div>
+          </div>
+
+          {/* Tab Videos */}
+          {activeContentTab === 'videos' && (
+            <div>
+              {myVideos.length === 0 ? (
+                <div className="center-text tiny faint" style={{ padding: 24 }}>
+                  Bạn chưa đăng video nào lên RanVideo.
+                </div>
+              ) : (
+                <div className="flex col g12">
+                  {myVideos.map((v) => (
+                    <div key={v.id} className="card flex items-center justify-between" style={{ padding: 14, background: 'rgba(255,255,255,0.03)' }}>
+                      <div className="flex items-center g12">
+                        <div style={{ width: 44, height: 44, borderRadius: 10, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <VideoIcon size={20} style={{ color: '#f43f5e' }} />
+                        </div>
+                        <div>
+                          <div className="semi small" style={{ color: '#fff' }}>{v.caption}</div>
+                          <div className="tiny faint">{v.tags?.join(' ')} · {new Date(v.created_at).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        style={{ width: 34, height: 34, color: '#fb7185' }}
+                        onClick={() => handleDeleteVideo(v.id)}
+                        title="Xóa video"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab Posts */}
+          {activeContentTab === 'posts' && (
+            <div>
+              {myPosts.length === 0 ? (
+                <div className="center-text tiny faint" style={{ padding: 24 }}>
+                  Bạn chưa đăng bài viết nào lên RanNews.
+                </div>
+              ) : (
+                <div className="flex col g12">
+                  {myPosts.map((p) => (
+                    <div key={p.id} className="card flex items-center justify-between" style={{ padding: 14, background: 'rgba(255,255,255,0.03)' }}>
+                      <div className="flex items-center g12">
+                        <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(6,182,212,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Newspaper size={20} style={{ color: '#06b6d4' }} />
+                        </div>
+                        <div>
+                          <div className="semi small" style={{ color: '#fff' }}>{p.content?.slice(0, 50)}...</div>
+                          <div className="tiny faint">{new Date(p.created_at).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        style={{ width: 34, height: 34, color: '#fb7185' }}
+                        onClick={() => handleDeletePost(p.id)}
+                        title="Xóa bài viết"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* REFERRAL / TRUST REWARDS CARD */}
         <div 
           className="card"
@@ -412,59 +562,6 @@ export default function ProfilePage() {
                   background: 'var(--gold-gradient)'
                 }} 
               />
-            </div>
-          </div>
-        </div>
-
-        {/* CUSTOMIZE BANNER & AVATAR UPLOAD (DISCORD STYLE) */}
-        <div className="card flex col g18" style={{ padding: 26 }}>
-          <div className="rm-title flex items-center g8" style={{ fontSize: 18, color: '#fff', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-            <Palette size={18} style={{ color: '#ec4899' }} /> Tải Lên Ảnh Đại Diện & Ảnh Bìa (Từ Thiết Bị)
-          </div>
-
-          <div className="flex g16" style={{ flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn btn-secondary grow"
-              style={{ padding: '14px', fontSize: 13 }}
-              onClick={() => avatarFileRef.current?.click()}
-            >
-              <Camera size={16} style={{ color: '#ec4899' }} /> Tải ảnh đại diện từ điện thoại / máy tính
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-secondary grow"
-              style={{ padding: '14px', fontSize: 13 }}
-              onClick={() => bannerFileRef.current?.click()}
-            >
-              <Upload size={16} style={{ color: '#06b6d4' }} /> Tải ảnh bìa Discord từ thiết bị
-            </button>
-          </div>
-
-          <div className="field-group">
-            <label className="field-label">Hoặc chọn Theme màu ảnh bìa có sẵn:</label>
-            <div className="flex" style={{ flexWrap: 'wrap', gap: 10 }}>
-              {BANNER_THEMES.map((theme) => (
-                <button
-                  key={theme.id}
-                  type="button"
-                  onClick={() => { setBannerTheme(theme.id); setCustomBannerUrl(''); }}
-                  style={{
-                    padding: '10px 16px',
-                    borderRadius: 14,
-                    background: theme.bg,
-                    border: (bannerTheme === theme.id && !customBannerUrl) ? '2px solid #fff' : '1px solid rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontWeight: 700,
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    boxShadow: (bannerTheme === theme.id && !customBannerUrl) ? '0 0 16px rgba(255,255,255,0.5)' : 'none'
-                  }}
-                >
-                  {theme.name}
-                </button>
-              ))}
             </div>
           </div>
         </div>

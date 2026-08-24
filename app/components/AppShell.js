@@ -1,24 +1,47 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   Home, Compass, Video, Globe, User, Zap, 
-  LogOut, ShieldCheck, Sparkles, MessageSquare, Newspaper, DollarSign
+  LogOut, ShieldCheck, Sparkles, MessageSquare, Newspaper, DollarSign,
+  Languages
 } from 'lucide-react'
+import { TRANSLATIONS, detectBrowserLanguage } from '@/lib/i18n'
 
 export default function AppShell({ children, userProfile, trustScore }) {
   const pathname = usePathname()
+  const [lang, setLang] = useState('vi')
+
+  useEffect(() => {
+    // Auto-detect browser language or load from localStorage
+    const saved = localStorage.getItem('ranmet_lang')
+    if (saved && TRANSLATIONS[saved]) {
+      setLang(saved)
+    } else {
+      const detected = detectBrowserLanguage()
+      setLang(detected)
+      localStorage.setItem('ranmet_lang', detected)
+    }
+  }, [])
+
+  function handleLanguageChange(newLang) {
+    setLang(newLang)
+    localStorage.setItem('ranmet_lang', newLang)
+  }
+
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.vi
 
   const navItems = [
-    { href: '/home', label: 'Trang chủ', icon: Home },
-    { href: '/chats', label: 'Tin nhắn', icon: MessageSquare, badge: 'Live' },
-    { href: '/news', label: 'RanNews', icon: Newspaper, badge: 'New' },
-    { href: '/videos', label: 'RanVideo', icon: Video, badge: 'Hot' },
-    { href: '/match', label: 'Ghép đôi', icon: Compass },
-    { href: '/world', label: 'RanWorld', icon: Globe },
-    { href: '/creator', label: 'Creator Studio', icon: DollarSign, badge: 'Kiếm tiền' },
-    { href: '/profile', label: 'Hồ sơ', icon: User },
+    { href: '/home', label: t.home, icon: Home },
+    { href: '/chats', label: t.chats, icon: MessageSquare, badge: 'Live' },
+    { href: '/news', label: t.news, icon: Newspaper, badge: 'New' },
+    { href: '/videos', label: t.videos, icon: Video, badge: 'Hot' },
+    { href: '/match', label: t.match, icon: Compass },
+    { href: '/world', label: t.world, icon: Globe },
+    { href: '/creator', label: t.creator, icon: DollarSign, badge: 'Kiếm tiền' },
+    { href: '/profile', label: t.profile, icon: User },
   ]
 
   const isAuthPage = pathname === '/login' || pathname === '/register'
@@ -32,15 +55,38 @@ export default function AppShell({ children, userProfile, trustScore }) {
       {/* DESKTOP SIDEBAR (Visible on screens >= 960px) */}
       <aside className="rm-desktop-sidebar">
         <div>
-          {/* Brand Logo */}
-          <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none', marginBottom: 20 }}>
-            <div className="rm-logo" style={{ fontSize: 24 }}>
-              <Zap size={24} style={{ color: '#ec4899' }} /> RanMet
-            </div>
-            <span className="badge tiny" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899', fontSize: 10 }}>
-              v1.0
-            </span>
-          </Link>
+          {/* Brand Logo & Language Switcher */}
+          <div className="flex justify-between items-center" style={{ marginBottom: 20 }}>
+            <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none' }}>
+              <div className="rm-logo" style={{ fontSize: 24 }}>
+                <Zap size={24} style={{ color: '#ec4899' }} /> RanMet
+              </div>
+              <span className="badge tiny" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899', fontSize: 10 }}>
+                v1.0
+              </span>
+            </Link>
+
+            {/* Language Dropdown Selector */}
+            <select
+              value={lang}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8,
+                padding: '3px 6px',
+                fontSize: 11,
+                cursor: 'pointer'
+              }}
+              title="Chuyển đổi ngôn ngữ / Language"
+            >
+              <option value="vi" style={{ background: '#161320' }}>🇻🇳 VI</option>
+              <option value="en" style={{ background: '#161320' }}>🇺🇸 EN</option>
+              <option value="ja" style={{ background: '#161320' }}>🇯🇵 JA</option>
+              <option value="ko" style={{ background: '#161320' }}>🇰🇷 KO</option>
+            </select>
+          </div>
 
           {/* Nav List */}
           <nav className="flex col g4">
@@ -88,7 +134,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
             >
               <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
                 <span className="tiny faint flex items-center g4">
-                  <ShieldCheck size={12} style={{ color: '#10b981' }} /> Trust Score
+                  <ShieldCheck size={12} style={{ color: '#10b981' }} /> {t.trustScore}
                 </span>
                 <span className="tiny bold rm-num" style={{ color: '#ec4899' }}>
                   {trustScore} pts
@@ -118,9 +164,9 @@ export default function AppShell({ children, userProfile, trustScore }) {
               </div>
               <div>
                 <div className="semi small" style={{ fontSize: 13.5, lineHeight: 1.2, color: '#fff' }}>
-                  {userProfile?.display_name || 'Hồ sơ cá nhân'}
+                  {userProfile?.display_name || t.profile}
                 </div>
-                <div className="tiny faint" style={{ fontSize: 11 }}>Xem & sửa hồ sơ</div>
+                <div className="tiny faint" style={{ fontSize: 11 }}>{t.saveProfile}</div>
               </div>
             </Link>
 
@@ -140,23 +186,23 @@ export default function AppShell({ children, userProfile, trustScore }) {
       <nav className="rm-mobile-bottom-nav">
         <Link href="/home" className={`mobile-nav-item ${pathname === '/home' ? 'active' : ''}`}>
           <Home size={19} />
-          <span>Trang chủ</span>
+          <span>{t.home}</span>
         </Link>
         <Link href="/news" className={`mobile-nav-item ${pathname.startsWith('/news') ? 'active' : ''}`}>
           <Newspaper size={19} />
-          <span>RanNews</span>
+          <span>{t.news}</span>
         </Link>
         <Link href="/match" className={`mobile-nav-item ${pathname.startsWith('/match') ? 'active' : ''}`}>
           <Compass size={19} />
-          <span>Ghép đôi</span>
+          <span>{t.match}</span>
         </Link>
         <Link href="/chats" className={`mobile-nav-item ${pathname.startsWith('/chats') ? 'active' : ''}`}>
           <MessageSquare size={19} />
-          <span>Tin nhắn</span>
+          <span>{t.chats}</span>
         </Link>
         <Link href="/profile" className={`mobile-nav-item ${pathname.startsWith('/profile') ? 'active' : ''}`}>
           <User size={19} />
-          <span>Hồ sơ</span>
+          <span>{t.profile}</span>
         </Link>
       </nav>
     </div>

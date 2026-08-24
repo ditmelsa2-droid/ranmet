@@ -1,9 +1,7 @@
 -- ============================================================
 -- RanMet — Full Production Schema for Supabase (Postgres)
--- Chạy toàn bộ file này trong Supabase Dashboard -> SQL Editor -> Run
 -- ============================================================
 
--- 1. Cấp quyền truy cập Schema và Bảng cho các role của Supabase
 grant usage on schema public to postgres, anon, authenticated, service_role;
 grant all on all tables in schema public to postgres, anon, authenticated, service_role;
 grant all on all functions in schema public to postgres, anon, authenticated, service_role;
@@ -34,26 +32,6 @@ create table if not exists public.profiles (
   onboarding_complete boolean not null default false,
   created_at timestamptz not null default now()
 );
-
--- Thêm các cột nếu bảng đã tồn tại
-do $$
-begin
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='avatar_url') then
-    alter table public.profiles add column avatar_url text;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='banner_url') then
-    alter table public.profiles add column banner_url text;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='banner_theme') then
-    alter table public.profiles add column banner_theme text default 'cyberpunk';
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='is_creator') then
-    alter table public.profiles add column is_creator boolean not null default false;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='creator_earnings') then
-    alter table public.profiles add column creator_earnings numeric not null default 0;
-  end if;
-end $$;
 
 alter table public.profiles enable row level security;
 
@@ -123,23 +101,6 @@ drop policy if exists "users insert own trust log" on public.trust_log;
 create policy "users insert own trust log"
   on public.trust_log for insert to authenticated with check (auth.uid() = user_id);
 
-create or replace function public.handle_new_user_trust()
-returns trigger
-language plpgsql
-security definer set search_path = ''
-as $$
-begin
-  insert into public.trust_scores (user_id) values (new.id)
-  on conflict (user_id) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_profile_created_trust on public.profiles;
-create trigger on_profile_created_trust
-  after insert on public.profiles
-  for each row execute function public.handle_new_user_trust();
-
 create or replace function public.add_trust(p_user_id uuid, p_delta int, p_reason text)
 returns void
 language plpgsql
@@ -157,36 +118,34 @@ begin
 end;
 $$;
 
--- ---------- REFERRALS / ADS SYSTEM ----------
-create table if not exists public.referrals (
-  id bigserial primary key,
-  referrer_id uuid not null references public.profiles(id) on delete cascade,
-  referred_user_id uuid not null references public.profiles(id) on delete cascade,
-  reward_claimed boolean not null default false,
-  created_at timestamptz not null default now(),
-  unique (referrer_id, referred_user_id)
-);
-alter table public.referrals enable row level security;
-
-drop policy if exists "referrals viewable by authenticated users" on public.referrals;
-create policy "referrals viewable by authenticated users"
-  on public.referrals for select to authenticated using (true);
-
-drop policy if exists "users can record referrals" on public.referrals;
-create policy "users can record referrals"
-  on public.referrals for insert to authenticated with check (auth.uid() = referred_user_id or auth.uid() = referrer_id);
-
--- ---------- CHAT & MEDIA MESSAGES ----------
+-- ---------- CHAT & REPORTS (DISCONNECT & AI LOCK) ----------
 create table if not exists public.chats (
   id uuid primary key default gen_random_uuid(),
   user_a uuid not null references public.profiles(id) on delete cascade,
   user_b uuid not null references public.profiles(id) on delete cascade,
   compatibility int,
   compatibility_breakdown jsonb,
+  is_locked boolean not null default false,
+  locked_reason text,
+  disconnect_type text, -- null | 'permanent' | 'temporary_24h' | 'temporary_7d'
   ended_at timestamptz,
   created_at timestamptz not null default now(),
   constraint different_users check (user_a <> user_b)
 );
+
+do $$
+begin
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='chats' and column_name='is_locked') then
+    alter table public.chats add column is_locked boolean not null default false;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='chats' and column_name='locked_reason') then
+    alter table public.chats add column locked_reason text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='chats' and column_name='disconnect_type') then
+    alter table public.chats add column disconnect_type text;
+  end if;
+end $$;
+
 alter table public.chats enable row level security;
 
 drop policy if exists "participants can view their chats" on public.chats;
@@ -199,6 +158,31 @@ create policy "authenticated users can create a chat they're part of"
   on public.chats for insert to authenticated
   with check (auth.uid() = user_a or auth.uid() = user_b);
 
+drop policy if exists "participants can update their chats" on public.chats;
+create policy "participants can update their chats"
+  on public.chats for update to authenticated
+  using (auth.uid() = user_a or auth.uid() = user_b);
+
+create table if not exists public.chat_reports (
+  id bigserial primary key,
+  chat_id uuid not null references public.chats(id) on delete cascade,
+  reporter_id uuid not null references public.profiles(id) on delete cascade,
+  reported_user_id uuid not null references public.profiles(id) on delete cascade,
+  reason text not null,
+  ai_verdict text,
+  status text not null default 'locked_for_review',
+  created_at timestamptz not null default now()
+);
+alter table public.chat_reports enable row level security;
+
+drop policy if exists "reports viewable by participants" on public.chat_reports;
+create policy "reports viewable by participants" on public.chat_reports for select to authenticated
+  using (auth.uid() = reporter_id or auth.uid() = reported_user_id);
+
+drop policy if exists "users can create reports" on public.chat_reports;
+create policy "users can create reports" on public.chat_reports for insert to authenticated
+  with check (auth.uid() = reporter_id);
+
 create table if not exists public.messages (
   id bigserial primary key,
   chat_id uuid not null references public.chats(id) on delete cascade,
@@ -209,17 +193,6 @@ create table if not exists public.messages (
   file_name text,
   created_at timestamptz not null default now()
 );
-
-do $$
-begin
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='messages' and column_name='media_url') then
-    alter table public.messages add column media_url text;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='messages' and column_name='file_name') then
-    alter table public.messages add column file_name text;
-  end if;
-end $$;
-
 alter table public.messages enable row level security;
 
 drop policy if exists "participants can view messages in their chats" on public.messages;
@@ -262,6 +235,10 @@ drop policy if exists "users can create posts" on public.rannews_posts;
 create policy "users can create posts"
   on public.rannews_posts for insert to authenticated with check (auth.uid() = author_id);
 
+drop policy if exists "users can delete own posts" on public.rannews_posts;
+create policy "users can delete own posts"
+  on public.rannews_posts for delete to authenticated using (auth.uid() = author_id);
+
 create table if not exists public.rannews_likes (
   post_id uuid not null references public.rannews_posts(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -298,7 +275,7 @@ create policy "users can comment on posts" on public.rannews_comments for insert
 -- ---------- RANVIDEO REAL DATABASE ----------
 create table if not exists public.videos (
   id uuid primary key default gen_random_uuid(),
-  creator_id uuid references public.profiles(id) on delete set null,
+  creator_id uuid references public.profiles(id) on delete cascade,
   creator_name text not null default 'RanMet Creator',
   creator_handle text not null default '@creator',
   avatar_letter text not null default 'R',
@@ -315,6 +292,9 @@ create policy "videos viewable by everyone" on public.videos for select to authe
 
 drop policy if exists "users can post videos" on public.videos;
 create policy "users can post videos" on public.videos for insert to authenticated with check (true);
+
+drop policy if exists "users can delete own videos" on public.videos;
+create policy "users can delete own videos" on public.videos for delete to authenticated using (auth.uid() = creator_id);
 
 create table if not exists public.video_likes (
   video_id uuid not null references public.videos(id) on delete cascade,
@@ -386,7 +366,26 @@ create policy "world messages viewable by everyone" on public.world_messages for
 drop policy if exists "users can post world messages" on public.world_messages;
 create policy "users can post world messages" on public.world_messages for insert to authenticated with check (auth.uid() = sender_id);
 
--- ---------- REALTIME ENABLING (IDEMPOTENT CHECK) ----------
+-- ---------- REFERRALS ----------
+create table if not exists public.referrals (
+  id bigserial primary key,
+  referrer_id uuid not null references public.profiles(id) on delete cascade,
+  referred_user_id uuid not null references public.profiles(id) on delete cascade,
+  reward_claimed boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (referrer_id, referred_user_id)
+);
+alter table public.referrals enable row level security;
+
+drop policy if exists "referrals viewable by authenticated users" on public.referrals;
+create policy "referrals viewable by authenticated users"
+  on public.referrals for select to authenticated using (true);
+
+drop policy if exists "users can record referrals" on public.referrals;
+create policy "users can record referrals"
+  on public.referrals for insert to authenticated with check (auth.uid() = referred_user_id or auth.uid() = referrer_id);
+
+-- ---------- REALTIME SUBSCRIPTIONS (IDEMPOTENT) ----------
 do $$
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
@@ -399,6 +398,10 @@ begin
 
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'chats') then
     alter publication supabase_realtime add table public.chats;
+  end if;
+
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'chat_reports') then
+    alter publication supabase_realtime add table public.chat_reports;
   end if;
 
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'world_messages') then
@@ -425,22 +428,3 @@ begin
     alter publication supabase_realtime add table public.rannews_likes;
   end if;
 end $$;
-
--- ---------- SEED DATA CHÍNH THỨC VÀO DATABASE ----------
-insert into public.world_rooms (id, name, description, category, host_name, is_voice, tags, color)
-values
-  ('minecraft-builders', 'Thế Giới Minecraft & Builders ⛏️', 'Cộng đồng chia sẻ công trình, server multiplayer và mẹo sinh tồn backrooms.', 'Gaming', 'Kaito_Gamer', true, array['Minecraft', 'Survival', 'Redstone'], '#10b981'),
-  ('anime-lounge', 'Góc Wibu & Anime Mùa Mới ✨', 'Thảo luận các bộ Anime hot, cosplay, manga và art phong cách Cyber.', 'Anime', 'VyVy_Anime', false, array['Anime', 'Manga', 'Cosplay'], '#ec4899'),
-  ('dev-ai-hub', 'Dev & AI Creators Space 💻', 'Nơi quy tụ các lập trình viên Next.js, Supabase, Python AI và Indie Hackers.', 'Công nghệ', 'LinhChi_Dev', true, array['Next.js', 'AI', 'Fullstack'], '#06b6d4'),
-  ('chill-lofi-room', 'Tâm Sự Đêm Khuya & Lofi Beats ☕', 'Phòng nghe nhạc chill, trò chuyện tâm sự nhẹ nhàng sau những giờ làm việc mệt mỏi.', 'Âm nhạc', 'MinhQuan', true, array['Lofi', 'Chill', 'TamSu'], '#a855f7'),
-  ('travel-food', 'Hội Mê Du Lịch & Ẩm Thực 🍜', 'Chia sẻ các địa điểm check-in, quán cafe đẹp và review đồ ăn ngon toàn quốc.', 'Đời sống', 'HaMy', false, array['Foodie', 'Travel', 'Cafe'], '#f59e0b')
-on conflict (id) do nothing;
-
--- Đồng bộ dữ liệu profiles cho các tài khoản hiện có
-insert into public.profiles (id)
-select id from auth.users
-on conflict (id) do nothing;
-
-insert into public.trust_scores (user_id)
-select id from public.profiles
-on conflict (user_id) do nothing;

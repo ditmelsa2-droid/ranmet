@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
-  MessageCircle, Sparkles, ShieldCheck, ArrowRight, 
-  Compass, Clock, Search, UserCheck
+  MessageSquare, Sparkles, Compass, ShieldCheck, 
+  Search, Clock, ChevronRight, User, MoreVertical, X
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import AppShell from '../components/AppShell'
@@ -13,10 +13,10 @@ import AppShell from '../components/AppShell'
 export default function ChatsInboxPage() {
   const router = useRouter()
   const [supabase] = useState(() => createClient())
-  const [chats, setChats] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState(null)
-  const [search, setSearch] = useState('')
+  const [conversations, setConversations] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     async function loadChats() {
@@ -27,71 +27,87 @@ export default function ChatsInboxPage() {
       }
       setCurrentUserId(user.id)
 
-      // Fetch all chats where user is participant
-      const { data: rawChats, error } = await supabase
+      // Fetch all chats where current user is participant
+      const { data: chatsData } = await supabase
         .from('chats')
-        .select(`
-          id,
-          user_a,
-          user_b,
-          compatibility,
-          created_at,
-          ended_at,
-          messages (
-            id,
-            content,
-            created_at,
-            sender_id
-          )
-        `)
+        .select('*')
         .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
         .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error fetching chats:', error)
+      if (!chatsData || chatsData.length === 0) {
         setLoading(false)
         return
       }
 
-      // Fetch profiles for the partners
-      const partnerIds = (rawChats || []).map((c) => (c.user_a === user.id ? c.user_b : c.user_a))
+      // DEDUPLICATE / GROUP BY PARTNER ID (Keep only the latest chat per partner)
+      const partnerChatMap = new Map()
+      const partnerIds = []
+
+      for (const chat of chatsData) {
+        const partnerId = chat.user_a === user.id ? chat.user_b : chat.user_a
+        if (!partnerChatMap.has(partnerId)) {
+          partnerChatMap.set(partnerId, chat)
+          partnerIds.push(partnerId)
+        }
+      }
+
+      const uniqueChats = Array.from(partnerChatMap.values())
+
+      // Fetch partner profiles
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, display_name, country, avatar_seed')
+        .select('id, display_name, country, avatar_url')
         .in('id', partnerIds)
 
       const profileMap = new Map((profiles || []).map((p) => [p.id, p]))
 
-      const formatted = (rawChats || []).map((c) => {
+      // Fetch latest message for each chat
+      const chatIds = uniqueChats.map((c) => c.id)
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('*')
+        .in('chat_id', chatIds)
+        .order('created_at', { ascending: true })
+
+      const lastMsgMap = new Map()
+      if (messages) {
+        messages.forEach((m) => {
+          lastMsgMap.set(m.chat_id, m)
+        })
+      }
+
+      const formatted = uniqueChats.map((c) => {
         const partnerId = c.user_a === user.id ? c.user_b : c.user_a
-        const partner = profileMap.get(partnerId) || { display_name: 'Người dùng', country: 'Toàn cầu' }
-        const msgs = c.messages || []
-        const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null
+        const partner = profileMap.get(partnerId) || { display_name: 'Người bạn mới', country: 'Việt Nam' }
+        const lastMsg = lastMsgMap.get(c.id)
 
         return {
           id: c.id,
           partnerId,
-          partnerName: partner.display_name,
-          partnerCountry: partner.country,
-          compatibility: c.compatibility || 85,
-          lastMessage: lastMsg?.content || 'Chưa có tin nhắn nào',
-          lastTime: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          name: partner.display_name,
+          avatarUrl: partner.avatar_url,
+          country: partner.country,
+          compatibility: c.compatibility || 75,
+          isLocked: c.is_locked,
+          disconnectType: c.disconnect_type,
+          lastMessage: lastMsg ? (lastMsg.kind === 'image' ? '[Hình ảnh]' : lastMsg.kind === 'video' ? '[Video]' : lastMsg.kind === 'file' ? '[Tập tin]' : lastMsg.content) : 'Chưa có tin nhắn nào',
+          lastTime: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       })
 
-      setChats(formatted)
+      setConversations(formatted)
       setLoading(false)
     }
 
     loadChats()
 
-    // Realtime subscription for incoming new chats
+    // Realtime changes on chats & messages
     const channel = supabase
       .channel('inbox-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
         loadChats()
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, () => {
         loadChats()
       })
       .subscribe()
@@ -101,52 +117,53 @@ export default function ChatsInboxPage() {
     }
   }, [router, supabase])
 
-  const filtered = chats.filter((c) =>
-    c.partnerName.toLowerCase().includes(search.toLowerCase()) ||
-    c.lastMessage.toLowerCase().includes(search.toLowerCase())
+  const filteredConversations = conversations.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (
     <AppShell>
-      <div className="flex col g24" style={{ maxWidth: 840, margin: '0 auto', width: '100%' }}>
-        {/* Top Header */}
-        <div className="flex justify-between items-center">
+      <div className="flex col g20" style={{ maxWidth: 840, margin: '0 auto', width: '100%' }}>
+        {/* HEADER BAR */}
+        <div className="flex justify-between items-center" style={{ flexWrap: 'wrap', gap: 14 }}>
           <div>
-            <div className="tiny faint flex items-center g6" style={{ textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-              <ShieldCheck size={14} style={{ color: '#10b981' }} /> Realtime Messenger
+            <div className="tiny faint flex items-center g6" style={{ letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              <ShieldCheck size={13} style={{ color: '#10b981' }} /> Realtime Messenger
             </div>
-            <h1 className="rm-title" style={{ fontSize: 26, color: '#fff' }}>
+            <h1 className="rm-title" style={{ fontSize: 24, color: '#fff', marginTop: 4 }}>
               Hộp Thư & Cuộc Trò Chuyện 💬
             </h1>
           </div>
 
-          <Link href="/match" className="btn btn-primary" style={{ width: 'auto', padding: '10px 18px', fontSize: 13 }}>
+          <Link href="/match" className="btn btn-primary" style={{ width: 'auto', padding: '10px 20px', fontSize: 13, borderRadius: 999 }}>
             <Compass size={16} /> Ghép bạn mới
           </Link>
         </div>
 
-        {/* Search bar */}
-        <div>
+        {/* SEARCH BAR */}
+        <div style={{ position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             className="input"
-            style={{ padding: '12px 18px', borderRadius: 999 }}
-            placeholder="🔍 Tìm kiếm người trò chuyện hoặc tin nhắn..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            style={{ paddingLeft: 44, borderRadius: 14, background: 'rgba(255,255,255,0.03)' }}
+            placeholder="Tìm kiếm người trò chuyện hoặc tin nhắn..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {/* Chats List */}
+        {/* CONVERSATION LIST (DEDUPLICATED) */}
         {loading ? (
           <div className="card center-text" style={{ padding: 40 }}>
-            <div className="tiny bold muted">Đang tải lịch sử hội thoại...</div>
+            <div className="tiny bold muted">Đang tải danh sách tin nhắn...</div>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="card flex col items-center center-text" style={{ padding: 48 }}>
+        ) : filteredConversations.length === 0 ? (
+          <div className="card flex col items-center center-text" style={{ padding: '48px 24px' }}>
             <div 
               style={{ 
-                width: 60, 
-                height: 60, 
+                width: 64, 
+                height: 64, 
                 borderRadius: '50%', 
                 background: 'rgba(236, 72, 153, 0.15)', 
                 display: 'flex', 
@@ -155,37 +172,47 @@ export default function ChatsInboxPage() {
                 marginBottom: 16
               }}
             >
-              <MessageCircle size={28} style={{ color: '#ec4899' }} />
+              <MessageSquare size={30} style={{ color: '#ec4899' }} />
             </div>
-            <h2 className="rm-title" style={{ fontSize: 20, marginBottom: 6 }}>Chưa có cuộc trò chuyện nào</h2>
-            <p className="small muted" style={{ marginBottom: 20, maxWidth: 400 }}>
-              Hãy sử dụng tính năng Ghép đôi AI để tìm bạn mới và bắt đầu trò chuyện ngay lập tức!
+            <h2 className="rm-title" style={{ fontSize: 20, marginBottom: 8 }}>Chưa có cuộc trò chuyện nào</h2>
+            <p className="small muted" style={{ marginBottom: 20, maxWidth: 360, lineHeight: 1.5 }}>
+              Hãy bắt đầu ghép đôi qua AI Match Radar để kết nối với những người bạn có cùng gu và sở thích!
             </p>
-            <Link href="/match" className="btn btn-primary" style={{ width: 'auto', padding: '12px 24px' }}>
-              <Compass size={16} /> Bắt đầu ghép đôi AI
+            <Link href="/match" className="btn btn-primary" style={{ width: 'auto', padding: '12px 28px' }}>
+              <Compass size={16} /> Bắt đầu ghép đôi ngay
             </Link>
           </div>
         ) : (
-          <div className="flex col g12">
-            {filtered.map((c) => (
+          <div className="flex col g10">
+            {filteredConversations.map((conv) => (
               <Link 
-                key={c.id} 
-                href={`/chat/${c.id}`}
+                key={conv.id} 
+                href={`/chat/${conv.id}`}
                 className="card card-interactive flex items-center justify-between"
-                style={{ padding: '18px 20px' }}
+                style={{ 
+                  padding: '16px 20px', 
+                  borderRadius: 18,
+                  background: conv.isLocked ? 'rgba(244, 63, 94, 0.08)' : 'rgba(20, 16, 32, 0.75)',
+                  border: conv.isLocked ? '1px solid rgba(244, 63, 94, 0.4)' : '1px solid var(--border)'
+                }}
               >
-                <div className="flex items-center g14">
-                  <div style={{ position: 'relative' }}>
-                    <div 
-                      className="avatar" 
-                      style={{ 
-                        width: 48, 
-                        height: 48, 
-                        fontSize: 18, 
-                        background: 'var(--brand-gradient)' 
+                <div className="flex items-center g14 grow" style={{ overflow: 'hidden' }}>
+                  {/* Avatar with Status */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div
+                      className="avatar"
+                      style={{
+                        width: 48,
+                        height: 48,
+                        fontSize: 18,
+                        background: 'var(--brand-gradient)',
                       }}
                     >
-                      {c.partnerName.charAt(0).toUpperCase()}
+                      {conv.avatarUrl ? (
+                        <img src={conv.avatarUrl} alt="Avatar" />
+                      ) : (
+                        conv.name.charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div 
                       style={{ 
@@ -195,30 +222,42 @@ export default function ChatsInboxPage() {
                         width: 12, 
                         height: 12, 
                         borderRadius: '50%', 
-                        background: '#10b981', 
+                        background: conv.isLocked ? '#f43f5e' : '#10b981', 
                         border: '2px solid #161320' 
                       }} 
                     />
                   </div>
 
-                  <div>
-                    <div className="flex items-center g8">
-                      <span className="semi" style={{ fontSize: 16, color: '#fff' }}>
-                        {c.partnerName}
+                  {/* Text Details */}
+                  <div className="grow" style={{ overflow: 'hidden' }}>
+                    <div className="flex items-center g8" style={{ marginBottom: 4 }}>
+                      <span className="semi" style={{ fontSize: 16, color: '#fff' }}>{conv.name}</span>
+                      <span className="badge tiny" style={{ fontSize: 10, padding: '2px 7px', background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' }}>
+                        {conv.compatibility}% tương thích
                       </span>
-                      <span className="badge badge-glow tiny" style={{ fontSize: 10, padding: '2px 6px' }}>
-                        {c.compatibility}% Tương thích
-                      </span>
+                      {conv.isLocked && (
+                        <span className="badge tiny" style={{ background: 'rgba(244, 63, 94, 0.25)', color: '#fb7185', fontSize: 9 }}>
+                          🔒 AI Khóa
+                        </span>
+                      )}
                     </div>
-                    <div className="small muted" style={{ marginTop: 4, maxWidth: 420, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {c.lastMessage}
+                    <div 
+                      className="small" 
+                      style={{ 
+                        color: conv.isLocked ? '#fb7185' : 'var(--text-muted)', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap' 
+                      }}
+                    >
+                      {conv.isLocked ? 'Cuộc trò chuyện đang được AI xem xét an toàn' : conv.lastMessage}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex col items-end g6">
-                  <span className="tiny faint rm-num">{c.lastTime}</span>
-                  <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
+                <div className="flex items-center g10" style={{ flexShrink: 0, marginLeft: 12 }}>
+                  <span className="tiny faint">{conv.lastTime}</span>
+                  <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
                 </div>
               </Link>
             ))}

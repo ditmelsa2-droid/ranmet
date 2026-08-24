@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { 
-  Heart, MessageCircle, Share2, Volume2, VolumeX, 
-  Play, Pause, Music, Sparkles, Flame, UserPlus, Check, Send, Plus, Video as VideoIcon, Clock, AlertCircle, ShieldCheck, Upload
+  Heart, MessageCircle, Share2, Music, Volume2, 
+  VolumeX, Play, Plus, Sparkles, Flame, Eye, Compass, X, Upload, Video as VideoIcon
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent, checkTags } from '@/lib/moderation'
@@ -12,96 +12,73 @@ import { readFileAsDataUrl } from '@/lib/upload'
 import AppShell from '../components/AppShell'
 
 export default function RanVideoPage() {
-  const [supabase] = useState(() => createClient())
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [muted, setMuted] = useState(true)
   const [likedMap, setLikedMap] = useState({})
   const [likesCountMap, setLikesCountMap] = useState({})
-  const [commentsMap, setCommentsMap] = useState({})
-  const [isMuted, setIsMuted] = useState(true)
-  const [isPlaying, setIsPlaying] = useState(true)
+  
+  // Comments modal state
   const [showComments, setShowComments] = useState(false)
-  const [commentDraft, setCommentDraft] = useState('')
-  const [showPostModal, setShowPostModal] = useState(false)
-  const [newVideoUrl, setNewVideoUrl] = useState('')
+  const [activeVideoComments, setActiveVideoComments] = useState([])
+  const [newComment, setNewComment] = useState('')
+  const [activeVideoId, setActiveVideoId] = useState(null)
+  
+  // Upload modal state
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [videoUrl, setVideoUrl] = useState('')
+  const [videoFileName, setVideoFileName] = useState('')
   const [newCaption, setNewCaption] = useState('')
-  const [newTags, setNewTags] = useState('')
+  const [newTags, setNewTags] = useState('#trend, #ranmet')
+  const [newSong, setNewSong] = useState('Original Sound - RanMet')
+  const [isPosting, setIsPosting] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
-  const [moderationError, setModerationError] = useState('')
+  
   const [currentUserId, setCurrentUserId] = useState(null)
-  const [currentUserName, setCurrentUserName] = useState('Người dùng RanMet')
-
-  const videoRef = useRef(null)
-  const fileInputRef = useRef(null)
+  const [userProfile, setUserProfile] = useState(null)
+  const containerRef = useRef(null)
+  const videoRefs = useRef([])
+  const videoFileInputRef = useRef(null)
+  const [supabase] = useState(() => createClient())
 
   function showToast(msg) {
     setToastMsg(msg)
-    setTimeout(() => setToastMsg(''), 2500)
+    setTimeout(() => setToastMsg(''), 3000)
   }
 
-  // Load real videos and user from Supabase
+  // Fetch videos from Supabase
+  async function fetchVideos() {
+    const { data, error } = await supabase
+      .from('videos')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (data && data.length > 0) {
+      setVideos(data)
+    } else {
+      setVideos([])
+    }
+    setLoading(false)
+  }
+
   useEffect(() => {
-    async function loadData() {
+    async function loadUser() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setCurrentUserId(user.id)
-        const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
-        if (profile?.display_name) setCurrentUserName(profile.display_name)
+        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        if (prof) setUserProfile(prof)
       }
-
-      // Fetch real videos from DB
-      const { data: dbVideos } = await supabase
-        .from('videos')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (dbVideos) {
-        setVideos(dbVideos)
-      }
-
-      // Fetch likes count and comments for all videos
-      const { data: likes } = await supabase.from('video_likes').select('video_id, user_id')
-      if (likes) {
-        const counts = {}
-        const userLiked = {}
-        likes.forEach((l) => {
-          counts[l.video_id] = (counts[l.video_id] || 0) + 1
-          if (user && l.user_id === user.id) {
-            userLiked[l.video_id] = true
-          }
-        })
-        setLikesCountMap(counts)
-        setLikedMap(userLiked)
-      }
-
-      // Fetch comments
-      const { data: comments } = await supabase.from('video_comments').select('*').order('created_at', { ascending: true })
-      if (comments) {
-        const cm = {}
-        comments.forEach((c) => {
-          if (!cm[c.video_id]) cm[c.video_id] = []
-          cm[c.video_id].push(c)
-        })
-        setCommentsMap(cm)
-      }
-
-      setLoading(false)
     }
+    loadUser()
+    fetchVideos()
 
-    loadData()
-
-    // Realtime listeners
+    // Realtime listener for new videos
     const channel = supabase
-      .channel('videos-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'video_comments' }, (payload) => {
-        setCommentsMap((prev) => ({
-          ...prev,
-          [payload.new.video_id]: [...(prev[payload.new.video_id] || []), payload.new]
-        }))
-      })
+      .channel('ranvideo-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'videos' }, (payload) => {
-        setVideos((prev) => [payload.new, ...prev])
+        setVideos((prev) => [payload.new, ...prev.filter(v => v.id !== payload.new.id)])
       })
       .subscribe()
 
@@ -110,475 +87,469 @@ export default function RanVideoPage() {
     }
   }, [supabase])
 
-  const currentVideo = videos[currentIndex]
-  const isLiked = currentVideo ? !!likedMap[currentVideo.id] : false
-  const currentLikes = currentVideo ? likesCountMap[currentVideo.id] || 0 : 0
-  const currentComments = currentVideo ? commentsMap[currentVideo.id] || [] : []
-
-  async function handleVideoFileUpload(e) {
+  // Direct Device Video Upload
+  async function handleDeviceVideoPick(e) {
     const file = e.target.files?.[0]
     if (!file) return
+
     try {
-      showToast('Đang xử lý tệp video từ thiết bị...')
-      const res = await readFileAsDataUrl(file, 80)
-      setNewVideoUrl(res.url)
-      showToast('Đã tải video từ thiết bị thành công! Sẵn sàng đăng tải. 🎬')
+      showToast('Đang đọc file video từ thiết bị...')
+      const res = await readFileAsDataUrl(file, 50)
+      setVideoUrl(res.url)
+      setVideoFileName(res.name)
+      showToast('Đã chọn video từ máy! Hãy nhập mô tả và bấm Đăng.')
     } catch (err) {
       showToast(err.message)
     }
   }
 
-  async function toggleLike(videoId) {
-    if (!currentUserId) {
-      showToast('Vui lòng đăng nhập để thả tim!')
+  // Handle Post Video with AI Safety & Gemini Check
+  async function handlePostVideo(e) {
+    e.preventDefault()
+    if (!videoUrl.trim() || isPosting) return
+
+    const cleanCaption = newCaption.trim()
+    if (!cleanCaption) {
+      showToast('Vui lòng nhập mô tả cho video!')
       return
     }
 
-    const wasLiked = !!likedMap[videoId]
-    setLikedMap((prev) => ({ ...prev, [videoId]: !wasLiked }))
-    setLikesCountMap((prev) => ({
-      ...prev,
-      [videoId]: Math.max(0, (prev[videoId] || 0) + (wasLiked ? -1 : 1))
-    }))
+    setIsPosting(true)
+    showToast('AI đang kiểm duyệt nội dung video... 🧠')
 
-    if (wasLiked) {
-      await supabase.from('video_likes').delete().match({ video_id: videoId, user_id: currentUserId })
+    // AI & DEEP SLANG MODERATION CHECK
+    const captionCheck = await checkContent(cleanCaption)
+    if (!captionCheck.isSafe) {
+      showToast(`Mô tả video bị từ chối: Vi phạm an toàn cộng đồng! ⚠️`)
+      setIsPosting(false)
+      return
+    }
+
+    const rawTags = newTags.split(/[\s,]+/).map(t => t.startsWith('#') ? t : `#${t}`).filter(t => t.length > 1)
+    const tagsCheck = await checkTags(rawTags)
+    if (tagsCheck.hasBlocked) {
+      showToast(`Hashtag [${tagsCheck.blockedWords.join(', ')}] bị hệ thống AI từ chối!`)
+      setIsPosting(false)
+      return
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const activeUid = currentUserId || user?.id || null
+
+    const newVid = {
+      creator_id: activeUid,
+      creator_name: userProfile?.display_name || 'RanMet Creator',
+      creator_handle: `@${(userProfile?.display_name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
+      avatar_letter: (userProfile?.display_name || 'R').charAt(0).toUpperCase(),
+      caption: cleanCaption,
+      video_url: videoUrl.trim(),
+      song_title: newSong.trim() || 'Original Sound - RanMet',
+      tags: tagsCheck.safeTags
+    }
+
+    const { data, error } = await supabase.from('videos').insert(newVid).select().single()
+
+    setIsPosting(false)
+
+    if (error) {
+      showToast('Lỗi đăng video: ' + error.message)
+    } else {
+      setShowUploadModal(false)
+      setVideoUrl('')
+      setVideoFileName('')
+      setNewCaption('')
+      showToast('Đã đăng video thành công lên RanVideo! ✨')
+      if (data) {
+        setVideos((prev) => [data, ...prev.filter(v => v.id !== data.id)])
+      }
+    }
+  }
+
+  // Toggle Like
+  async function toggleLike(videoId) {
+    const isLiked = likedMap[videoId]
+    const currentCount = likesCountMap[videoId] || 0
+
+    setLikedMap((prev) => ({ ...prev, [videoId]: !isLiked }))
+    setLikesCountMap((prev) => ({ ...prev, [videoId]: isLiked ? Math.max(0, currentCount - 1) : currentCount + 1 }))
+
+    if (!currentUserId) return
+
+    if (isLiked) {
+      await supabase.from('video_likes').delete().eq('video_id', videoId).eq('user_id', currentUserId)
     } else {
       await supabase.from('video_likes').insert({ video_id: videoId, user_id: currentUserId })
     }
   }
 
-  async function handleAddComment() {
-    if (!commentDraft.trim() || !currentUserId || !currentVideo) return
-    const text = commentDraft.trim()
-
-    // AI Moderation check
-    const modCheck = await checkContent(text)
-    if (!modCheck.isSafe) {
-      showToast('Bình luận vi phạm tiêu chuẩn cộng đồng, đã bị chặn!')
-      return
-    }
-
-    setCommentDraft('')
-
-    const newComment = {
-      video_id: currentVideo.id,
-      user_id: currentUserId,
-      user_name: currentUserName,
-      content: text,
-    }
-
-    const { error } = await supabase.from('video_comments').insert(newComment)
-    if (error) {
-      setCommentsMap((prev) => ({
-        ...prev,
-        [currentVideo.id]: [...(prev[currentVideo.id] || []), { id: Date.now(), ...newComment }]
-      }))
-    }
-    showToast('Đã gửi bình luận!')
+  // Open Comments
+  async function openComments(videoId) {
+    setActiveVideoId(videoId)
+    setShowComments(true)
+    const { data } = await supabase
+      .from('video_comments')
+      .select('*')
+      .eq('video_id', videoId)
+      .order('created_at', { ascending: true })
+    setActiveVideoComments(data || [])
   }
 
-  async function handlePostVideo(e) {
+  // Post Comment with AI Moderation
+  async function handleSendComment(e) {
     e.preventDefault()
-    if (!newVideoUrl.trim() || !newCaption.trim()) return
+    if (!newComment.trim() || !activeVideoId) return
 
-    // AI AUTO-MODERATION CHECK ON VIDEO CAPTION AND TAGS
-    const modCaption = await checkContent(newCaption)
-    if (!modCaption.isSafe) {
-      setModerationError(`Mô tả video chứa nội dung không an toàn (${modCaption.flaggedWord}). Hãy điều chỉnh!`)
+    const modCheck = await checkContent(newComment.trim())
+    if (!modCheck.isSafe) {
+      showToast('Bình luận vi phạm tiêu chuẩn an toàn cộng đồng!')
       return
     }
 
-    const tagArray = newTags
-      .split(' ')
-      .filter((t) => t.trim().length > 0)
-      .map((t) => (t.startsWith('#') ? t : `#${t}`))
-
-    const modTags = await checkTags(tagArray)
-    if (modTags.hasBlocked) {
-      setModerationError(`Hashtags [${modTags.blockedWords.join(', ')}] bị hệ thống AI từ chối!`)
-      return
+    const authorName = userProfile?.display_name || 'Người dùng RanMet'
+    const newCommentObj = {
+      video_id: activeVideoId,
+      user_id: currentUserId,
+      user_name: authorName,
+      content: newComment.trim()
     }
 
-    setModerationError('')
+    setActiveVideoComments((prev) => [...prev, { ...newCommentObj, id: Date.now(), created_at: new Date().toISOString() }])
+    setNewComment('')
 
-    const newVid = {
-      creator_id: currentUserId,
-      creator_name: currentUserName,
-      creator_handle: `@${currentUserName.toLowerCase().replace(/\s+/g, '')}`,
-      avatar_letter: currentUserName.charAt(0).toUpperCase(),
-      caption: newCaption.trim(),
-      video_url: newVideoUrl.trim(),
-      song_title: 'Original Sound - ' + currentUserName,
-      tags: modTags.safeTags.length > 0 ? modTags.safeTags : ['#RanVideo', '#Hot'],
-    }
-
-    const { data, error } = await supabase.from('videos').insert(newVid).select().single()
-    if (!error && data) {
-      setVideos([data, ...videos])
-    } else {
-      setVideos([{ id: 'v-' + Date.now(), ...newVid }, ...videos])
-    }
-
-    setShowPostModal(false)
-    setNewVideoUrl('')
-    setNewCaption('')
-    setNewTags('')
-    showToast('Đã đăng video thành công! 🎉')
-  }
-
-  function togglePlay() {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause()
-        setIsPlaying(false)
-      } else {
-        videoRef.current.play()
-        setIsPlaying(true)
-      }
-    }
+    await supabase.from('video_comments').insert(newCommentObj)
   }
 
   return (
     <AppShell>
-      <div className="desktop-grid-2">
-        {/* CENTER VIDEO FEED */}
-        <div className="flex col items-center">
-          {/* Top category tabs & Post Button */}
-          <div className="flex items-center justify-between" style={{ marginBottom: 16, width: '100%', maxWidth: 420 }}>
-            <div className="flex items-center g8">
-              <span className="badge badge-glow" style={{ padding: '6px 14px', cursor: 'pointer' }}>
-                <Flame size={13} /> Thịnh hành
-              </span>
-            </div>
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 999 }}
-              onClick={() => setShowPostModal(true)}
-            >
-              <Plus size={14} /> Đăng Video
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="card center-text" style={{ padding: 40, width: '100%', maxWidth: 420 }}>
-              <div className="tiny bold muted">Đang tải video RanVideo...</div>
-            </div>
-          ) : videos.length === 0 ? (
-            /* EMPTY STATE WHEN NO VIDEOS */
-            <div className="card flex col items-center center-text" style={{ padding: '48px 24px', width: '100%', maxWidth: 420 }}>
-              <div 
-                style={{ 
-                  width: 64, 
-                  height: 64, 
-                  borderRadius: '50%', 
-                  background: 'rgba(244, 63, 94, 0.15)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  marginBottom: 16
-                }}
-              >
-                <VideoIcon size={30} style={{ color: '#f43f5e' }} />
-              </div>
-              <h2 className="rm-title" style={{ fontSize: 20, marginBottom: 8 }}>Chưa có video nào</h2>
-              <p className="small muted" style={{ marginBottom: 20, lineHeight: 1.5 }}>
-                Hiện tại chưa có video nào được đăng tải. Vui lòng quay lại sau hoặc là người đầu tiên chia sẻ video của bạn!
-              </p>
-              <button 
-                type="button" 
-                className="btn btn-primary"
-                onClick={() => setShowPostModal(true)}
-              >
-                <Plus size={16} /> Đăng video đầu tiên
-              </button>
-            </div>
-          ) : (
-            /* Short-form Video Card */
-            <>
-              <div className="ranvid-card">
-                <video
-                  ref={videoRef}
-                  className="ranvid-video"
-                  src={currentVideo.video_url}
-                  loop
-                  autoPlay
-                  muted={isMuted}
-                  playsInline
-                  onClick={togglePlay}
-                />
-
-                {/* Play/Pause Overlay indicator */}
-                {!isPlaying && (
-                  <div 
-                    style={{ 
-                      position: 'absolute', 
-                      inset: 0, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      background: 'rgba(0,0,0,0.35)',
-                      pointerEvents: 'none'
-                    }}
-                  >
-                    <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Play size={32} style={{ color: '#fff', marginLeft: 4 }} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Right Action Icons */}
-                <div className="ranvid-actions">
-                  <div style={{ position: 'relative', marginBottom: 6 }}>
-                    <div 
-                      className="avatar" 
-                      style={{ width: 46, height: 46, fontSize: 18, background: 'var(--brand-gradient)' }}
-                    >
-                      {currentVideo.avatar_letter || (currentVideo.creator_name || 'R').charAt(0)}
-                    </div>
-                  </div>
-
-                  {/* Like */}
-                  <button 
-                    type="button" 
-                    className="ranvid-action-btn"
-                    onClick={() => toggleLike(currentVideo.id)}
-                  >
-                    <div 
-                      className="ranvid-icon-wrap"
-                      style={{ 
-                        background: isLiked ? 'rgba(236, 72, 153, 0.25)' : 'rgba(20, 16, 32, 0.65)',
-                        borderColor: isLiked ? '#ec4899' : 'rgba(255,255,255,0.15)'
-                      }}
-                    >
-                      <Heart 
-                        size={24} 
-                        style={{ 
-                          color: isLiked ? '#ec4899' : '#fff',
-                          fill: isLiked ? '#ec4899' : 'transparent',
-                          transition: 'all 0.2s ease'
-                        }} 
-                      />
-                    </div>
-                    <span className="tiny bold rm-num">{currentLikes}</span>
-                  </button>
-
-                  {/* Comment */}
-                  <button 
-                    type="button" 
-                    className="ranvid-action-btn"
-                    onClick={() => setShowComments(true)}
-                  >
-                    <div className="ranvid-icon-wrap">
-                      <MessageCircle size={24} style={{ color: '#fff' }} />
-                    </div>
-                    <span className="tiny bold rm-num">{currentComments.length}</span>
-                  </button>
-
-                  {/* Share */}
-                  <button 
-                    type="button" 
-                    className="ranvid-action-btn"
-                    onClick={() => showToast('Đã sao chép link video vào bộ nhớ tạm! 📋')}
-                  >
-                    <div className="ranvid-icon-wrap">
-                      <Share2 size={22} style={{ color: '#fff' }} />
-                    </div>
-                  </button>
-
-                  {/* Mute/Unmute */}
-                  <button 
-                    type="button" 
-                    className="ranvid-action-btn"
-                    onClick={() => setIsMuted(!isMuted)}
-                  >
-                    <div className="ranvid-icon-wrap">
-                      {isMuted ? <VolumeX size={20} style={{ color: '#fff' }} /> : <Volume2 size={20} style={{ color: '#06b6d4' }} />}
-                    </div>
-                  </button>
-                </div>
-
-                {/* Bottom Overlay Info */}
-                <div className="ranvid-overlay">
-                  <div />
-                  <div>
-                    <div className="flex items-center g8" style={{ marginBottom: 6 }}>
-                      <span className="bold" style={{ fontSize: 16, color: '#fff' }}>
-                        {currentVideo.creator_name}
-                      </span>
-                      <span className="tiny muted">{currentVideo.creator_handle}</span>
-                    </div>
-
-                    <p className="small" style={{ color: '#f8fafc', marginBottom: 10, lineHeight: 1.4 }}>
-                      {currentVideo.caption}
-                    </p>
-
-                    <div className="flex items-center g8 tiny muted">
-                      <Music size={13} style={{ color: '#ec4899' }} />
-                      <span>{currentVideo.song_title}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation Controls */}
-              <div className="flex items-center g16" style={{ marginTop: 16 }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ width: 'auto', padding: '10px 18px', fontSize: 13 }}
-                  disabled={currentIndex === 0}
-                  onClick={() => {
-                    setCurrentIndex((prev) => Math.max(0, prev - 1))
-                    setIsPlaying(true)
-                  }}
-                >
-                  ← Trước
-                </button>
-                <span className="tiny faint rm-num">
-                  {currentIndex + 1} / {videos.length}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{ width: 'auto', padding: '10px 18px', fontSize: 13 }}
-                  disabled={currentIndex === videos.length - 1}
-                  onClick={() => {
-                    setCurrentIndex((prev) => Math.min(videos.length - 1, prev + 1))
-                    setIsPlaying(true)
-                  }}
-                >
-                  Tiếp theo →
-                </button>
-              </div>
-            </>
-          )}
+      <div 
+        className="flex justify-between items-center" 
+        style={{ 
+          maxWidth: 480, 
+          margin: '0 auto 12px', 
+          padding: '0 8px'
+        }}
+      >
+        <div className="flex items-center g8">
+          <Flame size={20} style={{ color: '#f43f5e' }} />
+          <h1 className="rm-title" style={{ fontSize: 20, color: '#fff' }}>RanVideo TikTok-Feed</h1>
+          <span className="badge badge-glow tiny" style={{ fontSize: 9 }}>REALTIME</span>
         </div>
 
-        {/* RIGHT DESKTOP SIDEBAR */}
-        <div className="flex col g20">
-          <div className="card">
-            <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-              <div className="flex items-center g8">
-                <VideoIcon size={16} style={{ color: '#ec4899' }} />
-                <span className="semi small">Đăng video sáng tạo</span>
-              </div>
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ width: 'auto', padding: '8px 16px', fontSize: 12, borderRadius: 999 }}
+          onClick={() => setShowUploadModal(true)}
+        >
+          <Plus size={15} /> Đăng Video Mới
+        </button>
+      </div>
+
+      {/* FEED CONTAINER */}
+      <div 
+        ref={containerRef}
+        className="tiktok-container"
+        style={{ 
+          maxWidth: 480, 
+          margin: '0 auto', 
+          height: 'calc(100vh - 150px)', 
+          minHeight: 580,
+          background: '#000',
+          borderRadius: 24,
+          overflowY: 'scroll',
+          scrollSnapType: 'y mandatory',
+          position: 'relative',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }}
+      >
+        {loading ? (
+          <div className="flex col items-center justify-center" style={{ height: '100%', color: 'var(--text-muted)' }}>
+            <div className="tiny bold">Đang kết nối kho RanVideo...</div>
+          </div>
+        ) : videos.length === 0 ? (
+          /* EMPTY STATE WITH ACTION TO POST FIRST VIDEO */
+          <div className="flex col items-center justify-center center-text" style={{ height: '100%', padding: 24 }}>
+            <div 
+              style={{ 
+                width: 64, 
+                height: 64, 
+                borderRadius: '50%', 
+                background: 'rgba(244, 63, 94, 0.15)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: 16
+              }}
+            >
+              <VideoIcon size={30} style={{ color: '#f43f5e' }} />
             </div>
-            <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 14 }}>
-              Chia sẻ các video ngắn trực tiếp từ máy tính/điện thoại lên RanVideo để xây dựng lượng người theo dõi và mở khóa kiếm tiền.
+            <h3 className="rm-title" style={{ fontSize: 18, marginBottom: 6 }}>Chưa có video nào trên hệ thống</h3>
+            <p className="tiny muted" style={{ maxWidth: 300, marginBottom: 20, lineHeight: 1.5 }}>
+              Hãy là người đầu tiên tải lên video ngắn từ điện thoại hoặc máy tính để nhận Trust và lượt tương tác!
             </p>
             <button 
               type="button" 
               className="btn btn-primary"
-              onClick={() => setShowPostModal(true)}
+              style={{ width: 'auto', padding: '12px 24px' }}
+              onClick={() => setShowUploadModal(true)}
             >
-              <Plus size={16} /> Tải Lên Video Mới
+              <Upload size={16} /> Tải lên video đầu tiên ngay
             </button>
           </div>
+        ) : (
+          videos.map((vid, idx) => {
+            const isLiked = !!likedMap[vid.id]
+            const likesCount = (likesCountMap[vid.id] || 0)
 
-          <div className="card">
-            <div className="flex items-center g8" style={{ marginBottom: 12 }}>
-              <Sparkles size={16} style={{ color: '#06b6d4' }} />
-              <span className="semi small">Chủ đề nổi bật</span>
-            </div>
-            <div className="flex" style={{ flexWrap: 'wrap', gap: 8 }}>
-              {['#Minecraft', '#Cyberpunk', '#Anime', '#DevLife', '#AI', '#Setup', '#ChillBeats'].map((tag) => (
-                <span key={tag} className="chip" style={{ fontSize: 12, padding: '6px 12px' }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* COMMENTS MODAL / DRAWER */}
-      {showComments && currentVideo && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(10px)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center'
-          }}
-          onClick={() => setShowComments(false)}
-        >
-          <div
-            className="card"
-            style={{
-              width: '100%',
-              maxWidth: 460,
-              maxHeight: '75vh',
-              borderRadius: '24px 24px 0 0',
-              padding: '20px 20px 30px',
-              display: 'flex',
-              flexDirection: 'column',
-              animation: 'msgPop 0.25s ease'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between" style={{ marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-              <span className="bold small">Bình luận trực tiếp ({currentComments.length})</span>
-              <button 
-                type="button" 
-                onClick={() => setShowComments(false)} 
-                className="btn-icon" 
-                style={{ width: 30, height: 30 }}
+            return (
+              <div 
+                key={vid.id}
+                className="tiktok-card"
+                style={{
+                  height: '100%',
+                  width: '100%',
+                  scrollSnapAlign: 'start',
+                  position: 'relative',
+                  background: '#0a0a0c',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden'
+                }}
               >
-                ✕
-              </button>
-            </div>
+                {/* VIDEO ELEMENT */}
+                <video
+                  ref={(el) => (videoRefs.current[idx] = el)}
+                  src={vid.video_url}
+                  className="tiktok-video"
+                  loop
+                  muted={muted}
+                  playsInline
+                  autoPlay={idx === 0}
+                  controls={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                  onClick={() => {
+                    const el = videoRefs.current[idx]
+                    if (el) {
+                      if (el.paused) el.play()
+                      else el.pause()
+                    }
+                  }}
+                />
 
-            {/* Comments List */}
-            <div className="grow flex col g12" style={{ overflowY: 'auto', maxHeight: '45vh', marginBottom: 16 }}>
-              {currentComments.length === 0 ? (
-                <div className="tiny faint center-text" style={{ padding: 20 }}>Chưa có bình luận nào. Hãy là người đầu tiên!</div>
-              ) : (
-                currentComments.map((c) => (
-                  <div key={c.id} className="flex g10 items-start">
-                    <div className="avatar" style={{ width: 32, height: 32, fontSize: 13, background: 'var(--brand-gradient)' }}>
-                      {(c.user_name || 'U').charAt(0)}
-                    </div>
-                    <div>
-                      <div className="semi tiny" style={{ color: '#c084fc' }}>{c.user_name}</div>
-                      <div className="small" style={{ color: '#f8fafc', marginTop: 2 }}>{c.content || c.text}</div>
+                {/* OVERLAY GRADIENT */}
+                <div 
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 40%, rgba(0,0,0,0.85) 100%)',
+                    pointerEvents: 'none'
+                  }}
+                />
+
+                {/* SOUND TOGGLE */}
+                <button
+                  type="button"
+                  onClick={() => setMuted(!muted)}
+                  style={{
+                    position: 'absolute',
+                    top: 18,
+                    left: 18,
+                    background: 'rgba(0,0,0,0.5)',
+                    backdropFilter: 'blur(10px)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: 36,
+                    height: 36,
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    zIndex: 10
+                  }}
+                >
+                  {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+
+                {/* RIGHT ACTION BAR */}
+                <div 
+                  className="tiktok-actions"
+                  style={{
+                    position: 'absolute',
+                    right: 14,
+                    bottom: 30,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 16,
+                    zIndex: 10
+                  }}
+                >
+                  {/* Creator Avatar */}
+                  <div style={{ position: 'relative', marginBottom: 4 }}>
+                    <div 
+                      className="avatar" 
+                      style={{ 
+                        width: 44, 
+                        height: 44, 
+                        fontSize: 16, 
+                        border: '2px solid #fff',
+                        background: 'var(--brand-gradient)'
+                      }}
+                    >
+                      {vid.avatar_letter}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
 
-            {/* Post Comment Input */}
-            <div className="flex g8 items-center">
-              <input
-                className="input"
-                style={{ padding: '10px 16px', fontSize: 14, borderRadius: 999 }}
-                placeholder="Thêm bình luận..."
-                value={commentDraft}
-                onChange={(e) => setCommentDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment() }}
-              />
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ width: 42, height: 42, borderRadius: '50%', padding: 0, flexShrink: 0 }}
-                onClick={handleAddComment}
-              >
-                <Send size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                  {/* Like Button */}
+                  <button
+                    type="button"
+                    onClick={() => toggleLike(vid.id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: isLiked ? '#f43f5e' : '#fff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      gap: 4
+                    }}
+                  >
+                    <div 
+                      style={{ 
+                        width: 42, 
+                        height: 42, 
+                        borderRadius: '50%', 
+                        background: 'rgba(0,0,0,0.4)', 
+                        backdropFilter: 'blur(8px)',
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center' 
+                      }}
+                    >
+                      <Heart size={22} fill={isLiked ? '#f43f5e' : 'none'} />
+                    </div>
+                    <span className="tiny bold" style={{ color: '#fff' }}>{likesCount}</span>
+                  </button>
 
-      {/* POST VIDEO MODAL WITH DIRECT DEVICE UPLOAD */}
-      {showPostModal && (
+                  {/* Comments Button */}
+                  <button
+                    type="button"
+                    onClick={() => openComments(vid.id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#fff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      gap: 4
+                    }}
+                  >
+                    <div 
+                      style={{ 
+                        width: 42, 
+                        height: 42, 
+                        borderRadius: '50%', 
+                        background: 'rgba(0,0,0,0.4)', 
+                        backdropFilter: 'blur(8px)',
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center' 
+                      }}
+                    >
+                      <MessageCircle size={22} />
+                    </div>
+                    <span className="tiny bold" style={{ color: '#fff' }}>Bình luận</span>
+                  </button>
+
+                  {/* Share Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({ title: vid.caption, url: window.location.href })
+                      } else {
+                        navigator.clipboard.writeText(window.location.href)
+                        showToast('Đã sao chép liên kết video!')
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#fff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      gap: 4
+                    }}
+                  >
+                    <div 
+                      style={{ 
+                        width: 42, 
+                        height: 42, 
+                        borderRadius: '50%', 
+                        background: 'rgba(0,0,0,0.4)', 
+                        backdropFilter: 'blur(8px)',
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center' 
+                      }}
+                    >
+                      <Share2 size={20} />
+                    </div>
+                    <span className="tiny bold" style={{ color: '#fff' }}>Chia sẻ</span>
+                  </button>
+                </div>
+
+                {/* BOTTOM INFO (CREATOR & CAPTION) */}
+                <div 
+                  className="tiktok-meta"
+                  style={{
+                    position: 'absolute',
+                    left: 18,
+                    bottom: 24,
+                    right: 76,
+                    color: '#fff',
+                    zIndex: 10
+                  }}
+                >
+                  <div className="semi" style={{ fontSize: 16, marginBottom: 4, textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>
+                    {vid.creator_name} <span className="tiny faint" style={{ color: 'rgba(255,255,255,0.7)' }}>{vid.creator_handle}</span>
+                  </div>
+                  <div className="small" style={{ lineHeight: 1.4, marginBottom: 8, textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>
+                    {vid.caption}
+                  </div>
+                  
+                  {vid.tags && (
+                    <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                      {vid.tags.map((t, i) => (
+                        <span key={i} className="tiny bold" style={{ color: '#ec4899' }}>{t}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="tiny faint flex items-center g6" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                    <Music size={13} /> {vid.song_title}
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* UPLOAD VIDEO MODAL WITH DIRECT DEVICE UPLOAD */}
+      {showUploadModal && (
         <div 
           style={{
             position: 'fixed',
@@ -591,63 +562,62 @@ export default function RanVideoPage() {
             justifyContent: 'center',
             padding: 20
           }}
-          onClick={() => setShowPostModal(false)}
+          onClick={() => setShowUploadModal(false)}
         >
           <div 
             className="card" 
-            style={{ width: '100%', maxWidth: 480, padding: 26, animation: 'msgPop 0.25s ease' }}
+            style={{ width: '100%', maxWidth: 460, padding: 26, animation: 'msgPop 0.25s ease' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
               <div className="flex items-center g8">
-                <h2 className="rm-title" style={{ fontSize: 20 }}>Tải Lên Video Sáng Tạo</h2>
-                <span className="badge tiny flex items-center g4" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
-                  <ShieldCheck size={12} /> Gemini Guard
-                </span>
+                <Sparkles size={20} style={{ color: '#f43f5e' }} />
+                <h2 className="rm-title" style={{ fontSize: 18 }}>Tải Lên Video Ngắn RanVideo</h2>
               </div>
               <button 
                 type="button" 
-                onClick={() => setShowPostModal(false)}
+                onClick={() => setShowUploadModal(false)}
                 className="btn-icon" 
                 style={{ width: 32, height: 32 }}
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
-            {moderationError && (
-              <div className="err-text" style={{ marginBottom: 14 }}>
-                <AlertCircle size={16} /> {moderationError}
+            {/* Direct Device Video Upload Trigger */}
+            <div style={{ marginBottom: 14 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '18px', borderStyle: 'dashed', width: '100%', borderRadius: 16 }}
+                onClick={() => videoFileInputRef.current?.click()}
+              >
+                <Upload size={22} style={{ color: '#f43f5e' }} /> 
+                {videoFileName ? `✓ Đã chọn: ${videoFileName}` : 'Bấm để chọn video (.mp4, .webm) từ máy'}
+              </button>
+              <input 
+                type="file" 
+                ref={videoFileInputRef} 
+                accept="video/mp4,video/webm,video/*" 
+                style={{ display: 'none' }} 
+                onChange={handleDeviceVideoPick} 
+              />
+            </div>
+
+            {/* Preview chosen video */}
+            {videoUrl && (
+              <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', maxHeight: 180, background: '#000' }}>
+                <video src={videoUrl} controls style={{ width: '100%', maxHeight: 180 }} />
               </div>
             )}
 
-            <form onSubmit={handlePostVideo} className="flex col g16">
+            <form onSubmit={handlePostVideo} className="flex col g14">
               <div className="field-group">
-                <label className="field-label">Chọn tệp video từ thiết bị (MP4 / WebM)</label>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ padding: 14, borderStyle: 'dashed' }}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload size={18} style={{ color: '#ec4899' }} /> 
-                  {newVideoUrl ? '✓ Đã chọn tệp video từ máy' : 'Bấm để chọn video từ máy tính / điện thoại'}
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  accept="video/*" 
-                  style={{ display: 'none' }} 
-                  onChange={handleVideoFileUpload} 
-                />
-              </div>
-
-              <div className="field-group">
-                <label className="field-label">Tiêu đề / Caption</label>
+                <label className="field-label">Mô tả video (Caption) *</label>
                 <textarea 
                   className="input" 
-                  rows={3} 
-                  placeholder="Viết mô tả thú vị cho video của bạn..."
+                  rows={2} 
+                  placeholder="Chia sẻ khoảnh khắc thú vị của bạn..."
                   value={newCaption}
                   onChange={(e) => setNewCaption(e.target.value)}
                   required
@@ -655,17 +625,99 @@ export default function RanVideoPage() {
               </div>
 
               <div className="field-group">
-                <label className="field-label">Hashtags (cách nhau bằng dấu cách)</label>
+                <label className="field-label">Hashtags</label>
                 <input 
                   className="input" 
-                  placeholder="#gaming #minecraft #coding"
+                  placeholder="#gaming, #vlog, #music"
                   value={newTags}
                   onChange={(e) => setNewTags(e.target.value)}
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }} disabled={!newVideoUrl.trim()}>
-                <Sparkles size={16} /> Đăng tải video lên RanVideo
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                style={{ marginTop: 6 }}
+                disabled={!videoUrl.trim() || isPosting}
+              >
+                {isPosting ? 'Đang kiểm duyệt và đăng video...' : 'Đăng video lên RanVideo'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* COMMENTS MODAL */}
+      {showComments && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center'
+          }}
+          onClick={() => setShowComments(false)}
+        >
+          <div 
+            className="card" 
+            style={{ 
+              width: '100%', 
+              maxWidth: 480, 
+              height: '65vh', 
+              padding: 0, 
+              borderBottomLeftRadius: 0, 
+              borderBottomRightRadius: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              animation: 'msgPop 0.25s ease'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Comments Header */}
+            <div className="flex justify-between items-center" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <div className="semi" style={{ fontSize: 16 }}>Bình luận ({activeVideoComments.length})</div>
+              <button type="button" onClick={() => setShowComments(false)} className="btn-icon" style={{ width: 32, height: 32 }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Comments List */}
+            <div className="grow" style={{ overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {activeVideoComments.length === 0 ? (
+                <div className="center-text tiny faint" style={{ margin: 'auto 0' }}>
+                  Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
+                </div>
+              ) : (
+                activeVideoComments.map((c) => (
+                  <div key={c.id} className="flex g10 items-start">
+                    <div className="avatar" style={{ width: 34, height: 34, fontSize: 13, background: 'var(--brand-gradient)', flexShrink: 0 }}>
+                      {c.user_name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="semi tiny" style={{ color: '#fff' }}>{c.user_name}</div>
+                      <div className="small" style={{ color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{c.content}</div>
+                      <div className="tiny faint" style={{ marginTop: 4 }}>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Comments Input */}
+            <form onSubmit={handleSendComment} className="flex g10" style={{ padding: '12px 18px', borderTop: '1px solid var(--border)' }}>
+              <input
+                className="input"
+                placeholder="Viết bình luận văn minh..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                style={{ borderRadius: 999 }}
+              />
+              <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 20px', borderRadius: 999 }}>
+                Gửi
               </button>
             </form>
           </div>

@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, Send, Sparkles, ShieldCheck, 
   MessageCircle, Heart, Flame, Image as ImageIcon, Video as VideoIcon, 
-  FileText, Paperclip, Plus, X, Download, Play, Upload, Camera
+  FileText, Paperclip, Plus, X, Download, Play, Upload, Camera,
+  AlertTriangle, UserX, Lock, ShieldAlert, CheckCircle
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent } from '@/lib/moderation'
@@ -19,24 +21,48 @@ const ICE_BREAKERS = [
 ]
 
 export default function ChatRoom({ chatId, myId, otherName, compatibility, initialMessages }) {
+  const router = useRouter()
   const [messages, setMessages] = useState(initialMessages || [])
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [isLocked, setIsLocked] = useState(false)
+  const [lockedReason, setLockedReason] = useState('')
+  
+  // Modals
   const [showMediaModal, setShowMediaModal] = useState(false)
-  const [mediaType, setMediaType] = useState('image') // 'image' | 'video' | 'file'
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false)
+  
+  // Form states
+  const [reportReason, setReportReason] = useState('Quấy rối tình dục / 18+')
+  const [disconnectType, setDisconnectType] = useState('temporary_24h')
+  const [mediaType, setMediaType] = useState('image')
   const [mediaUrl, setMediaUrl] = useState('')
   const [fileName, setFileName] = useState('')
   const [toastMsg, setToastMsg] = useState('')
+  
   const scrollRef = useRef(null)
   const fileInputRef = useRef(null)
   const [supabase] = useState(() => createClient())
 
   function showToast(msg) {
     setToastMsg(msg)
-    setTimeout(() => setToastMsg(''), 2500)
+    setTimeout(() => setToastMsg(''), 3000)
   }
 
+  // Load chat status (check if locked)
   useEffect(() => {
+    async function checkChatStatus() {
+      const { data: chat } = await supabase.from('chats').select('is_locked, locked_reason, ended_at').eq('id', chatId).single()
+      if (chat) {
+        if (chat.is_locked) {
+          setIsLocked(true)
+          setLockedReason(chat.locked_reason || 'Bị báo cáo hành vi lạm dụng')
+        }
+      }
+    }
+    checkChatStatus()
+
     const channel = supabase
       .channel('chat:' + chatId)
       .on(
@@ -44,6 +70,19 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
         (payload) => {
           setMessages((prev) => (prev.some((m) => m.id === payload.new.id) ? prev : [...prev, payload.new]))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chats', filter: `id=eq.${chatId}` },
+        (payload) => {
+          if (payload.new.is_locked) {
+            setIsLocked(true)
+            setLockedReason(payload.new.locked_reason || 'Đang được AI xem xét vi phạm')
+          }
+          if (payload.new.ended_at) {
+            showToast('Đối phương đã ngắt kết nối cuộc trò chuyện.')
+          }
         }
       )
       .subscribe()
@@ -63,6 +102,10 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
   }, [messages])
 
   async function sendText(textToSend) {
+    if (isLocked) {
+      showToast('Cuộc trò chuyện đang bị khóa an toàn!')
+      return
+    }
     const text = (textToSend || draft).trim()
     if (!text || isSending) return
 
@@ -110,6 +153,10 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
 
   async function sendMedia(e) {
     e?.preventDefault()
+    if (isLocked) {
+      showToast('Cuộc trò chuyện đang bị khóa!')
+      return
+    }
     if (!mediaUrl.trim() || isSending) return
 
     setIsSending(true)
@@ -137,6 +184,47 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
     } else {
       showToast('Đã gửi tệp đính kèm! ✨')
     }
+  }
+
+  // 🛡️ REPORT ABUSE & AI LOCK CHAT
+  async function handleReportSubmit(e) {
+    e.preventDefault()
+    setIsLocked(true)
+    setLockedReason(reportReason)
+    setShowReportModal(false)
+
+    // Update chat in DB to lock from both sides
+    await supabase.from('chats').update({
+      is_locked: true,
+      locked_reason: `Báo cáo: ${reportReason}`
+    }).eq('id', chatId)
+
+    // Insert into reports table
+    await supabase.from('chat_reports').insert({
+      chat_id: chatId,
+      reporter_id: myId,
+      reported_user_id: myId, // placeholder partner reference
+      reason: reportReason,
+      ai_verdict: 'AI Auto-Locked for Safety Review'
+    })
+
+    showToast('Đã báo cáo vi phạm! Hệ thống AI đã tạm khóa phòng chat từ cả 2 phía để kiểm tra. 🛡️')
+  }
+
+  // 🔌 DISCONNECT CHAT WITH COOLDOWN
+  async function handleDisconnectSubmit(e) {
+    e.preventDefault()
+    setShowDisconnectModal(false)
+
+    await supabase.from('chats').update({
+      ended_at: new Date().toISOString(),
+      disconnect_type: disconnectType
+    }).eq('id', chatId)
+
+    showToast('Đã ngắt kết nối cuộc trò chuyện.')
+    setTimeout(() => {
+      router.push('/chats')
+    }, 800)
   }
 
   const initial = (otherName || 'N').charAt(0).toUpperCase()
@@ -180,7 +268,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                     width: 12, 
                     height: 12, 
                     borderRadius: '50%', 
-                    background: '#10b981', 
+                    background: isLocked ? '#f43f5e' : '#10b981', 
                     border: '2px solid #161320' 
                   }} 
                 />
@@ -189,6 +277,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
               <div>
                 <div className="semi small flex items-center g6">
                   <span>{otherName || 'Người bạn mới'}</span>
+                  {isLocked && <span className="badge tiny" style={{ background: 'rgba(244, 63, 94, 0.2)', color: '#fb7185', fontSize: 10 }}>ĐÃ KHÓA</span>}
                 </div>
                 {compatibility != null && (
                   <div className="tiny bold flex items-center g4" style={{ color: '#ec4899' }}>
@@ -199,12 +288,51 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
             </div>
           </div>
 
-          <div className="flex items-center g6">
-            <span className="badge badge-glow tiny" style={{ padding: '4px 10px' }}>
-              <ShieldCheck size={12} /> Gemini Protected
-            </span>
+          {/* Action Tools: Report & Disconnect */}
+          <div className="flex items-center g8">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: 'auto', padding: '6px 12px', fontSize: 12, borderRadius: 999, color: '#fb7185', borderColor: 'rgba(244, 63, 94, 0.3)' }}
+              onClick={() => setShowReportModal(true)}
+              title="Báo cáo vi phạm"
+            >
+              <AlertTriangle size={14} /> Báo cáo
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: 'auto', padding: '6px 12px', fontSize: 12, borderRadius: 999 }}
+              onClick={() => setShowDisconnectModal(true)}
+              title="Ngắt kết nối trò chuyện"
+            >
+              <UserX size={14} /> Ngắt kết nối
+            </button>
           </div>
         </div>
+
+        {/* AI LOCKED WARNING BANNER IF LOCKED */}
+        {isLocked && (
+          <div 
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.25) 0%, rgba(139, 92, 246, 0.2) 100%)',
+              borderBottom: '1px solid rgba(244, 63, 94, 0.4)',
+              padding: '12px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12
+            }}
+          >
+            <ShieldAlert size={22} style={{ color: '#fb7185', flexShrink: 0 }} />
+            <div className="grow">
+              <div className="semi small" style={{ color: '#fff' }}>Phòng trò chuyện đã bị AI tạm khóa từ 2 phía 🔒</div>
+              <div className="tiny faint" style={{ color: '#fca5a5' }}>
+                Lý do: {lockedReason || 'Nghi vấn có hành vi lạm dụng / quấy rối online theo báo cáo'}. Không thể gửi thêm tin nhắn.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Message History Feed */}
         <div 
@@ -351,56 +479,165 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
             borderTop: '1px solid rgba(255, 255, 255, 0.08)'
           }}
         >
-          <div className="flex items-center g10">
-            {/* Attachment Button */}
-            <button
-              type="button"
-              className="btn-icon"
-              style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }}
-              onClick={() => setShowMediaModal(true)}
-              title="Đăng Ảnh / Video / File từ máy"
-            >
-              <Paperclip size={18} style={{ color: '#ec4899' }} />
-            </button>
+          {isLocked ? (
+            <div className="center-text tiny faint" style={{ padding: '8px 0', color: '#fb7185' }}>
+              🔒 Cuộc trò chuyện đã bị tạm khóa an toàn. Bạn không thể gửi thêm tin nhắn.
+            </div>
+          ) : (
+            <div className="flex items-center g10">
+              {/* Attachment Button */}
+              <button
+                type="button"
+                className="btn-icon"
+                style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }}
+                onClick={() => setShowMediaModal(true)}
+                title="Đăng Ảnh / Video / File từ máy"
+              >
+                <Paperclip size={18} style={{ color: '#ec4899' }} />
+              </button>
 
-            <input
-              className="input"
-              style={{ 
-                borderRadius: 999, 
-                padding: '13px 20px',
-                fontSize: 15,
-                background: 'rgba(255, 255, 255, 0.05)'
-              }}
-              placeholder="Nhập tin nhắn..."
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { 
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  sendText()
-                } 
-              }}
-            />
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ 
-                width: 46, 
-                height: 46, 
-                borderRadius: '50%', 
-                padding: 0, 
-                flexShrink: 0 
-              }}
-              onClick={() => sendText()}
-              disabled={!draft.trim() || isSending}
-            >
-              <Send size={18} />
-            </button>
-          </div>
+              <input
+                className="input"
+                style={{ 
+                  borderRadius: 999, 
+                  padding: '13px 20px',
+                  fontSize: 15,
+                  background: 'rgba(255, 255, 255, 0.05)'
+                }}
+                placeholder="Nhập tin nhắn..."
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { 
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    sendText()
+                  } 
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ 
+                  width: 46, 
+                  height: 46, 
+                  borderRadius: '50%', 
+                  padding: 0, 
+                  flexShrink: 0 
+                }}
+                onClick={() => sendText()}
+                disabled={!draft.trim() || isSending}
+              >
+                <Send size={18} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* SEND MEDIA / FILE MODAL WITH DIRECT DEVICE UPLOAD */}
+      {/* REPORT ABUSE MODAL */}
+      {showReportModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20
+          }}
+          onClick={() => setShowReportModal(false)}
+        >
+          <div 
+            className="card" 
+            style={{ width: '100%', maxWidth: 460, padding: 26, animation: 'msgPop 0.25s ease' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+              <div className="flex items-center g8">
+                <AlertTriangle size={20} style={{ color: '#fb7185' }} />
+                <h2 className="rm-title" style={{ fontSize: 18 }}>Báo Cáo Vi Phạm & Lạm Dụng</h2>
+              </div>
+              <button type="button" onClick={() => setShowReportModal(false)} className="btn-icon" style={{ width: 32, height: 32 }}>✕</button>
+            </div>
+
+            <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 16 }}>
+              Khi bạn gửi báo cáo, hệ thống AI sẽ <b>khóa ngay lập tức phòng chat từ cả 2 phía</b> để bảo vệ bạn và xem xét nội dung vi phạm.
+            </p>
+
+            <form onSubmit={handleReportSubmit} className="flex col g16">
+              <div className="field-group">
+                <label className="field-label">Lý do báo cáo vi phạm:</label>
+                <select className="input" value={reportReason} onChange={(e) => setReportReason(e.target.value)}>
+                  <option value="Quấy rối tình dục / Gạ gẫm 18+" style={{ background: '#161320' }}>Quấy rối tình dục / Gạ gẫm 18+</option>
+                  <option value="Đe dọa / Ngôn từ thù địch / Xâm hại" style={{ background: '#161320' }}>Đe dọa / Ngôn từ thù địch / Xâm hại</option>
+                  <option value="Lừa đảo / Gửi link độc hại / Spam" style={{ background: '#161320' }}>Lừa đảo / Gửi link độc hại / Spam</option>
+                  <option value="Gửi hình ảnh / video khiêu dâm trái phép" style={{ background: '#161320' }}>Gửi hình ảnh / video khiêu dâm trái phép</option>
+                </select>
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)' }}>
+                <ShieldAlert size={16} /> Gửi Báo Cáo & Khóa Chat Ngay
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DISCONNECT MODAL */}
+      {showDisconnectModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20
+          }}
+          onClick={() => setShowDisconnectModal(false)}
+        >
+          <div 
+            className="card" 
+            style={{ width: '100%', maxWidth: 460, padding: 26, animation: 'msgPop 0.25s ease' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+              <div className="flex items-center g8">
+                <UserX size={20} style={{ color: '#f59e0b' }} />
+                <h2 className="rm-title" style={{ fontSize: 18 }}>Ngắt Kết Nối Trò Chuyện</h2>
+              </div>
+              <button type="button" onClick={() => setShowDisconnectModal(false)} className="btn-icon" style={{ width: 32, height: 32 }}>✕</button>
+            </div>
+
+            <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 16 }}>
+              Bạn có thể chọn thời gian cho phép hệ thống ghép lại người này trong tương lai:
+            </p>
+
+            <form onSubmit={handleDisconnectSubmit} className="flex col g16">
+              <div className="field-group">
+                <label className="field-label">Tùy chọn ghép lại:</label>
+                <select className="input" value={disconnectType} onChange={(e) => setDisconnectType(e.target.value)}>
+                  <option value="temporary_24h" style={{ background: '#161320' }}>Tạm ngắt kết nối (Có thể ghép lại sau 24 giờ)</option>
+                  <option value="temporary_7d" style={{ background: '#161320' }}>Tạm ngắt kết nối (Có thể ghép lại sau 7 ngày)</option>
+                  <option value="permanent" style={{ background: '#161320' }}>Ngắt kết nối vĩnh viễn (Không bao giờ ghép lại)</option>
+                </select>
+              </div>
+
+              <button type="submit" className="btn btn-primary">
+                <CheckCircle size={16} /> Xác nhận ngắt kết nối
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SEND MEDIA / FILE MODAL */}
       {showMediaModal && (
         <div 
           style={{
@@ -433,7 +670,6 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
               </button>
             </div>
 
-            {/* Direct Device Upload Trigger */}
             <div style={{ marginBottom: 14 }}>
               <button
                 type="button"
@@ -453,7 +689,6 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
               />
             </div>
 
-            {/* Media Preview if chosen */}
             {mediaUrl && (
               <div style={{ marginBottom: 14, padding: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 14 }}>
                 {mediaType === 'image' && (
