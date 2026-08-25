@@ -428,3 +428,24 @@ begin
     alter publication supabase_realtime add table public.rannews_likes;
   end if;
 end $$;
+
+-- ---------- SUPABASE STORAGE BUCKETS (VIDEOS & MEDIA) ----------
+insert into storage.buckets (id, name, public) 
+values ('videos', 'videos', true), ('media', 'media', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Allow public viewing of videos and media" on storage.objects;
+create policy "Allow public viewing of videos and media"
+  on storage.objects for select
+  using (bucket_id in ('videos', 'media'));
+
+drop policy if exists "Allow authenticated uploads to videos and media" on storage.objects;
+create policy "Allow authenticated uploads to videos and media"
+  on storage.objects for insert to authenticated
+  with check (bucket_id in ('videos', 'media'));
+
+drop policy if exists "Allow public uploads to videos and media" on storage.objects;
+create policy "Allow public uploads to videos and media"
+  on storage.objects for insert to anon
+  with check (bucket_id in ('videos', 'media'));
+

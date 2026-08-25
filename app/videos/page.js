@@ -31,6 +31,8 @@ export default function RanVideoPage() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [videoUrl, setVideoUrl] = useState('')
   const [videoFileName, setVideoFileName] = useState('')
+  const [selectedVideoFile, setSelectedVideoFile] = useState(null)
+  const [uploadMode, setUploadMode] = useState('file') // 'file' or 'url'
   const [newCaption, setNewCaption] = useState('')
   const [newTags, setNewTags] = useState('#trend, #ranmet')
   const [newSong, setNewSong] = useState('Original Sound - RanMet')
@@ -46,7 +48,7 @@ export default function RanVideoPage() {
 
   function showToast(msg) {
     setToastMsg(msg)
-    setTimeout(() => setToastMsg(''), 3000)
+    setTimeout(() => setToastMsg(''), 4000)
   }
 
   // Fetch videos from Supabase
@@ -88,15 +90,16 @@ export default function RanVideoPage() {
     }
   }, [supabase])
 
-  // Direct Device Video Upload
+  // Direct Device Video Pick
   async function handleDeviceVideoPick(e) {
     const file = e.target.files?.[0]
     if (!file) return
 
     try {
-      showToast('Đang đọc file video từ thiết bị...')
-      const res = await readFileAsDataUrl(file, 50)
-      setVideoUrl(res.url)
+      showToast('Đang đọc video từ thiết bị...')
+      const res = await readFileAsDataUrl(file, 100)
+      setSelectedVideoFile(file)
+      setVideoUrl(res.url) // For immediate local preview in modal
       setVideoFileName(res.name)
       showToast('Đã chọn video từ máy! Hãy nhập mô tả và bấm Đăng.')
     } catch (err) {
@@ -104,10 +107,10 @@ export default function RanVideoPage() {
     }
   }
 
-  // Handle Post Video with AI Safety & Gemini Check
+  // Handle Post Video with Supabase Storage & AI Safety Check
   async function handlePostVideo(e) {
     e.preventDefault()
-    if (!videoUrl.trim() || isPosting) return
+    if ((!selectedVideoFile && !videoUrl.trim()) || isPosting) return
 
     const cleanCaption = newCaption.trim()
     if (!cleanCaption) {
@@ -137,13 +140,33 @@ export default function RanVideoPage() {
     const { data: { user } } = await supabase.auth.getUser()
     const activeUid = currentUserId || user?.id || null
 
+    let finalVideoCdnUrl = videoUrl.trim()
+
+    // If uploading a real binary file, upload to Supabase Storage CDN first!
+    if (selectedVideoFile) {
+      try {
+        showToast('Đang tải video lên Supabase Storage CDN... 🚀')
+        const { uploadMediaToSupabase } = await import('@/lib/upload')
+        const storageResult = await uploadMediaToSupabase(supabase, selectedVideoFile, 'videos', activeUid || 'guest')
+        finalVideoCdnUrl = storageResult.url
+      } catch (uploadErr) {
+        console.warn('Storage upload error, checking direct url fallback:', uploadErr)
+        // If storage bucket is not configured, warn user
+        showToast(uploadErr.message || 'Lỗi tải video lên Supabase Storage')
+        setIsPosting(false)
+        return
+      }
+    }
+
+    showToast('Đang lưu bài đăng video vào hệ thống...')
+
     const newVid = {
       creator_id: activeUid,
       creator_name: userProfile?.display_name || 'RanMet Creator',
       creator_handle: `@${(userProfile?.display_name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
       avatar_letter: (userProfile?.display_name || 'R').charAt(0).toUpperCase(),
       caption: cleanCaption,
-      video_url: videoUrl.trim(),
+      video_url: finalVideoCdnUrl,
       song_title: newSong.trim() || 'Original Sound - RanMet',
       tags: tagsCheck.safeTags
     }
@@ -158,6 +181,7 @@ export default function RanVideoPage() {
       setShowUploadModal(false)
       setVideoUrl('')
       setVideoFileName('')
+      setSelectedVideoFile(null)
       setNewCaption('')
       showToast('Đã đăng video thành công lên RanVideo! ✨')
       if (data) {
@@ -584,24 +608,61 @@ export default function RanVideoPage() {
               </button>
             </div>
 
-            <div style={{ marginBottom: 14 }}>
+            {/* Upload Method Switcher */}
+            <div className="flex g8" style={{ marginBottom: 16 }}>
               <button
                 type="button"
-                className="btn btn-secondary"
-                style={{ padding: '18px', borderStyle: 'dashed', width: '100%', borderRadius: 16 }}
-                onClick={() => videoFileInputRef.current?.click()}
+                className={`btn ${uploadMode === 'file' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ flex: 1, padding: '8px 12px', fontSize: 12, borderRadius: 999 }}
+                onClick={() => setUploadMode('file')}
               >
-                <Upload size={22} style={{ color: '#f43f5e' }} /> 
-                {videoFileName ? `✓ ${videoFileName}` : t('uploadPhotoBtn')}
+                <Upload size={14} /> Tải từ máy
               </button>
-              <input 
-                type="file" 
-                ref={videoFileInputRef} 
-                accept="video/mp4,video/webm,video/*" 
-                style={{ display: 'none' }} 
-                onChange={handleDeviceVideoPick} 
-              />
+              <button
+                type="button"
+                className={`btn ${uploadMode === 'url' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ flex: 1, padding: '8px 12px', fontSize: 12, borderRadius: 999 }}
+                onClick={() => setUploadMode('url')}
+              >
+                <VideoIcon size={14} /> Dán link Video
+              </button>
             </div>
+
+            {uploadMode === 'file' ? (
+              <div style={{ marginBottom: 14 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '18px', borderStyle: 'dashed', width: '100%', borderRadius: 16 }}
+                  onClick={() => videoFileInputRef.current?.click()}
+                >
+                  <Upload size={22} style={{ color: '#f43f5e' }} /> 
+                  {videoFileName ? `✓ ${videoFileName}` : 'Chọn video từ máy (MP4/WebM)'}
+                </button>
+                <input 
+                  type="file" 
+                  ref={videoFileInputRef} 
+                  accept="video/mp4,video/webm,video/quicktime,video/*" 
+                  style={{ display: 'none' }} 
+                  onChange={handleDeviceVideoPick} 
+                />
+              </div>
+            ) : (
+              <div className="field-group" style={{ marginBottom: 14 }}>
+                <label className="field-label">Đường dẫn Video Trực Tiếp (Direct MP4 URL) *</label>
+                <input
+                  className="input"
+                  placeholder="https://assets.mixkit.co/.../video.mp4"
+                  value={videoUrl}
+                  onChange={(e) => {
+                    setVideoUrl(e.target.value)
+                    setSelectedVideoFile(null)
+                    setVideoFileName('')
+                  }}
+                  required
+                />
+              </div>
+            )}
 
             {videoUrl && (
               <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', maxHeight: 180, background: '#000' }}>
@@ -636,9 +697,9 @@ export default function RanVideoPage() {
                 type="submit" 
                 className="btn btn-primary" 
                 style={{ marginTop: 6 }}
-                disabled={!videoUrl.trim() || isPosting}
+                disabled={(!videoUrl.trim() && !selectedVideoFile) || isPosting}
               >
-                {isPosting ? 'Posting...' : t('postVideoBtn')}
+                {isPosting ? 'Đang tải lên & Đăng bài...' : t('postVideoBtn')}
               </button>
             </form>
           </div>
