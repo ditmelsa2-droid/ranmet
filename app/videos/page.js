@@ -38,6 +38,7 @@ export default function RanVideoPage() {
   const [newSong, setNewSong] = useState('Original Sound - RanMet')
   const [isPosting, setIsPosting] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
+  const [unblurredMap, setUnblurredMap] = useState({})
   
   const [currentUserId, setCurrentUserId] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
@@ -121,20 +122,42 @@ export default function RanVideoPage() {
     setIsPosting(true)
     showToast('AI đang kiểm duyệt nội dung video... 🧠')
 
-    // AI & DEEP SLANG MODERATION CHECK
+    // 1. AI & DEEP SLANG MODERATION CHECK ON TEXT
     const captionCheck = await checkContent(cleanCaption)
+    let isNsfw = false
+
     if (!captionCheck.isSafe) {
-      showToast(`Mô tả video bị từ chối: Vi phạm an toàn cộng đồng! ⚠️`)
-      setIsPosting(false)
-      return
+      if (captionCheck.reason?.includes('18+') || captionCheck.reason?.includes('nhạy cảm') || captionCheck.reason?.includes('thô tục')) {
+        isNsfw = true
+      } else {
+        showToast(`Mô tả video bị từ chối: Vi phạm an toàn cộng đồng! ⚠️`)
+        setIsPosting(false)
+        return
+      }
     }
 
     const rawTags = newTags.split(/[\s,]+/).map(t => t.startsWith('#') ? t : `#${t}`).filter(t => t.length > 1)
     const tagsCheck = await checkTags(rawTags)
     if (tagsCheck.hasBlocked) {
-      showToast(`Hashtag [${tagsCheck.blockedWords.join(', ')}] bị hệ thống AI từ chối!`)
-      setIsPosting(false)
-      return
+      isNsfw = true
+    }
+
+    // 2. AI MULTIMODAL VISION CHECK (QUÉT TỪNG KHUNG HÌNH VIDEO PHÂN LOẠI 18+ / NSFW)
+    showToast('AI Vision đang quét hình ảnh video kiểm tra 18+... 👁️')
+    try {
+      const { checkVideoVisualSafety } = await import('@/lib/videoInspector')
+      const visualCheck = await checkVideoVisualSafety(selectedVideoFile || videoUrl)
+      if (!visualCheck.isAllowed) {
+        showToast(`Video bị AI từ chối: ${visualCheck.reason || 'Nội dung bạo lực / nguy hiểm!'} ⚠️`)
+        setIsPosting(false)
+        return
+      }
+      if (visualCheck.isNsfw) {
+        isNsfw = true
+        showToast('AI phát hiện nội dung 18+ — Đã gắn nhãn NSFW và kích hoạt làm mờ bảo vệ! 🔞')
+      }
+    } catch (visErr) {
+      console.warn('Vision check warning:', visErr)
     }
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -151,7 +174,6 @@ export default function RanVideoPage() {
         finalVideoCdnUrl = storageResult.url
       } catch (uploadErr) {
         console.warn('Storage upload error, checking direct url fallback:', uploadErr)
-        // If storage bucket is not configured, warn user
         showToast(uploadErr.message || 'Lỗi tải video lên Supabase Storage')
         setIsPosting(false)
         return
@@ -168,7 +190,8 @@ export default function RanVideoPage() {
       caption: cleanCaption,
       video_url: finalVideoCdnUrl,
       song_title: newSong.trim() || 'Original Sound - RanMet',
-      tags: tagsCheck.safeTags
+      tags: tagsCheck.safeTags,
+      is_nsfw: isNsfw
     }
 
     const { data, error } = await supabase.from('videos').insert(newVid).select().single()
@@ -325,6 +348,10 @@ export default function RanVideoPage() {
           videos.map((vid, idx) => {
             const isLiked = !!likedMap[vid.id]
             const likesCount = (likesCountMap[vid.id] || 0)
+            const isVideoNsfw = !!vid.is_nsfw || (vid.tags && vid.tags.some(t => /18|nsfw|sex|porn|hentai/i.test(t)))
+            const isUserAdult = !!userProfile?.age_verified
+            const isUnblurred = !!unblurredMap[vid.id]
+            const shouldBlur = isVideoNsfw && (!isUserAdult || !isUnblurred)
 
             return (
               <div 
@@ -342,7 +369,7 @@ export default function RanVideoPage() {
                   overflow: 'hidden'
                 }}
               >
-                {/* VIDEO ELEMENT */}
+                {/* VIDEO ELEMENT WITH 18+ BLUR */}
                 <video
                   ref={(el) => (videoRefs.current[idx] = el)}
                   src={vid.video_url}
@@ -350,14 +377,18 @@ export default function RanVideoPage() {
                   loop
                   muted={muted}
                   playsInline
-                  autoPlay={idx === 0}
+                  autoPlay={idx === 0 && !shouldBlur}
                   controls={false}
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover'
+                    objectFit: 'cover',
+                    filter: shouldBlur ? 'blur(45px) brightness(0.6)' : 'none',
+                    transform: shouldBlur ? 'scale(1.15)' : 'none',
+                    transition: 'filter 0.4s ease, transform 0.4s ease'
                   }}
                   onClick={() => {
+                    if (shouldBlur) return
                     const el = videoRefs.current[idx]
                     if (el) {
                       if (el.paused) el.play()
@@ -365,6 +396,75 @@ export default function RanVideoPage() {
                     }
                   }}
                 />
+
+                {/* 18+ NSFW AGE GATE OVERLAY */}
+                {shouldBlur && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(10, 10, 16, 0.8)',
+                      backdropFilter: 'blur(16px)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 24,
+                      textAlign: 'center',
+                      zIndex: 8,
+                      animation: 'msgPop 0.3s ease'
+                    }}
+                  >
+                    <div 
+                      style={{ 
+                        width: 58, 
+                        height: 58, 
+                        borderRadius: '50%', 
+                        background: 'rgba(236, 72, 153, 0.2)', 
+                        border: '2px solid rgba(236, 72, 153, 0.6)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontSize: 26,
+                        marginBottom: 12,
+                        boxShadow: '0 0 25px rgba(236, 72, 153, 0.4)'
+                      }}
+                    >
+                      🔞
+                    </div>
+                    <div className="rm-title" style={{ fontSize: 18, color: '#f43f5e', marginBottom: 6 }}>
+                      NỘI DUNG 18+ NHẠY CẢM (NSFW)
+                    </div>
+                    <p className="tiny muted" style={{ maxWidth: 280, lineHeight: 1.5, marginBottom: 16 }}>
+                      {!isUserAdult 
+                        ? 'Video này chứa hình ảnh 18+ và đã được AI tự động làm mờ bảo vệ. Bạn cần xác thực trên 18 tuổi trong Hồ Sơ để mở khóa xem.'
+                        : 'Video chứa hình ảnh 18+. Bạn đã xác thực đủ 18 tuổi.'}
+                    </p>
+
+                    {!isUserAdult ? (
+                      <Link 
+                        href="/profile" 
+                        className="btn btn-secondary" 
+                        style={{ width: 'auto', padding: '10px 20px', fontSize: 12, borderRadius: 999, borderColor: 'rgba(236, 72, 153, 0.4)', color: '#f43f5e' }}
+                      >
+                        🛡️ Xác thực 18+ trong Hồ Sơ
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ width: 'auto', padding: '10px 22px', fontSize: 13, borderRadius: 999 }}
+                        onClick={() => {
+                          setUnblurredMap((prev) => ({ ...prev, [vid.id]: true }))
+                          const el = videoRefs.current[idx]
+                          if (el) el.play()
+                        }}
+                      >
+                        👁️ Mở khóa xem video
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* OVERLAY GRADIENT */}
                 <div 
@@ -375,6 +475,29 @@ export default function RanVideoPage() {
                     pointerEvents: 'none'
                   }}
                 />
+
+                {/* 18+ Re-blur Toggle for Adult Users */}
+                {isVideoNsfw && isUserAdult && isUnblurred && (
+                  <button
+                    type="button"
+                    onClick={() => setUnblurredMap((prev) => ({ ...prev, [vid.id]: false }))}
+                    style={{
+                      position: 'absolute',
+                      top: 18,
+                      right: 18,
+                      background: 'rgba(236, 72, 153, 0.25)',
+                      border: '1px solid rgba(236, 72, 153, 0.5)',
+                      borderRadius: 999,
+                      padding: '4px 10px',
+                      fontSize: 11,
+                      color: '#fff',
+                      cursor: 'pointer',
+                      zIndex: 10
+                    }}
+                  >
+                    🔞 Làm mờ lại
+                  </button>
+                )}
 
                 {/* SOUND TOGGLE */}
                 <button

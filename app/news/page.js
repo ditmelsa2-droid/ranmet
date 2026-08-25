@@ -64,6 +64,9 @@ export default function RanNewsPage() {
 
   const [currentUserId, setCurrentUserId] = useState(null)
   const [currentUserName, setCurrentUserName] = useState('User')
+  const [userProfile, setUserProfile] = useState(null)
+  const [isImageDraftNsfw, setIsImageDraftNsfw] = useState(false)
+  const [unblurredNewsMap, setUnblurredNewsMap] = useState({})
   const [toastMsg, setToastMsg] = useState('')
   const [moderationWarning, setModerationWarning] = useState('')
 
@@ -123,8 +126,11 @@ export default function RanNewsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setCurrentUserId(user.id)
-        const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
-        if (profile?.display_name) setCurrentUserName(profile.display_name)
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        if (profile) {
+          setUserProfile(profile)
+          if (profile.display_name) setCurrentUserName(profile.display_name)
+        }
       }
 
       // Fetch posts from database
@@ -189,10 +195,29 @@ export default function RanNewsPage() {
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      showToast('Đang tải hình ảnh từ thiết bị...')
+      showToast('Đang tải và quét an toàn hình ảnh bằng AI Vision... 👁️')
       const res = await readFileAsDataUrl(file, 20)
+
+      // Gemini Vision Check
+      const { checkImageVisualSafety } = await import('@/lib/videoInspector')
+      const visionCheck = await checkImageVisualSafety(res.url)
+      
+      if (!visionCheck.isAllowed) {
+        showToast(`Hình ảnh bị AI từ chối: ${visionCheck.reason || 'Nội dung bạo lực / bất hợp pháp!'} ⚠️`)
+        setImageDraft('')
+        setIsImageDraftNsfw(false)
+        return
+      }
+
+      if (visionCheck.isNsfw) {
+        setIsImageDraftNsfw(true)
+        showToast('AI phát hiện ảnh 18+ — Đã gắn nhãn NSFW và kích hoạt làm mờ bảo vệ! 🔞')
+      } else {
+        setIsImageDraftNsfw(false)
+        showToast('Đã đính kèm ảnh thành công! 🖼️')
+      }
+
       setImageDraft(res.url)
-      showToast('Đã đính kèm ảnh thành công! 🖼️')
     } catch (err) {
       showToast(err.message)
     }
@@ -204,10 +229,16 @@ export default function RanNewsPage() {
 
     // GEMINI AI & SLANG AUTO-MODERATION CHECK
     const modCheck = await checkContent(postDraft)
+    let isNsfw = isImageDraftNsfw
+
     if (!modCheck.isSafe) {
-      setModerationWarning(`Hệ thống AI từ chối: Bài viết chứa nội dung không an toàn (${modCheck.flaggedWord}). Hãy điều chỉnh để bảo vệ cộng đồng!`)
-      showToast('Nội dung bài viết vi phạm tiêu chuẩn an toàn!')
-      return
+      if (modCheck.reason?.includes('18+') || modCheck.reason?.includes('nhạy cảm') || modCheck.reason?.includes('thô tục')) {
+        isNsfw = true
+      } else {
+        setModerationWarning(`Hệ thống AI từ chối: Bài viết chứa nội dung không an toàn (${modCheck.flaggedWord}). Hãy điều chỉnh để bảo vệ cộng đồng!`)
+        showToast('Nội dung bài viết vi phạm tiêu chuẩn an toàn!')
+        return
+      }
     }
 
     setModerationWarning('')
@@ -218,7 +249,8 @@ export default function RanNewsPage() {
       author_avatar: currentUserName.charAt(0).toUpperCase(),
       content: postDraft.trim(),
       image_url: imageDraft.trim() || null,
-      tags: ['#RanNews', '#Community']
+      tags: ['#RanNews', '#Community'],
+      is_nsfw: isNsfw
     }
 
     const { data, error } = await supabase.from('rannews_posts').insert(newPost).select().single()
@@ -230,7 +262,8 @@ export default function RanNewsPage() {
 
     setPostDraft('')
     setImageDraft('')
-    showToast('Đã đăng bài viết lên RanNews! 🎉')
+    setIsImageDraftNsfw(false)
+    showToast(isNsfw ? 'Đã đăng bài viết (Chế độ 18+ đã làm mờ)! 🔞' : 'Đã đăng bài viết lên RanNews! 🎉')
   }
 
   async function handleToggleLike(postId) {
@@ -431,16 +464,77 @@ export default function RanNewsPage() {
                     )}
                   </div>
 
-                  {/* Attached Image if any */}
-                  {post.image_url && (
-                    <div style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 14, maxHeight: 380 }}>
-                      <img 
-                        src={post.image_url} 
-                        alt="Post attachment" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                    </div>
-                  )}
+                  {/* Attached Image if any with 18+ Blur & Age Gate */}
+                  {post.image_url && (() => {
+                    const isPostNsfw = !!post.is_nsfw || (post.tags && post.tags.some(t => /18|nsfw|sex|porn|hentai/i.test(t)))
+                    const isUserAdult = !!userProfile?.age_verified
+                    const isUnblurred = !!unblurredNewsMap[post.id]
+                    const shouldBlur = isPostNsfw && (!isUserAdult || !isUnblurred)
+
+                    return (
+                      <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', marginBottom: 14, maxHeight: 380 }}>
+                        <img 
+                          src={post.image_url} 
+                          alt="Post attachment" 
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover',
+                            filter: shouldBlur ? 'blur(40px) brightness(0.6)' : 'none',
+                            transform: shouldBlur ? 'scale(1.15)' : 'none',
+                            transition: 'filter 0.3s ease, transform 0.3s ease'
+                          }} 
+                        />
+
+                        {shouldBlur && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              background: 'rgba(10, 10, 16, 0.75)',
+                              backdropFilter: 'blur(12px)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: 16,
+                              textAlign: 'center',
+                              zIndex: 5
+                            }}
+                          >
+                            <div style={{ fontSize: 24, marginBottom: 6 }}>🔞</div>
+                            <div className="semi small" style={{ color: '#f43f5e', marginBottom: 4 }}>
+                              Hình ảnh 18+ Nhạy cảm
+                            </div>
+                            <p className="tiny faint" style={{ maxWidth: 260, lineHeight: 1.4, marginBottom: 10 }}>
+                              {!isUserAdult 
+                                ? 'Đã làm mờ bảo vệ. Cần xác thực độ tuổi 18+ trong Hồ sơ để xem.'
+                                : 'Hình ảnh 18+ đã làm mờ.'}
+                            </p>
+
+                            {!isUserAdult ? (
+                              <Link
+                                href="/profile"
+                                className="btn btn-secondary"
+                                style={{ width: 'auto', padding: '6px 14px', fontSize: 11, borderRadius: 999, color: '#f43f5e' }}
+                              >
+                                🛡️ Xác thực 18+ trong Hồ sơ
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                style={{ width: 'auto', padding: '6px 16px', fontSize: 12, borderRadius: 999 }}
+                                onClick={() => setUnblurredNewsMap((prev) => ({ ...prev, [post.id]: true }))}
+                              >
+                                👁️ Mở khóa xem ảnh
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   {/* Tags */}
                   {post.tags && post.tags.length > 0 && (

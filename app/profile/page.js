@@ -46,6 +46,8 @@ export default function ProfilePage() {
   const [customInterest, setCustomInterest] = useState('')
   const [style, setStyle] = useState('')
   const [trustScore, setTrustScore] = useState(100)
+  const [ageVerified, setAgeVerified] = useState(false)
+  const [birthday, setBirthday] = useState('')
   
   // My Uploaded Content State
   const [myVideos, setMyVideos] = useState([])
@@ -99,6 +101,8 @@ export default function ProfilePage() {
         setCustomBannerUrl(profile.banner_url || '')
         setInterests(profile.interests || [])
         setStyle(profile.conversation_style || '')
+        setAgeVerified(!!profile.age_verified)
+        setBirthday(profile.birthday || '')
       }
       if (trust) {
         setTrustScore(trust.score)
@@ -231,6 +235,8 @@ export default function ProfilePage() {
       banner_url: customBannerUrl.trim() || null,
       interests: tagsCheck.safeTags,
       conversation_style: style.trim(),
+      age_verified: ageVerified,
+      birthday: birthday || null,
       onboarding_complete: true
     }
 
@@ -373,6 +379,7 @@ export default function ProfilePage() {
                 <div className="flex items-center g10">
                   <h1 className="rm-title" style={{ fontSize: 26, color: '#fff' }}>{displayName || 'User'}</h1>
                   <span className="badge badge-success tiny" style={{ fontSize: 10 }}>{t('verifiedBadge')}</span>
+                  {ageVerified && <span className="badge tiny" style={{ background: 'rgba(236, 72, 153, 0.2)', color: '#f43f5e', border: '1px solid rgba(236, 72, 153, 0.4)', fontSize: 10 }}>🔞 18+</span>}
                 </div>
                 <div className="tiny muted" style={{ marginTop: 4 }}>
                   {country} · {interests.length} {t('interestsCount')} · <span style={{ color: '#c084fc' }}>{t('styleLabel')}: {style || 'Casual'}</span>
@@ -411,6 +418,50 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
+
+        {/* 18+ AGE VERIFICATION CARD (XÁC THỰC ĐỘ TUỔI ĐỂ XEM NỘI DUNG 18+ ĐÃ LÀM MỜ) */}
+        <div
+          className="card"
+          style={{
+            background: ageVerified 
+              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.1) 100%)' 
+              : 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.1) 100%)',
+            border: ageVerified ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+            padding: 22
+          }}
+        >
+          <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 14 }}>
+            <div>
+              <div className="flex items-center g8" style={{ marginBottom: 6 }}>
+                <ShieldCheck size={18} style={{ color: ageVerified ? '#10b981' : '#f59e0b' }} />
+                <h3 className="rm-title" style={{ fontSize: 17, color: '#fff' }}>
+                  Xác thực độ tuổi 18+ (Age Verification)
+                </h3>
+                <span className={`badge tiny ${ageVerified ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: 10 }}>
+                  {ageVerified ? '🔞 ĐÃ XÁC THỰC 18+' : '🔒 CHƯA XÁC THỰC (DƯỚI 18)'}
+                </span>
+              </div>
+              <p className="tiny muted" style={{ maxWidth: 520, lineHeight: 1.5 }}>
+                {ageVerified 
+                  ? 'Tài khoản của bạn đã được xác thực trên 18 tuổi. Bạn có quyền xem và bỏ làm mờ các nội dung / video 18+ trên bảng tin và RanVideo.'
+                  : 'Hệ thống bảo vệ trẻ vị thành niên: Toàn bộ video và bài viết 18+ NSFW sẽ bị khóa hoặc làm mờ 100% cho đến khi bạn xác thực độ tuổi.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className={`btn ${ageVerified ? 'btn-secondary' : 'btn-primary'}`}
+              style={{ width: 'auto', padding: '10px 18px', fontSize: 12, borderRadius: 999 }}
+              onClick={() => {
+                const nextState = !ageVerified
+                setAgeVerified(nextState)
+                showToast(nextState ? 'Đã bật xác thực 18+! Hãy bấm "Lưu hồ sơ" để áp dụng.' : 'Đã tắt xác thực 18+ (Kích hoạt chế độ bảo vệ trẻ em)!')
+              }}
+            >
+              {ageVerified ? 'Tắt xác thực 18+' : '🔞 Xác thực tôi trên 18 tuổi'}
+            </button>
+          </div>
+        </div>
 
         {/* MY UPLOADED CONTENT MANAGER (QUẢN LÝ VIDEO, ẢNH, BÀI VIẾT) */}
         <div className="card" style={{ padding: 26 }}>

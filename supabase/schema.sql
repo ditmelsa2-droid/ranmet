@@ -430,6 +430,12 @@ begin
 end $$;
 
 -- ---------- SUPABASE STORAGE BUCKETS (VIDEOS & MEDIA) ----------
+-- Thêm các cột hỗ trợ kiểm duyệt nội dung 18+ NSFW & Xác thực tuổi người dùng
+alter table profiles add column if not exists age_verified boolean default false;
+alter table profiles add column if not exists birthday date;
+alter table videos add column if not exists is_nsfw boolean default false;
+alter table rannews_posts add column if not exists is_nsfw boolean default false;
+
 insert into storage.buckets (id, name, public) 
 values ('videos', 'videos', true), ('media', 'media', true)
 on conflict (id) do update set public = true;
