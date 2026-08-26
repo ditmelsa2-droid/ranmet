@@ -4,16 +4,16 @@
    ========================================================================== */
 
 :root {
-  /* Ultra-Deep Luxury Obsidian Palette */
+  /* Ultra-Deep Obsidian Canvas */
   --ln-black: #060608;
-  --ln-dark-1: #0d0d12;
-  --ln-dark-2: #14141c;
-  --ln-dark-3: #1c1c28;
-  --ln-glass: rgba(14, 14, 20, 0.78);
+  --ln-dark-1: #0b0b10;
+  --ln-dark-2: #12121a;
+  --ln-dark-3: #1a1a24;
+  --ln-glass: rgba(12, 12, 18, 0.85);
   
-  /* High-Voltage Electric Accents */
+  /* High-Voltage Electric Accents (Lando Norris Signature) */
   --ln-lime: #d2ff00;
-  --ln-lime-glow: rgba(210, 255, 0, 0.35);
+  --ln-lime-glow: rgba(210, 255, 0, 0.4);
   --ln-cyan: #00f0ff;
   --ln-cyan-glow: rgba(0, 240, 255, 0.35);
   --ln-magenta: #f43f5e;
@@ -28,6 +28,7 @@
   --gold-glow: rgba(245, 192, 66, 0.3);
   --gold-hairline: rgba(245, 192, 66, 0.12);
   --gold-hairline-strong: rgba(245, 192, 66, 0.28);
+  --gold-gradient: linear-gradient(135deg, #f5c042 0%, #ffd978 50%, #d49722 100%);
   --champagne: #f7f1e6;
   
   /* Text Hues */
@@ -36,15 +37,15 @@
   --text-faint: #5a5a70;
   
   /* Fonts */
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'Be Vietnam Pro', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: var(--font-display, 'Syne', sans-serif);
+  --font-body: var(--font-body, 'Be Vietnam Pro', sans-serif);
+  --font-mono: var(--font-mono, 'JetBrains Mono', monospace);
   
-  /* Smooth Physics */
+  /* Physics */
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Base resets */
+/* Base Resets */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -61,7 +62,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbars (Sleek Dark) */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -77,21 +78,20 @@ html, body {
   background: var(--ln-lime);
 }
 
-/* Selection */
 ::selection {
   background: var(--ln-lime);
   color: var(--ln-black);
 }
 
 /* ==========================================================================
-   TYPOGRAPHY & IMPACT HEADINGS (Lando Norris Style)
+   LANDO NORRIS TYPOGRAPHY & IMPACT HEADINGS
    ========================================================================== */
 
 .ln-impact-title {
   font-family: var(--font-display);
-  font-size: clamp(28px, 5.5vw, 56px);
+  font-size: clamp(32px, 6vw, 68px);
   font-weight: 800;
-  line-height: 0.96;
+  line-height: 0.95;
   letter-spacing: -0.04em;
   text-transform: uppercase;
   color: var(--text-pure);
@@ -156,27 +156,27 @@ html, body {
 
 .card {
   background: var(--ln-dark-1);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.8);
   transition: all 0.25s var(--ease-spring);
 }
 
 .card-glass {
   background: var(--ln-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  border-radius: 18px;
 }
 
 .card-interactive {
   cursor: pointer;
 }
 .card-interactive:hover {
-  transform: translateY(-2px);
-  border-color: var(--gold-hairline-strong);
-  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.9);
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.95);
 }
 
 /* ==========================================================================
@@ -188,11 +188,11 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 11px 22px;
   font-family: var(--font-body);
   font-size: 13.5px;
   font-weight: 700;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
@@ -234,9 +234,9 @@ html, body {
 }
 
 .btn-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -261,11 +261,11 @@ html, body {
   align-items: center;
   gap: 8px;
   padding: 6px;
-  background: rgba(18, 18, 24, 0.85);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgba(14, 14, 20, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  border-radius: 16px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -277,15 +277,15 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 18px;
+  padding: 9px 20px;
   font-family: var(--font-body);
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   color: var(--text-muted);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 11px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s var(--ease-spring);
@@ -311,46 +311,111 @@ html, body {
 }
 
 /* ==========================================================================
-   TELEMETRY TICKER (F1 Running Stream)
+   INFINITE MARQUEE TICKER (Lando Norris Style)
    ========================================================================== */
 
-.telemetry-ticker {
+.marquee-container {
+  width: 100%;
+  overflow: hidden;
+  background: #000000;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 0;
+  display: flex;
+}
+
+.marquee-track {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 8px 20px;
-  background: rgba(10, 10, 14, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-muted);
-  overflow-x: auto;
-  scrollbar-width: none;
+  gap: 36px;
+  width: max-content;
+  animation: marqueeLoop 30s linear infinite;
   white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-.telemetry-ticker::-webkit-scrollbar {
-  display: none;
+.marquee-track:hover {
+  animation-play-state: paused;
 }
 
-.telemetry-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+@keyframes marqueeLoop {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
-.telemetry-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+
+/* ==========================================================================
+   AUDIO EQUALIZER VISUALIZER
+   ========================================================================== */
+
+.equalizer-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+}
+.equalizer-bar {
+  width: 3px;
   background: var(--ln-lime);
-  box-shadow: 0 0 10px var(--ln-lime);
-  animation: telemetryPulse 1.8s infinite ease-in-out;
+  border-radius: 2px;
+  animation: eqJump 1.2s ease-in-out infinite;
+}
+.equalizer-bar:nth-child(1) { height: 8px; animation-delay: 0.1s; }
+.equalizer-bar:nth-child(2) { height: 16px; animation-delay: 0.3s; }
+.equalizer-bar:nth-child(3) { height: 10px; animation-delay: 0.5s; }
+.equalizer-bar:nth-child(4) { height: 14px; animation-delay: 0.2s; }
+.equalizer-bar:nth-child(5) { height: 6px; animation-delay: 0.4s; }
+
+@keyframes eqJump {
+  0%, 100% { transform: scaleY(0.4); transform-origin: bottom; }
+  50% { transform: scaleY(1); transform-origin: bottom; }
 }
 
-@keyframes telemetryPulse {
-  0% { transform: scale(0.9); opacity: 0.7; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.7; }
+/* ==========================================================================
+   RADAR HUD SWEEPER
+   ========================================================================== */
+
+.radar-hud {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(210, 255, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(210, 255, 0, 0.06) 0%, rgba(6, 6, 8, 0.95) 75%);
+  box-shadow: 0 0 40px rgba(210, 255, 0, 0.15);
+  margin: 0 auto;
+}
+
+.radar-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dashed rgba(210, 255, 0, 0.2);
+}
+.radar-ring-1 { width: 80px; height: 80px; }
+.radar-ring-2 { width: 160px; height: 160px; }
+.radar-ring-3 { width: 240px; height: 240px; }
+
+.radar-sweep-beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 50%;
+  background: linear-gradient(135deg, rgba(210, 255, 0, 0.5) 0%, transparent 80%);
+  transform-origin: bottom right;
+  border-radius: 100% 0 0 0;
+  animation: radarSweep 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes radarSweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* ==========================================================================
@@ -361,7 +426,7 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px;
+  padding: 4px 10px;
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
@@ -385,42 +450,13 @@ html, body {
   border: 1px solid rgba(45, 212, 191, 0.3);
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 8px;
-  background: var(--ln-dark-2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--champagne);
-  cursor: pointer;
-  transition: all 0.2s var(--ease-spring);
-}
-.chip:hover {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: var(--ln-dark-3);
-}
-.chip.selected {
-  background: rgba(245, 192, 66, 0.12);
-  border-color: var(--gold-hairline-strong);
-  color: var(--kinpaku-gold);
-  font-weight: 600;
-}
-
-/* ==========================================================================
-   INPUTS & FORMS
-   ========================================================================== */
-
+/* Inputs & Form */
 .input {
   width: 100%;
-  padding: 11px 16px;
+  padding: 12px 16px;
   background: var(--ln-dark-2);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--champagne);
   font-family: var(--font-body);
   font-size: 14px;
@@ -428,11 +464,10 @@ html, body {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .input:focus {
-  border-color: var(--kinpaku-gold);
-  box-shadow: 0 0 16px rgba(245, 192, 66, 0.2);
+  border-color: var(--ln-lime);
+  box-shadow: 0 0 16px var(--ln-lime-glow);
 }
 
-/* Avatar */
 .avatar {
   display: flex;
   align-items: center;
@@ -467,29 +502,27 @@ html, body {
   transition: transform 0.4s var(--ease-spring);
 }
 
-/* ==========================================================================
-   THEATER & DESKTOP SPLIT LAYOUTS
-   ========================================================================== */
-
+/* Theater View */
 .theater-container {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) 420px;
-  gap: 20px;
-  max-width: 1240px;
+  gap: 24px;
+  max-width: 1360px;
   margin: 0 auto;
-  height: calc(100dvh - 120px);
-  min-height: 640px;
+  height: calc(100dvh - 130px);
+  min-height: 660px;
 }
 
 .theater-stage {
   position: relative;
   background: #000000;
-  border-radius: 18px;
+  border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
 }
 
 .theater-stage video {
@@ -501,85 +534,24 @@ html, body {
 .theater-panel {
   background: var(--ln-dark-1);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* Desktop Grid 3 */
-.desktop-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 18px;
-}
-
-/* ==========================================================================
-   APPLICATION SHELL & NAVIGATION DOCK
-   ========================================================================== */
-
-.app-container {
-  min-height: 100dvh;
-  display: flex;
-  background: var(--ln-black);
-}
-
-.app-sidebar {
-  width: 240px;
-  height: 100dvh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  background: rgba(10, 10, 14, 0.95);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px 16px;
-  z-index: 50;
-}
-
-.sidebar-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-decoration: none;
-  transition: all 0.2s var(--ease-spring);
-}
-.sidebar-link:hover {
-  color: var(--text-pure);
-  background: rgba(255, 255, 255, 0.05);
-}
-.sidebar-link.active {
-  color: #ffffff;
-  background: var(--brand-aurora);
-  box-shadow: 0 4px 18px var(--brand-aurora-glow);
-}
-
-.app-main {
-  flex: 1 1 0%;
-  margin-left: 240px;
-  padding: 24px 32px 60px;
-  min-height: 100dvh;
-}
-
+/* Mobile Bottom Dock */
 .mobile-dock {
   display: none;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
-  background: rgba(8, 8, 12, 0.92);
+  height: 66px;
+  background: rgba(8, 8, 12, 0.94);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0 8px;
+  padding: 0 12px;
   justify-content: space-around;
   align-items: center;
   z-index: 100;
@@ -599,53 +571,15 @@ html, body {
   color: var(--ln-lime);
 }
 
-/* Animations */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.spin { animation: spin 1s linear infinite; }
-
-@keyframes radarSweep {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes radarPulse {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.05); opacity: 0.4; }
-  100% { transform: scale(0.95); opacity: 0.8; }
-}
-
-@keyframes msgPop {
-  0% { opacity: 0; transform: scale(0.96); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-/* Responsive Media Queries */
 @media (max-width: 1024px) {
   .theater-container {
     grid-template-columns: 1fr;
     height: auto;
   }
-  .theater-stage {
-    height: 70vh;
-    min-height: 500px;
-  }
 }
 
 @media (max-width: 768px) {
-  .app-sidebar {
-    display: none;
-  }
-  .app-main {
-    margin-left: 0;
-    padding: 16px 14px 90px;
-  }
   .mobile-dock {
     display: flex;
-  }
-  .theater-stage {
-    height: 80vh;
   }
 }

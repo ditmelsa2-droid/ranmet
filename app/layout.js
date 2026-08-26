@@ -1,9 +1,31 @@
 import "./globals.css";
+import { Syne, Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 import { LanguageProvider } from "@/lib/LanguageContext";
 
+const syne = Syne({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["700", "800"],
+  display: "swap",
+});
+
+const beVietnam = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-body",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["400", "600", "700"],
+  display: "swap",
+});
+
 export const metadata = {
-  title: "RanMet — AI Match & Realtime Social",
-  description: "Connect · Create · Inspire. Khám phá những kết nối thú vị cùng RanMet.",
+  title: "RanMet — AI Match & High-Octane Social",
+  description: "Connect · Create · Inspire. Vũ trụ mạng xã hội thế hệ mới cùng RanMet.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -18,26 +40,19 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#07060c",
+  themeColor: "#060608",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="vi">
+    <html lang="vi" className={`${syne.variable} ${beVietnam.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body>
         <LanguageProvider>
-          <div className="bg-ambient">
-            <div className="orb orb-1" />
-            <div className="orb orb-2" />
-            <div className="orb orb-3" />
-          </div>
-          <div className="rm-container">
-            {children}
-          </div>
+          {children}
         </LanguageProvider>
       </body>
     </html>
