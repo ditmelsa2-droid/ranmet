@@ -9,98 +9,98 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, null)
 
   return (
-    <div style={{ width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+    <div style={{ width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', background: 'var(--lacquer-black)' }}>
       <div 
         className="card"
         style={{
           width: '100%',
-          maxWidth: 960,
+          maxWidth: 920,
           padding: 0,
           overflow: 'hidden',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          boxShadow: '0 30px 70px -15px rgba(0, 0, 0, 0.8), 0 0 60px -10px rgba(168, 85, 247, 0.25)',
-          border: '1px solid rgba(255, 255, 255, 0.12)'
+          boxShadow: '0 30px 70px -15px rgba(0, 0, 0, 0.85)',
+          border: '1px solid var(--gold-hairline-strong)'
         }}
       >
-        {/* LEFT BRAND SHOWCASE PANEL (Desktop & Tablet) */}
+        {/* LEFT BRAND SHOWCASE PANEL */}
         <div 
           style={{
-            background: 'linear-gradient(135deg, rgba(28, 18, 48, 0.95) 0%, rgba(14, 10, 24, 0.98) 100%)',
-            padding: '40px 36px',
+            background: 'var(--raised-lacquer)',
+            padding: '36px 32px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            borderRight: '1px solid rgba(255, 255, 255, 0.08)'
+            borderRight: '1px solid var(--gold-hairline)'
           }}
         >
           <div>
-            <div className="rm-logo" style={{ fontSize: 32, marginBottom: 8 }}>
-              <Zap size={30} style={{ color: '#ec4899' }} /> RanMet
+            <div className="rm-logo" style={{ fontSize: 26, marginBottom: 6 }}>
+              <Zap size={24} style={{ color: 'var(--kinpaku-gold)' }} /> RanMet
             </div>
-            <div className="tiny muted flex items-center g6" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 28 }}>
-              <Sparkles size={13} style={{ color: '#a855f7' }} />
-              Connect · Create · Inspire
+            <div className="tiny faint flex items-center g6" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 24 }}>
+              <Sparkles size={12} style={{ color: 'var(--kinpaku-gold)' }} />
+              CONNECT · DISCOVER · INSPIRE
             </div>
 
-            <h2 className="rm-title" style={{ fontSize: 24, lineHeight: 1.35, marginBottom: 14, color: '#fff' }}>
+            <h2 className="rm-title" style={{ fontSize: 20, lineHeight: 1.35, marginBottom: 10 }}>
               Không Gian Kết Nối & Mạng Xã Hội Thế Hệ Mới
             </h2>
-            <p className="small muted" style={{ lineHeight: 1.55, marginBottom: 32 }}>
+            <p className="small muted" style={{ lineHeight: 1.55, marginBottom: 24 }}>
               Khám phá bạn bè cùng sở thích bằng thuật toán AI Matching thông minh, trải nghiệm video ngắn RanVideo và tham gia các phòng cộng đồng RanWorld sôi động.
             </p>
 
             {/* Feature Highlights Grid */}
-            <div className="flex col g12">
-              <div className="flex items-center g12" style={{ padding: '10px 14px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(236, 72, 153, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Compass size={18} style={{ color: '#ec4899' }} />
+            <div className="flex col g10">
+              <div className="flex items-center g10" style={{ padding: '10px 12px', background: 'var(--lacquer-deep)', borderRadius: 8, border: '1px solid var(--gold-hairline)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(245, 192, 66, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--kinpaku-gold)' }}>
+                  <Compass size={16} />
                 </div>
                 <div>
-                  <div className="semi small" style={{ color: '#fff' }}>AI Matching Radar</div>
+                  <div className="semi small champagne">AI Matching Radar</div>
                   <div className="tiny faint">Ghép ngẫu nhiên người có cùng gu</div>
                 </div>
               </div>
 
-              <div className="flex items-center g12" style={{ padding: '10px 14px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(244, 63, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Video size={18} style={{ color: '#f43f5e' }} />
+              <div className="flex items-center g10" style={{ padding: '10px 12px', background: 'var(--lacquer-deep)', borderRadius: 8, border: '1px solid var(--gold-hairline)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(244, 63, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fb7185' }}>
+                  <Video size={16} />
                 </div>
                 <div>
-                  <div className="semi small" style={{ color: '#fff' }}>RanVideo Short-form</div>
+                  <div className="semi small champagne">RanVideo Short-form</div>
                   <div className="tiny faint">Lướt video, thả tim & bình luận</div>
                 </div>
               </div>
 
-              <div className="flex items-center g12" style={{ padding: '10px 14px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(6, 182, 212, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Globe2 size={18} style={{ color: '#06b6d4' }} />
+              <div className="flex items-center g10" style={{ padding: '10px 12px', background: 'var(--lacquer-deep)', borderRadius: 8, border: '1px solid var(--gold-hairline)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(56, 189, 248, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--verdigris-patina)' }}>
+                  <Globe2 size={16} />
                 </div>
                 <div>
-                  <div className="semi small" style={{ color: '#fff' }}>RanWorld Lounges</div>
+                  <div className="semi small champagne">RanWorld Lounges</div>
                   <div className="tiny faint">Phòng Voice & Thảo luận chủ đề</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center g8 tiny faint" style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-            <ShieldCheck size={14} style={{ color: '#10b981' }} />
-            <span>Hệ thống bảo vệ bởi Trust Engine & Supabase RLS</span>
+          <div className="flex items-center g6 tiny faint" style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--gold-hairline)' }}>
+            <ShieldCheck size={13} style={{ color: 'var(--emerald-patina)' }} />
+            <span>Bảo vệ bởi Trust Engine & Supabase RLS</span>
           </div>
         </div>
 
         {/* RIGHT AUTH FORM PANEL */}
-        <div style={{ padding: '40px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div style={{ marginBottom: 28 }}>
-            <h1 className="rm-title" style={{ fontSize: 26, marginBottom: 8, color: '#fff' }}>Đăng nhập</h1>
+        <div style={{ padding: '36px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--lacquer-deep)' }}>
+          <div style={{ marginBottom: 24 }}>
+            <h1 className="rm-title" style={{ fontSize: 24, marginBottom: 6 }}>Đăng nhập</h1>
             <p className="small muted">Nhập email và mật khẩu của bạn để vào RanMet</p>
           </div>
 
-          <form action={formAction} className="flex col g18">
+          <form action={formAction} className="flex col g16">
             <div className="field-group">
               <label className="field-label">
-                <Mail size={14} /> Email tài khoản
+                <Mail size={13} /> Email tài khoản
               </label>
               <input
                 className="input"
@@ -114,7 +114,7 @@ export default function LoginPage() {
 
             <div className="field-group">
               <label className="field-label">
-                <Lock size={14} /> Mật khẩu
+                <Lock size={13} /> Mật khẩu
               </label>
               <input
                 className="input"
@@ -136,22 +136,22 @@ export default function LoginPage() {
               className="btn btn-primary"
               type="submit"
               disabled={pending}
-              style={{ marginTop: 10, padding: 15 }}
+              style={{ marginTop: 8, padding: 13 }}
             >
               {pending ? (
                 <>Đang xác thực...</>
               ) : (
                 <>
-                  Đăng nhập ngay <ArrowRight size={18} />
+                  Đăng nhập ngay <ArrowRight size={16} />
                 </>
               )}
             </button>
           </form>
 
           {/* Footer switch to Register */}
-          <div className="center-text small muted" style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+          <div className="center-text small muted" style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--gold-hairline)' }}>
             Chưa có tài khoản?{' '}
-            <Link href="/register" style={{ color: '#c084fc', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 4 }}>
+            <Link href="/register" style={{ color: 'var(--kinpaku-gold)', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3 }}>
               Tạo tài khoản mới
             </Link>
           </div>

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { 
   Heart, MessageCircle, Share2, Music, Volume2, 
-  VolumeX, Play, Plus, Sparkles, Flame, Eye, Compass, X, Upload, Video as VideoIcon
+  VolumeX, Plus, Flame, X, Upload, Video as VideoIcon
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent, checkTags } from '@/lib/moderation'
@@ -54,7 +54,7 @@ export default function RanVideoPage() {
 
   // Fetch videos from Supabase
   async function fetchVideos() {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('videos')
       .select('*')
       .order('created_at', { ascending: false })
@@ -100,7 +100,7 @@ export default function RanVideoPage() {
       showToast('Đang đọc video từ thiết bị...')
       const res = await readFileAsDataUrl(file, 100)
       setSelectedVideoFile(file)
-      setVideoUrl(res.url) // For immediate local preview in modal
+      setVideoUrl(res.url)
       setVideoFileName(res.name)
       showToast('Đã chọn video từ máy! Hãy nhập mô tả và bấm Đăng.')
     } catch (err) {
@@ -165,7 +165,7 @@ export default function RanVideoPage() {
 
     let finalVideoCdnUrl = videoUrl.trim()
 
-    // If uploading a real binary file, upload to Supabase Storage CDN first!
+    // Upload real binary file to Supabase Storage CDN
     if (selectedVideoFile) {
       try {
         showToast('Đang tải video lên Supabase Storage CDN... 🚀')
@@ -173,7 +173,7 @@ export default function RanVideoPage() {
         const storageResult = await uploadMediaToSupabase(supabase, selectedVideoFile, 'videos', activeUid || 'guest')
         finalVideoCdnUrl = storageResult.url
       } catch (uploadErr) {
-        console.warn('Storage upload error, checking direct url fallback:', uploadErr)
+        console.warn('Storage upload error, fallback:', uploadErr)
         showToast(uploadErr.message || 'Lỗi tải video lên Supabase Storage')
         setIsPosting(false)
         return
@@ -272,43 +272,42 @@ export default function RanVideoPage() {
       <div 
         className="flex justify-between items-center" 
         style={{ 
-          maxWidth: 480, 
+          maxWidth: 440, 
           margin: '0 auto 12px', 
-          padding: '0 8px'
+          padding: '0 4px'
         }}
       >
         <div className="flex items-center g8">
-          <Flame size={20} style={{ color: '#f43f5e' }} />
-          <h1 className="rm-title" style={{ fontSize: 20, color: '#fff' }}>{t('ranVideoTitle')}</h1>
-          <span className="badge badge-glow tiny" style={{ fontSize: 9 }}>REALTIME</span>
+          <Flame size={18} style={{ color: 'var(--kinpaku-gold)' }} />
+          <h1 className="rm-title" style={{ fontSize: 18, margin: 0 }}>{t('ranVideoTitle')}</h1>
+          <span className="badge badge-gold tiny" style={{ fontSize: 9 }}>REALTIME</span>
         </div>
 
         <button
           type="button"
           className="btn btn-primary"
-          style={{ width: 'auto', padding: '8px 16px', fontSize: 12, borderRadius: 999 }}
+          style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 6 }}
           onClick={() => setShowUploadModal(true)}
         >
-          <Plus size={15} /> {t('uploadNewVideo')}
+          <Plus size={14} /> {t('uploadNewVideo')}
         </button>
       </div>
 
       {/* FEED CONTAINER */}
       <div 
         ref={containerRef}
-        className="tiktok-container"
         style={{ 
-          maxWidth: 480, 
+          maxWidth: 440, 
           margin: '0 auto', 
           height: 'calc(100vh - 150px)', 
-          minHeight: 580,
-          background: '#000',
-          borderRadius: 24,
+          minHeight: 560,
+          background: 'var(--lacquer-deep)',
+          borderRadius: 16,
           overflowY: 'scroll',
           scrollSnapType: 'y mandatory',
           position: 'relative',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-          border: '1px solid rgba(255,255,255,0.1)'
+          boxShadow: '0 20px 50px rgba(0,0,0,0.65)',
+          border: '1px solid var(--gold-hairline-strong)'
         }}
       >
         {loading ? (
@@ -319,29 +318,31 @@ export default function RanVideoPage() {
           <div className="flex col items-center justify-center center-text" style={{ height: '100%', padding: 24 }}>
             <div 
               style={{ 
-                width: 64, 
-                height: 64, 
+                width: 56, 
+                height: 56, 
                 borderRadius: '50%', 
-                background: 'rgba(244, 63, 94, 0.15)', 
+                background: 'rgba(245, 192, 66, 0.1)', 
+                border: '1px solid var(--gold-hairline-strong)',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
-                marginBottom: 16
-              }}
+                marginBottom: 14,
+                color: 'var(--kinpaku-gold)'
+              }} 
             >
-              <VideoIcon size={30} style={{ color: '#f43f5e' }} />
+              <VideoIcon size={26} />
             </div>
-            <h3 className="rm-title" style={{ fontSize: 18, marginBottom: 6 }}>{t('noVideosYet')}</h3>
-            <p className="tiny muted" style={{ maxWidth: 300, marginBottom: 20, lineHeight: 1.5 }}>
+            <h3 className="rm-title" style={{ fontSize: 16, marginBottom: 6 }}>{t('noVideosYet')}</h3>
+            <p className="tiny muted" style={{ maxWidth: 280, marginBottom: 18, lineHeight: 1.5 }}>
               {t('firstVideoPrompt')}
             </p>
             <button 
               type="button" 
               className="btn btn-primary"
-              style={{ width: 'auto', padding: '12px 24px' }}
+              style={{ width: 'auto', padding: '10px 20px', borderRadius: 6 }}
               onClick={() => setShowUploadModal(true)}
             >
-              <Upload size={16} /> {t('uploadFirstVideoBtn')}
+              <Upload size={15} /> {t('uploadFirstVideoBtn')}
             </button>
           </div>
         ) : (
@@ -356,13 +357,12 @@ export default function RanVideoPage() {
             return (
               <div 
                 key={vid.id}
-                className="tiktok-card"
                 style={{
                   height: '100%',
                   width: '100%',
                   scrollSnapAlign: 'start',
                   position: 'relative',
-                  background: '#0a0a0c',
+                  background: '#070609',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -373,7 +373,6 @@ export default function RanVideoPage() {
                 <video
                   ref={(el) => (videoRefs.current[idx] = el)}
                   src={vid.video_url}
-                  className="tiktok-video"
                   loop
                   muted={muted}
                   playsInline
@@ -403,7 +402,7 @@ export default function RanVideoPage() {
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      background: 'rgba(10, 10, 16, 0.8)',
+                      background: 'rgba(10, 8, 14, 0.84)',
                       backdropFilter: 'blur(16px)',
                       display: 'flex',
                       flexDirection: 'column',
@@ -417,25 +416,24 @@ export default function RanVideoPage() {
                   >
                     <div 
                       style={{ 
-                        width: 58, 
-                        height: 58, 
+                        width: 52, 
+                        height: 52, 
                         borderRadius: '50%', 
-                        background: 'rgba(236, 72, 153, 0.2)', 
-                        border: '2px solid rgba(236, 72, 153, 0.6)', 
+                        background: 'rgba(244, 63, 94, 0.15)', 
+                        border: '1.5px solid rgba(244, 63, 94, 0.5)', 
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center',
-                        fontSize: 26,
-                        marginBottom: 12,
-                        boxShadow: '0 0 25px rgba(236, 72, 153, 0.4)'
+                        fontSize: 22,
+                        marginBottom: 10
                       }}
                     >
                       🔞
                     </div>
-                    <div className="rm-title" style={{ fontSize: 18, color: '#f43f5e', marginBottom: 6 }}>
+                    <div className="rm-title" style={{ fontSize: 16, color: '#f43f5e', marginBottom: 4 }}>
                       NỘI DUNG 18+ NHẠY CẢM (NSFW)
                     </div>
-                    <p className="tiny muted" style={{ maxWidth: 280, lineHeight: 1.5, marginBottom: 16 }}>
+                    <p className="tiny muted" style={{ maxWidth: 280, lineHeight: 1.5, marginBottom: 14 }}>
                       {!isUserAdult 
                         ? 'Video này chứa hình ảnh 18+ và đã được AI tự động làm mờ bảo vệ. Bạn cần xác thực trên 18 tuổi trong Hồ Sơ để mở khóa xem.'
                         : 'Video chứa hình ảnh 18+. Bạn đã xác thực đủ 18 tuổi.'}
@@ -445,7 +443,7 @@ export default function RanVideoPage() {
                       <Link 
                         href="/profile" 
                         className="btn btn-secondary" 
-                        style={{ width: 'auto', padding: '10px 20px', fontSize: 12, borderRadius: 999, borderColor: 'rgba(236, 72, 153, 0.4)', color: '#f43f5e' }}
+                        style={{ width: 'auto', padding: '8px 16px', fontSize: 11.5, borderRadius: 6, borderColor: 'rgba(244, 63, 94, 0.3)', color: '#f43f5e' }}
                       >
                         🛡️ Xác thực 18+ trong Hồ Sơ
                       </Link>
@@ -453,7 +451,7 @@ export default function RanVideoPage() {
                       <button
                         type="button"
                         className="btn btn-primary"
-                        style={{ width: 'auto', padding: '10px 22px', fontSize: 13, borderRadius: 999 }}
+                        style={{ width: 'auto', padding: '8px 18px', fontSize: 12, borderRadius: 6 }}
                         onClick={() => {
                           setUnblurredMap((prev) => ({ ...prev, [vid.id]: true }))
                           const el = videoRefs.current[idx]
@@ -471,7 +469,7 @@ export default function RanVideoPage() {
                   style={{
                     position: 'absolute',
                     inset: 0,
-                    background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 40%, rgba(0,0,0,0.85) 100%)',
+                    background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 40%, rgba(0,0,0,0.85) 100%)',
                     pointerEvents: 'none'
                   }}
                 />
@@ -483,13 +481,13 @@ export default function RanVideoPage() {
                     onClick={() => setUnblurredMap((prev) => ({ ...prev, [vid.id]: false }))}
                     style={{
                       position: 'absolute',
-                      top: 18,
-                      right: 18,
-                      background: 'rgba(236, 72, 153, 0.25)',
-                      border: '1px solid rgba(236, 72, 153, 0.5)',
-                      borderRadius: 999,
-                      padding: '4px 10px',
-                      fontSize: 11,
+                      top: 16,
+                      right: 16,
+                      background: 'rgba(244, 63, 94, 0.2)',
+                      border: '1px solid rgba(244, 63, 94, 0.4)',
+                      borderRadius: 6,
+                      padding: '3px 8px',
+                      fontSize: 10.5,
                       color: '#fff',
                       cursor: 'pointer',
                       zIndex: 10
@@ -505,14 +503,14 @@ export default function RanVideoPage() {
                   onClick={() => setMuted(!muted)}
                   style={{
                     position: 'absolute',
-                    top: 18,
-                    left: 18,
+                    top: 16,
+                    left: 16,
                     background: 'rgba(0,0,0,0.5)',
-                    backdropFilter: 'blur(10px)',
-                    border: 'none',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid var(--gold-hairline)',
                     borderRadius: '50%',
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     color: '#fff',
                     display: 'flex',
                     alignItems: 'center',
@@ -521,33 +519,30 @@ export default function RanVideoPage() {
                     zIndex: 10
                   }}
                 >
-                  {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                  {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                 </button>
 
                 {/* RIGHT ACTION BAR */}
                 <div 
-                  className="tiktok-actions"
                   style={{
                     position: 'absolute',
-                    right: 14,
-                    bottom: 30,
+                    right: 12,
+                    bottom: 24,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 16,
+                    gap: 14,
                     zIndex: 10
                   }}
                 >
                   {/* Creator Avatar */}
-                  <div style={{ position: 'relative', marginBottom: 4 }}>
+                  <div style={{ position: 'relative', marginBottom: 2 }}>
                     <div 
                       className="avatar" 
                       style={{ 
-                        width: 44, 
-                        height: 44, 
-                        fontSize: 16, 
-                        border: '2px solid #fff',
-                        background: 'var(--brand-gradient)'
+                        width: 40, 
+                        height: 40, 
+                        fontSize: 14, 
                       }}
                     >
                       {vid.avatar_letter}
@@ -561,29 +556,30 @@ export default function RanVideoPage() {
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: isLiked ? '#f43f5e' : '#fff',
+                      color: isLiked ? 'var(--kinpaku-gold)' : '#fff',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       cursor: 'pointer',
-                      gap: 4
+                      gap: 3
                     }}
                   >
                     <div 
                       style={{ 
-                        width: 42, 
-                        height: 42, 
+                        width: 38, 
+                        height: 38, 
                         borderRadius: '50%', 
-                        background: 'rgba(0,0,0,0.4)', 
-                        backdropFilter: 'blur(8px)',
+                        background: 'rgba(0,0,0,0.45)', 
+                        backdropFilter: 'blur(6px)',
                         display: 'flex', 
                         alignItems: 'center', 
-                        justifyContent: 'center' 
-                      }}
+                        justifyContent: 'center',
+                        border: '1px solid var(--gold-hairline)'
+                      }} 
                     >
-                      <Heart size={22} fill={isLiked ? '#f43f5e' : 'none'} />
+                      <Heart size={18} fill={isLiked ? 'var(--kinpaku-gold)' : 'none'} />
                     </div>
-                    <span className="tiny bold" style={{ color: '#fff' }}>{likesCount}</span>
+                    <span className="tiny bold rm-num" style={{ color: '#fff', fontSize: 11 }}>{likesCount}</span>
                   </button>
 
                   {/* Comments Button */}
@@ -598,24 +594,25 @@ export default function RanVideoPage() {
                       flexDirection: 'column',
                       alignItems: 'center',
                       cursor: 'pointer',
-                      gap: 4
+                      gap: 3
                     }}
                   >
                     <div 
                       style={{ 
-                        width: 42, 
-                        height: 42, 
+                        width: 38, 
+                        height: 38, 
                         borderRadius: '50%', 
-                        background: 'rgba(0,0,0,0.4)', 
-                        backdropFilter: 'blur(8px)',
+                        background: 'rgba(0,0,0,0.45)', 
+                        backdropFilter: 'blur(6px)',
                         display: 'flex', 
                         alignItems: 'center', 
-                        justifyContent: 'center' 
-                      }}
+                        justifyContent: 'center',
+                        border: '1px solid var(--gold-hairline)'
+                      }} 
                     >
-                      <MessageCircle size={22} />
+                      <MessageCircle size={18} />
                     </div>
-                    <span className="tiny bold" style={{ color: '#fff' }}>{t('commentsLabel')}</span>
+                    <span className="tiny bold" style={{ color: '#fff', fontSize: 10 }}>{t('commentsLabel')}</span>
                   </button>
 
                   {/* Share Button */}
@@ -637,56 +634,56 @@ export default function RanVideoPage() {
                       flexDirection: 'column',
                       alignItems: 'center',
                       cursor: 'pointer',
-                      gap: 4
+                      gap: 3
                     }}
                   >
                     <div 
                       style={{ 
-                        width: 42, 
-                        height: 42, 
+                        width: 38, 
+                        height: 38, 
                         borderRadius: '50%', 
-                        background: 'rgba(0,0,0,0.4)', 
-                        backdropFilter: 'blur(8px)',
+                        background: 'rgba(0,0,0,0.45)', 
+                        backdropFilter: 'blur(6px)',
                         display: 'flex', 
                         alignItems: 'center', 
-                        justifyContent: 'center' 
-                      }}
+                        justifyContent: 'center',
+                        border: '1px solid var(--gold-hairline)'
+                      }} 
                     >
-                      <Share2 size={20} />
+                      <Share2 size={17} />
                     </div>
-                    <span className="tiny bold" style={{ color: '#fff' }}>{t('shareLabel')}</span>
+                    <span className="tiny bold" style={{ color: '#fff', fontSize: 10 }}>{t('shareLabel')}</span>
                   </button>
                 </div>
 
                 {/* BOTTOM INFO */}
                 <div 
-                  className="tiktok-meta"
                   style={{
                     position: 'absolute',
-                    left: 18,
-                    bottom: 24,
-                    right: 76,
+                    left: 16,
+                    bottom: 20,
+                    right: 70,
                     color: '#fff',
                     zIndex: 10
                   }}
                 >
-                  <div className="semi" style={{ fontSize: 16, marginBottom: 4, textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>
+                  <div className="semi" style={{ fontSize: 15, marginBottom: 3, textShadow: '0 2px 4px rgba(0,0,0,0.7)' }}>
                     {vid.creator_name} <span className="tiny faint" style={{ color: 'rgba(255,255,255,0.7)' }}>{vid.creator_handle}</span>
                   </div>
-                  <div className="small" style={{ lineHeight: 1.4, marginBottom: 8, textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>
+                  <div className="small" style={{ lineHeight: 1.4, marginBottom: 6, textShadow: '0 2px 4px rgba(0,0,0,0.7)' }}>
                     {vid.caption}
                   </div>
                   
                   {vid.tags && (
-                    <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                       {vid.tags.map((t, i) => (
-                        <span key={i} className="tiny bold" style={{ color: '#ec4899' }}>{t}</span>
+                        <span key={i} className="tiny bold gold">{t}</span>
                       ))}
                     </div>
                   )}
 
-                  <div className="tiny faint flex items-center g6" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                    <Music size={13} /> {vid.song_title}
+                  <div className="tiny faint flex items-center g4" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                    <Music size={12} /> {vid.song_title}
                   </div>
                 </div>
               </div>
@@ -701,8 +698,8 @@ export default function RanVideoPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(16px)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',
@@ -713,53 +710,53 @@ export default function RanVideoPage() {
         >
           <div 
             className="card" 
-            style={{ width: '100%', maxWidth: 460, padding: 26, animation: 'msgPop 0.25s ease' }}
+            style={{ width: '100%', maxWidth: 440, padding: 24, animation: 'msgPop 0.25s ease' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
               <div className="flex items-center g8">
-                <Sparkles size={20} style={{ color: '#f43f5e' }} />
-                <h2 className="rm-title" style={{ fontSize: 18 }}>{t('uploadNewVideo')}</h2>
+                <VideoIcon size={18} style={{ color: 'var(--kinpaku-gold)' }} />
+                <h2 className="rm-title" style={{ fontSize: 16 }}>{t('uploadNewVideo')}</h2>
               </div>
               <button 
                 type="button" 
                 onClick={() => setShowUploadModal(false)}
                 className="btn-icon" 
-                style={{ width: 32, height: 32 }}
+                style={{ width: 28, height: 28 }}
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
 
             {/* Upload Method Switcher */}
-            <div className="flex g8" style={{ marginBottom: 16 }}>
+            <div className="flex g6" style={{ marginBottom: 14 }}>
               <button
                 type="button"
                 className={`btn ${uploadMode === 'file' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1, padding: '8px 12px', fontSize: 12, borderRadius: 999 }}
+                style={{ flex: 1, padding: '7px 10px', fontSize: 11.5, borderRadius: 6 }}
                 onClick={() => setUploadMode('file')}
               >
-                <Upload size={14} /> Tải từ máy
+                <Upload size={13} /> Tải từ máy
               </button>
               <button
                 type="button"
                 className={`btn ${uploadMode === 'url' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ flex: 1, padding: '8px 12px', fontSize: 12, borderRadius: 999 }}
+                style={{ flex: 1, padding: '7px 10px', fontSize: 11.5, borderRadius: 6 }}
                 onClick={() => setUploadMode('url')}
               >
-                <VideoIcon size={14} /> Dán link Video
+                <VideoIcon size={13} /> Dán link Video
               </button>
             </div>
 
             {uploadMode === 'file' ? (
-              <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 12 }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ padding: '18px', borderStyle: 'dashed', width: '100%', borderRadius: 16 }}
+                  style={{ padding: '16px', borderStyle: 'dashed', width: '100%', borderRadius: 10 }}
                   onClick={() => videoFileInputRef.current?.click()}
                 >
-                  <Upload size={22} style={{ color: '#f43f5e' }} /> 
+                  <Upload size={18} style={{ color: 'var(--kinpaku-gold)' }} /> 
                   {videoFileName ? `✓ ${videoFileName}` : 'Chọn video từ máy (MP4/WebM)'}
                 </button>
                 <input 
@@ -771,7 +768,7 @@ export default function RanVideoPage() {
                 />
               </div>
             ) : (
-              <div className="field-group" style={{ marginBottom: 14 }}>
+              <div className="field-group" style={{ marginBottom: 12 }}>
                 <label className="field-label">Đường dẫn Video Trực Tiếp (Direct MP4 URL) *</label>
                 <input
                   className="input"
@@ -788,12 +785,12 @@ export default function RanVideoPage() {
             )}
 
             {videoUrl && (
-              <div style={{ marginBottom: 14, borderRadius: 12, overflow: 'hidden', maxHeight: 180, background: '#000' }}>
-                <video src={videoUrl} controls style={{ width: '100%', maxHeight: 180 }} />
+              <div style={{ marginBottom: 12, borderRadius: 8, overflow: 'hidden', maxHeight: 160, background: '#000' }}>
+                <video src={videoUrl} controls style={{ width: '100%', maxHeight: 160 }} />
               </div>
             )}
 
-            <form onSubmit={handlePostVideo} className="flex col g14">
+            <form onSubmit={handlePostVideo} className="flex col g12">
               <div className="field-group">
                 <label className="field-label">{t('captionLabel')}</label>
                 <textarea 
@@ -819,7 +816,7 @@ export default function RanVideoPage() {
               <button 
                 type="submit" 
                 className="btn btn-primary" 
-                style={{ marginTop: 6 }}
+                style={{ marginTop: 4 }}
                 disabled={(!videoUrl.trim() && !selectedVideoFile) || isPosting}
               >
                 {isPosting ? 'Đang tải lên & Đăng bài...' : t('postVideoBtn')}
@@ -835,8 +832,8 @@ export default function RanVideoPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(8px)',
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(10px)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'flex-end',
@@ -848,8 +845,8 @@ export default function RanVideoPage() {
             className="card" 
             style={{ 
               width: '100%', 
-              maxWidth: 480, 
-              height: '65vh', 
+              maxWidth: 440, 
+              height: '60vh', 
               padding: 0, 
               borderBottomLeftRadius: 0, 
               borderBottomRightRadius: 0,
@@ -859,43 +856,43 @@ export default function RanVideoPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-              <div className="semi" style={{ fontSize: 16 }}>{t('commentsLabel')} ({activeVideoComments.length})</div>
-              <button type="button" onClick={() => setShowComments(false)} className="btn-icon" style={{ width: 32, height: 32 }}>
-                <X size={16} />
+            <div className="flex justify-between items-center" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gold-hairline)' }}>
+              <div className="semi champagne" style={{ fontSize: 15 }}>{t('commentsLabel')} ({activeVideoComments.length})</div>
+              <button type="button" onClick={() => setShowComments(false)} className="btn-icon" style={{ width: 28, height: 28 }}>
+                <X size={14} />
               </button>
             </div>
 
-            <div className="grow" style={{ overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="grow" style={{ overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {activeVideoComments.length === 0 ? (
                 <div className="center-text tiny faint" style={{ margin: 'auto 0' }}>
-                  No comments yet.
+                  Chưa có bình luận nào.
                 </div>
               ) : (
                 activeVideoComments.map((c) => (
-                  <div key={c.id} className="flex g10 items-start">
-                    <div className="avatar" style={{ width: 34, height: 34, fontSize: 13, background: 'var(--brand-gradient)', flexShrink: 0 }}>
+                  <div key={c.id} className="flex g8 items-start">
+                    <div className="avatar" style={{ width: 30, height: 30, fontSize: 11, flexShrink: 0 }}>
                       {c.user_name?.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="semi tiny" style={{ color: '#fff' }}>{c.user_name}</div>
-                      <div className="small" style={{ color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{c.content}</div>
-                      <div className="tiny faint" style={{ marginTop: 4 }}>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      <div className="semi tiny gold">{c.user_name}</div>
+                      <div className="small champagne" style={{ marginTop: 2 }}>{c.content}</div>
+                      <div className="tiny faint rm-num" style={{ marginTop: 2 }}>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            <form onSubmit={handleSendComment} className="flex g10" style={{ padding: '12px 18px', borderTop: '1px solid var(--border)' }}>
+            <form onSubmit={handleSendComment} className="flex g8" style={{ padding: '10px 16px', borderTop: '1px solid var(--gold-hairline)' }}>
               <input
                 className="input"
                 placeholder={t('writeCommentPlaceholder')}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                style={{ borderRadius: 999 }}
+                style={{ borderRadius: 6, padding: '8px 12px', fontSize: 13 }}
               />
-              <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 20px', borderRadius: 999 }}>
+              <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 16px', borderRadius: 6, fontSize: 13 }}>
                 Send
               </button>
             </form>
@@ -911,13 +908,13 @@ export default function RanVideoPage() {
             top: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(18, 14, 28, 0.95)',
-            border: '1px solid rgba(236, 72, 153, 0.5)',
-            boxShadow: '0 8px 32px rgba(236, 72, 153, 0.3)',
-            padding: '10px 20px',
-            borderRadius: 999,
-            color: '#fff',
-            fontSize: 13.5,
+            background: 'var(--raised-lacquer)',
+            border: '1px solid var(--gold-hairline-strong)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.65)',
+            padding: '9px 18px',
+            borderRadius: 8,
+            color: 'var(--champagne)',
+            fontSize: 13,
             fontWeight: 600,
             zIndex: 1000,
             animation: 'msgPop 0.25s ease'

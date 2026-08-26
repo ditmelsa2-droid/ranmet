@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   Home, Compass, Video, Globe, User, Zap, 
-  LogOut, ShieldCheck, Sparkles, MessageSquare, Newspaper, DollarSign,
-  Languages
+  ShieldCheck, MessageSquare, Newspaper, DollarSign,
+  Languages, ChevronRight
 } from 'lucide-react'
 import { useLanguage } from '@/lib/LanguageContext'
 
@@ -32,45 +32,69 @@ export default function AppShell({ children, userProfile, trustScore }) {
 
   return (
     <div className="rm-app-layout">
+      {/* Ambient background light beam */}
+      <div className="bg-ambient">
+        <div className="ambient-beam" />
+      </div>
+
       {/* DESKTOP SIDEBAR (Visible on screens >= 960px) */}
       <aside className="rm-desktop-sidebar">
-        <div>
-          {/* Brand Logo & Global Language Switcher */}
-          <div className="flex justify-between items-center" style={{ marginBottom: 20 }}>
-            <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none' }}>
-              <div className="rm-logo" style={{ fontSize: 24 }}>
-                <Zap size={24} style={{ color: '#ec4899' }} /> RanMet
+        <div className="flex col g20">
+          {/* Brand Logo & Language Switcher */}
+          <div className="flex justify-between items-center" style={{ paddingBottom: 16, borderBottom: '1px solid var(--gold-hairline)' }}>
+            <Link href="/home" className="flex items-center g8" style={{ textDecoration: 'none' }}>
+              <div 
+                style={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: 8, 
+                  background: 'var(--gold-gradient)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  color: 'var(--dark-ink)',
+                  boxShadow: '0 2px 10px rgba(245, 192, 66, 0.3)'
+                }}
+              >
+                <Zap size={18} />
               </div>
-              <span className="badge tiny" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899', fontSize: 10 }}>
-                v1.0
-              </span>
+              <div className="rm-wordmark" style={{ fontSize: 16, letterSpacing: '0.12em' }}>
+                RANMET
+              </div>
             </Link>
 
-            {/* Global Language Selector */}
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value)}
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 8,
-                padding: '4px 6px',
-                fontSize: 11,
-                cursor: 'pointer'
-              }}
-              title="Chuyển đổi ngôn ngữ / Global Language"
-            >
-              {supportedLanguages.map((l) => (
-                <option key={l.code} value={l.code} style={{ background: '#161320' }}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
+            {/* Language Selector */}
+            <div className="flex items-center g4" style={{ background: 'var(--lacquer-deep)', border: '1px solid var(--gold-hairline)', borderRadius: 8, padding: '2px 6px' }}>
+              <Languages size={12} style={{ color: 'var(--kinpaku-gold)' }} />
+              <select
+                value={lang}
+                onChange={(e) => setLang(e.target.value)}
+                style={{
+                  background: 'transparent',
+                  color: 'var(--champagne)',
+                  border: 'none',
+                  fontSize: 11,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  padding: '2px 0'
+                }}
+                title="Chuyển đổi ngôn ngữ / Global Language"
+              >
+                {supportedLanguages.map((l) => (
+                  <option key={l.code} value={l.code} style={{ background: '#120f18', color: '#fff' }}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Nav List */}
+          {/* Navigation Items */}
           <nav className="flex col g4">
+            <div className="tiny faint" style={{ letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4, paddingLeft: 8 }}>
+              Điều hướng
+            </div>
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href))
@@ -80,17 +104,17 @@ export default function AppShell({ children, userProfile, trustScore }) {
                   href={item.href}
                   className={`sidebar-link ${isActive ? 'active' : ''}`}
                 >
-                  <Icon size={18} />
+                  <Icon size={17} style={{ color: isActive ? 'var(--kinpaku-gold)' : 'var(--text-muted)' }} />
                   <span className="grow">{item.label}</span>
                   {item.badge && (
                     <span 
-                      className="tiny bold" 
+                      className="badge tiny"
                       style={{ 
-                        fontSize: 10, 
-                        padding: '1px 6px', 
-                        borderRadius: 6, 
-                        background: item.badgeType === 'hot' ? 'rgba(244, 63, 94, 0.2)' : item.badgeType === 'earn' ? 'rgba(245, 158, 11, 0.2)' : item.badgeType === 'new' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                        color: item.badgeType === 'hot' ? '#fb7185' : item.badgeType === 'earn' ? '#f59e0b' : item.badgeType === 'new' ? '#22d3ee' : '#34d399'
+                        fontSize: 10,
+                        padding: '1px 6px',
+                        background: isActive ? 'oklch(84% 0.19 80.46 / 0.2)' : 'rgba(255,255,255,0.05)',
+                        color: isActive ? 'var(--kinpaku-gold)' : 'var(--text-muted)',
+                        border: '1px solid var(--gold-hairline)'
                       }}
                     >
                       {item.badge}
@@ -102,23 +126,23 @@ export default function AppShell({ children, userProfile, trustScore }) {
           </nav>
         </div>
 
-        {/* Bottom Sidebar: User & Trust mini-card */}
-        <div className="flex col g10">
+        {/* Bottom Sidebar: User Trust Card & Profile */}
+        <div className="flex col g12" style={{ paddingTop: 16, borderTop: '1px solid var(--gold-hairline)' }}>
           {trustScore != null && (
             <div 
               style={{ 
                 padding: '12px 14px', 
-                borderRadius: 14, 
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.06)'
+                borderRadius: 10, 
+                background: 'var(--lacquer-deep)',
+                border: '1px solid var(--gold-hairline)'
               }}
             >
               <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
                 <span className="tiny faint flex items-center g4">
-                  <ShieldCheck size={12} style={{ color: '#10b981' }} /> {t('trustScore')}
+                  <ShieldCheck size={13} style={{ color: 'var(--emerald-patina)' }} /> {t('trustScore')}
                 </span>
-                <span className="tiny bold rm-num" style={{ color: '#ec4899' }}>
-                  {trustScore} pts
+                <span className="tiny bold rm-num" style={{ color: 'var(--kinpaku-gold)' }}>
+                  {trustScore} <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>PTS</span>
                 </span>
               </div>
               <div className="compat-bar-track" style={{ height: 4 }}>
@@ -130,31 +154,29 @@ export default function AppShell({ children, userProfile, trustScore }) {
             </div>
           )}
 
-          <div className="flex items-center justify-between" style={{ padding: '0 4px' }}>
-            <Link href="/profile" className="flex items-center g10" style={{ textDecoration: 'none' }}>
+          <Link href="/profile" className="flex items-center justify-between" style={{ padding: '4px 6px', borderRadius: 8, textDecoration: 'none', transition: 'background 0.2s ease' }}>
+            <div className="flex items-center g10">
               <div
                 className="avatar"
                 style={{
-                  width: 36,
-                  height: 36,
-                  fontSize: 14,
-                  background: 'var(--brand-gradient)',
+                  width: 34,
+                  height: 34,
+                  fontSize: 13,
                 }}
               >
                 {(userProfile?.display_name || 'U').charAt(0).toUpperCase()}
               </div>
               <div>
-                <div className="semi small" style={{ fontSize: 13.5, lineHeight: 1.2, color: '#fff' }}>
+                <div className="semi small champagne" style={{ fontSize: 13.5, lineHeight: 1.2 }}>
                   {userProfile?.display_name || t('profile')}
                 </div>
-                <div className="tiny faint" style={{ fontSize: 11 }}>{t('saveProfile')}</div>
+                <div className="tiny faint" style={{ fontSize: 11 }}>
+                  {userProfile?.country || 'Global User'}
+                </div>
               </div>
-            </Link>
-
-            <Link href="/profile" className="btn-icon" style={{ width: 34, height: 34 }} title="Hồ sơ">
-              <User size={15} style={{ color: 'var(--text-muted)' }} />
-            </Link>
-          </div>
+            </div>
+            <ChevronRight size={14} style={{ color: 'var(--text-faint)' }} />
+          </Link>
         </div>
       </aside>
 
@@ -163,26 +185,26 @@ export default function AppShell({ children, userProfile, trustScore }) {
         {children}
       </main>
 
-      {/* MOBILE BOTTOM NAVIGATION DOCK */}
+      {/* MOBILE BOTTOM NAVIGATION DOCK (Floating Frosted Glass) */}
       <nav className="rm-mobile-bottom-nav">
         <Link href="/home" className={`mobile-nav-item ${pathname === '/home' ? 'active' : ''}`}>
-          <Home size={19} />
+          <Home size={18} />
           <span>{t('home')}</span>
         </Link>
         <Link href="/news" className={`mobile-nav-item ${pathname.startsWith('/news') ? 'active' : ''}`}>
-          <Newspaper size={19} />
+          <Newspaper size={18} />
           <span>{t('news')}</span>
         </Link>
         <Link href="/match" className={`mobile-nav-item ${pathname.startsWith('/match') ? 'active' : ''}`}>
-          <Compass size={19} />
+          <Compass size={18} />
           <span>{t('match')}</span>
         </Link>
         <Link href="/chats" className={`mobile-nav-item ${pathname.startsWith('/chats') ? 'active' : ''}`}>
-          <MessageSquare size={19} />
+          <MessageSquare size={18} />
           <span>{t('chats')}</span>
         </Link>
         <Link href="/profile" className={`mobile-nav-item ${pathname.startsWith('/profile') ? 'active' : ''}`}>
-          <User size={19} />
+          <User size={18} />
           <span>{t('profile')}</span>
         </Link>
       </nav>

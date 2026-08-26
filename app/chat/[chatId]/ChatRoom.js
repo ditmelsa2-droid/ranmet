@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, Send, Sparkles, ShieldCheck, 
-  MessageCircle, Heart, Flame, Image as ImageIcon, Video as VideoIcon, 
-  FileText, Paperclip, Plus, X, Download, Play, Upload, Camera,
-  AlertTriangle, UserX, Lock, ShieldAlert, CheckCircle, Languages, Loader2
+  MessageCircle, Heart, Image as ImageIcon, Video as VideoIcon, 
+  FileText, Paperclip, X, Download, Upload,
+  AlertTriangle, UserX, ShieldAlert, CheckCircle, Languages, Loader2
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent } from '@/lib/moderation'
@@ -31,7 +31,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
   const [isLocked, setIsLocked] = useState(false)
   const [lockedReason, setLockedReason] = useState('')
   
-  // Translation state: { [msgId]: { translatedText: string, isTranslating: boolean } }
+  // Translation state: { [msgId]: { translatedText: string, isTranslating: boolean, showTranslated: boolean } }
   const [translatedMap, setTranslatedMap] = useState({})
   
   // Modals
@@ -59,7 +59,6 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
   // Handle AI Message Translation
   async function handleTranslateMessage(msgId, originalContent) {
     if (translatedMap[msgId]?.translatedText) {
-      // Toggle off
       setTranslatedMap((prev) => ({
         ...prev,
         [msgId]: { ...prev[msgId], showTranslated: !prev[msgId].showTranslated }
@@ -215,7 +214,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
     }
   }
 
-  // 🛡️ REPORT ABUSE & AI LOCK CHAT
+  // REPORT ABUSE & AI LOCK CHAT
   async function handleReportSubmit(e) {
     e.preventDefault()
     setIsLocked(true)
@@ -238,7 +237,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
     showToast('Đã báo cáo vi phạm! Hệ thống AI đã tạm khóa phòng chat từ cả 2 phía để kiểm tra. 🛡️')
   }
 
-  // 🔌 DISCONNECT CHAT WITH COOLDOWN
+  // DISCONNECT CHAT WITH COOLDOWN
   async function handleDisconnectSubmit(e) {
     e.preventDefault()
     setShowDisconnectModal(false)
@@ -258,20 +257,20 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
 
   return (
     <AppShell>
-      <div className="card flex col justify-between" style={{ height: 'calc(100vh - 80px)', minHeight: 560, padding: 0, overflow: 'hidden' }}>
+      <div className="card flex col justify-between" style={{ height: 'calc(100vh - 80px)', minHeight: 560, padding: 0, overflow: 'hidden', border: '1px solid var(--gold-hairline)' }}>
         {/* Sleek Top Chat Header */}
         <div 
           className="flex items-center justify-between" 
           style={{ 
-            padding: '14px 20px', 
-            background: 'rgba(18, 14, 28, 0.95)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '12px 18px', 
+            background: 'var(--lacquer-deep)',
+            borderBottom: '1px solid var(--gold-hairline)',
             zIndex: 10
           }}
         >
-          <div className="flex items-center g12">
-            <Link href="/chats" className="btn-icon" style={{ width: 38, height: 38 }}>
-              <ArrowLeft size={18} />
+          <div className="flex items-center g10">
+            <Link href="/chats" className="btn-icon" style={{ width: 34, height: 34 }}>
+              <ArrowLeft size={16} />
             </Link>
 
             <div className="flex items-center g10">
@@ -279,10 +278,9 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                 <div
                   className="avatar"
                   style={{
-                    width: 42,
-                    height: 42,
-                    fontSize: 17,
-                    background: 'var(--brand-gradient)',
+                    width: 38,
+                    height: 38,
+                    fontSize: 15,
                   }}
                 >
                   {initial}
@@ -292,23 +290,23 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                     position: 'absolute', 
                     bottom: 0, 
                     right: 0, 
-                    width: 12, 
-                    height: 12, 
+                    width: 10, 
+                    height: 10, 
                     borderRadius: '50%', 
-                    background: isLocked ? '#f43f5e' : '#10b981', 
-                    border: '2px solid #161320' 
+                    background: isLocked ? '#f43f5e' : 'var(--emerald-patina)', 
+                    border: '2px solid var(--lacquer-black)' 
                   }} 
                 />
               </div>
 
               <div>
-                <div className="semi small flex items-center g6">
+                <div className="semi small champagne flex items-center g6">
                   <span>{otherName || 'Người bạn mới'}</span>
-                  {isLocked && <span className="badge tiny" style={{ background: 'rgba(244, 63, 94, 0.2)', color: '#fb7185', fontSize: 10 }}>ĐÃ KHÓA</span>}
+                  {isLocked && <span className="badge tiny" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', fontSize: 9 }}>ĐÃ KHÓA</span>}
                 </div>
                 {compatibility != null && (
-                  <div className="tiny bold flex items-center g4" style={{ color: '#ec4899' }}>
-                    <Sparkles size={11} /> {compatibility}% tương thích AI
+                  <div className="tiny bold gold flex items-center g4">
+                    <Sparkles size={10} /> {compatibility}% MATCH
                   </div>
                 )}
               </div>
@@ -316,25 +314,25 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           </div>
 
           {/* Action Tools: Report & Disconnect */}
-          <div className="flex items-center g8">
+          <div className="flex items-center g6">
             <button
               type="button"
               className="btn btn-secondary"
-              style={{ width: 'auto', padding: '6px 12px', fontSize: 12, borderRadius: 999, color: '#fb7185', borderColor: 'rgba(244, 63, 94, 0.3)' }}
+              style={{ width: 'auto', padding: '5px 10px', fontSize: 11.5, borderRadius: 6, color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.25)' }}
               onClick={() => setShowReportModal(true)}
               title="Báo cáo vi phạm"
             >
-              <AlertTriangle size={14} /> {t('reportAbuse')}
+              <AlertTriangle size={13} /> {t('reportAbuse')}
             </button>
 
             <button
               type="button"
               className="btn btn-secondary"
-              style={{ width: 'auto', padding: '6px 12px', fontSize: 12, borderRadius: 999 }}
+              style={{ width: 'auto', padding: '5px 10px', fontSize: 11.5, borderRadius: 6 }}
               onClick={() => setShowDisconnectModal(true)}
               title="Ngắt kết nối trò chuyện"
             >
-              <UserX size={14} /> {t('disconnect')}
+              <UserX size={13} /> {t('disconnect')}
             </button>
           </div>
         </div>
@@ -343,17 +341,17 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
         {isLocked && (
           <div 
             style={{ 
-              background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.25) 0%, rgba(139, 92, 246, 0.2) 100%)',
-              borderBottom: '1px solid rgba(244, 63, 94, 0.4)',
-              padding: '12px 20px',
+              background: 'rgba(244, 63, 94, 0.12)',
+              borderBottom: '1px solid rgba(244, 63, 94, 0.3)',
+              padding: '10px 18px',
               display: 'flex',
               alignItems: 'center',
-              gap: 12
+              gap: 10
             }}
           >
-            <ShieldAlert size={22} style={{ color: '#fb7185', flexShrink: 0 }} />
+            <ShieldAlert size={18} style={{ color: '#fb7185', flexShrink: 0 }} />
             <div className="grow">
-              <div className="semi small" style={{ color: '#fff' }}>Phòng trò chuyện đã bị AI tạm khóa từ 2 phía 🔒</div>
+              <div className="semi small champagne">Phòng trò chuyện đã bị AI tạm khóa từ 2 phía 🔒</div>
               <div className="tiny faint" style={{ color: '#fca5a5' }}>
                 Lý do: {lockedReason || 'Nghi vấn có hành vi lạm dụng / quấy rối online theo báo cáo'}. Không thể gửi thêm tin nhắn.
               </div>
@@ -367,37 +365,39 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           className="grow" 
           style={{ 
             overflowY: 'auto', 
-            padding: '20px 20px',
+            padding: '18px 18px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 10
+            gap: 8
           }}
         >
           {messages.length === 0 && (
             <div className="flex col items-center center-text" style={{ margin: 'auto 0', padding: '30px 16px' }}>
               <div 
                 style={{ 
-                  width: 58, 
-                  height: 58, 
+                  width: 52, 
+                  height: 52, 
                   borderRadius: '50%', 
-                  background: 'rgba(236, 72, 153, 0.15)', 
+                  background: 'rgba(245, 192, 66, 0.1)', 
+                  border: '1px solid var(--gold-hairline-strong)',
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center',
-                  marginBottom: 16
-                }}
+                  marginBottom: 14,
+                  color: 'var(--kinpaku-gold)'
+                }} 
               >
-                <MessageCircle size={28} style={{ color: '#ec4899' }} />
+                <MessageCircle size={24} />
               </div>
 
-              <div className="bold" style={{ fontSize: 18, marginBottom: 4 }}>
-                Hãy bắt đầu cuộc trò chuyện!
+              <div className="bold champagne" style={{ fontSize: 16, marginBottom: 4 }}>
+                Bắt đầu cuộc trò chuyện!
               </div>
-              <div className="tiny faint" style={{ marginBottom: 20, maxWidth: 300 }}>
-                Hai bạn đã được kết nối với nhau nhờ độ tương thích cao. Hãy gửi lời chào mở đầu:
+              <div className="tiny faint" style={{ marginBottom: 18, maxWidth: 300 }}>
+                Hai bạn đã được ghép nối nhờ độ tương thích cao. Hãy gửi lời chào mở đầu:
               </div>
 
-              <div className="flex col g8" style={{ width: '100%', maxWidth: 380 }}>
+              <div className="flex col g8" style={{ width: '100%', maxWidth: 360 }}>
                 {ICE_BREAKERS.map((text, i) => (
                   <button
                     key={i}
@@ -405,13 +405,13 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                     onClick={() => sendText(text)}
                     className="card card-interactive"
                     style={{
-                      padding: '12px 16px',
-                      fontSize: 13.5,
+                      padding: '10px 14px',
+                      fontSize: 13,
                       textAlign: 'left',
                       color: 'var(--text-muted)',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      borderRadius: 14,
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
+                      background: 'var(--lacquer-deep)',
+                      borderRadius: 10,
+                      border: '1px solid var(--gold-hairline)'
                     }}
                   >
                     💬 {text}
@@ -432,7 +432,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                   
                   {/* IMAGE ATTACHMENT */}
                   {m.kind === 'image' && m.media_url && (
-                    <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 6, maxHeight: 260 }}>
+                    <div style={{ borderRadius: 8, overflow: 'hidden', marginBottom: 6, maxHeight: 260 }}>
                       <img 
                         src={m.media_url} 
                         alt="Chat attachment" 
@@ -443,7 +443,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
 
                   {/* VIDEO ATTACHMENT */}
                   {m.kind === 'video' && m.media_url && (
-                    <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 6, maxHeight: 280, background: '#000' }}>
+                    <div style={{ borderRadius: 8, overflow: 'hidden', marginBottom: 6, maxHeight: 280, background: '#000' }}>
                       <video 
                         src={m.media_url} 
                         controls 
@@ -461,20 +461,20 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                       rel="noreferrer"
                       className="flex items-center g10"
                       style={{ 
-                        padding: '10px 14px', 
+                        padding: '8px 12px', 
                         background: 'rgba(0,0,0,0.25)', 
-                        borderRadius: 12, 
+                        borderRadius: 8, 
                         marginBottom: 6,
                         textDecoration: 'none',
-                        color: '#fff'
+                        color: 'inherit'
                       }}
                     >
-                      <FileText size={22} style={{ color: '#06b6d4' }} />
+                      <FileText size={20} style={{ color: 'var(--verdigris-patina)' }} />
                       <div className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <div className="semi small" style={{ color: '#fff' }}>{m.file_name || 'Tập tin đính kèm'}</div>
-                        <div className="tiny faint">Bấm để tải xuống / mở xem</div>
+                        <div className="semi small">{m.file_name || 'Tệp đính kèm'}</div>
+                        <div className="tiny faint">Bấm để tải xuống</div>
                       </div>
-                      <Download size={16} />
+                      <Download size={14} />
                     </a>
                   )}
 
@@ -482,11 +482,11 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                   <div>
                     {translation?.showTranslated && translation?.translatedText ? (
                       <div>
-                        <div style={{ borderLeft: '2px solid #a855f7', paddingLeft: 8, marginBottom: 4, color: '#f3e8ff' }}>
+                        <div style={{ borderLeft: isMe ? '2px solid rgba(0,0,0,0.3)' : '2px solid var(--kinpaku-gold)', paddingLeft: 8, marginBottom: 4 }}>
                           {translation.translatedText}
                         </div>
-                        <div className="tiny faint" style={{ fontSize: 10, opacity: 0.6 }}>
-                          (Bản gốc: {m.content})
+                        <div className="tiny faint" style={{ fontSize: 10, opacity: 0.7 }}>
+                          (Gốc: {m.content})
                         </div>
                       </div>
                     ) : (
@@ -495,7 +495,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                   </div>
 
                   {/* Bottom Message Row: Timestamp & AI Translate Action */}
-                  <div className="flex justify-between items-center" style={{ marginTop: 6, gap: 10 }}>
+                  <div className="flex justify-between items-center" style={{ marginTop: 4, gap: 10 }}>
                     {/* 1-Tap AI Translate Button */}
                     {m.kind === 'text' && m.content && (
                       <button
@@ -504,28 +504,27 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#c084fc',
-                          fontSize: 10.5,
+                          color: isMe ? 'rgba(0,0,0,0.7)' : 'var(--kinpaku-gold)',
+                          fontSize: 10,
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 3,
-                          padding: 0,
-                          opacity: 0.85
+                          padding: 0
                         }}
                       >
                         {translation?.isTranslating ? (
-                          <><Loader2 size={10} className="spin" /> {t('aiTranslating')}</>
+                          <><Loader2 size={9} className="spin" /> {t('aiTranslating')}</>
                         ) : translation?.showTranslated ? (
-                          <><Languages size={10} /> {t('showOriginal')}</>
+                          <><Languages size={9} /> {t('showOriginal')}</>
                         ) : (
-                          <><Sparkles size={10} /> {t('aiTranslate')}</>
+                          <><Sparkles size={9} /> {t('aiTranslate')}</>
                         )}
                       </button>
                     )}
 
                     <div 
-                      className="tiny" 
+                      className="tiny rm-num" 
                       style={{ 
                         fontSize: 10, 
                         opacity: 0.65, 
@@ -545,35 +544,35 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
         {/* Sleek Bottom Input Bar with Media Attachment */}
         <div 
           style={{ 
-            padding: '14px 18px', 
-            background: 'rgba(18, 14, 28, 0.95)',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+            padding: '12px 16px', 
+            background: 'var(--lacquer-deep)',
+            borderTop: '1px solid var(--gold-hairline)'
           }}
         >
           {isLocked ? (
-            <div className="center-text tiny faint" style={{ padding: '8px 0', color: '#fb7185' }}>
+            <div className="center-text tiny faint" style={{ padding: '6px 0', color: '#fb7185' }}>
               🔒 Cuộc trò chuyện đã bị tạm khóa an toàn. Bạn không thể gửi thêm tin nhắn.
             </div>
           ) : (
-            <div className="flex items-center g10">
+            <div className="flex items-center g8">
               {/* Attachment Button */}
               <button
                 type="button"
                 className="btn-icon"
-                style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }}
+                style={{ width: 40, height: 40, borderRadius: 8, flexShrink: 0 }}
                 onClick={() => setShowMediaModal(true)}
                 title="Đăng Ảnh / Video / File từ máy"
               >
-                <Paperclip size={18} style={{ color: '#ec4899' }} />
+                <Paperclip size={16} style={{ color: 'var(--kinpaku-gold)' }} />
               </button>
 
               <input
                 className="input"
                 style={{ 
-                  borderRadius: 999, 
-                  padding: '13px 20px',
-                  fontSize: 15,
-                  background: 'rgba(255, 255, 255, 0.05)'
+                  borderRadius: 8, 
+                  padding: '11px 16px',
+                  fontSize: 14,
+                  background: 'var(--raised-lacquer)'
                 }}
                 placeholder="Nhập tin nhắn (Tự động dịch cho đối phương)..."
                 value={draft}
@@ -589,16 +588,16 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                 type="button"
                 className="btn btn-primary"
                 style={{ 
-                  width: 46, 
-                  height: 46, 
-                  borderRadius: '50%', 
+                  width: 40, 
+                  height: 40, 
+                  borderRadius: 8, 
                   padding: 0, 
                   flexShrink: 0 
                 }}
                 onClick={() => sendText()}
                 disabled={!draft.trim() || isSending}
               >
-                <Send size={18} />
+                <Send size={16} />
               </button>
             </div>
           )}
@@ -611,8 +610,8 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(16px)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',
@@ -623,34 +622,34 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
         >
           <div 
             className="card" 
-            style={{ width: '100%', maxWidth: 460, padding: 26, animation: 'msgPop 0.25s ease' }}
+            style={{ width: '100%', maxWidth: 440, padding: 24, animation: 'msgPop 0.25s ease' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
               <div className="flex items-center g8">
-                <AlertTriangle size={20} style={{ color: '#fb7185' }} />
-                <h2 className="rm-title" style={{ fontSize: 18 }}>Báo Cáo Vi Phạm & Lạm Dụng</h2>
+                <AlertTriangle size={18} style={{ color: '#fb7185' }} />
+                <h2 className="rm-title" style={{ fontSize: 16 }}>Báo Cáo Vi Phạm & Lạm Dụng</h2>
               </div>
-              <button type="button" onClick={() => setShowReportModal(false)} className="btn-icon" style={{ width: 32, height: 32 }}>✕</button>
+              <button type="button" onClick={() => setShowReportModal(false)} className="btn-icon" style={{ width: 28, height: 28 }}>✕</button>
             </div>
 
-            <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 16 }}>
+            <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 14 }}>
               Khi bạn gửi báo cáo, hệ thống AI sẽ <b>khóa ngay lập tức phòng chat từ cả 2 phía</b> để bảo vệ bạn và xem xét nội dung vi phạm.
             </p>
 
-            <form onSubmit={handleReportSubmit} className="flex col g16">
+            <form onSubmit={handleReportSubmit} className="flex col g14">
               <div className="field-group">
                 <label className="field-label">Lý do báo cáo vi phạm:</label>
                 <select className="input" value={reportReason} onChange={(e) => setReportReason(e.target.value)}>
-                  <option value="Quấy rối tình dục / Gạ gẫm 18+" style={{ background: '#161320' }}>Quấy rối tình dục / Gạ gẫm 18+</option>
-                  <option value="Đe dọa / Ngôn từ thù địch / Xâm hại" style={{ background: '#161320' }}>Đe dọa / Ngôn từ thù địch / Xâm hại</option>
-                  <option value="Lừa đảo / Gửi link độc hại / Spam" style={{ background: '#161320' }}>Lừa đảo / Gửi link độc hại / Spam</option>
-                  <option value="Gửi hình ảnh / video khiêu dâm trái phép" style={{ background: '#161320' }}>Gửi hình ảnh / video khiêu dâm trái phép</option>
+                  <option value="Quấy rối tình dục / Gạ gẫm 18+" style={{ background: '#120f18' }}>Quấy rối tình dục / Gạ gẫm 18+</option>
+                  <option value="Đe dọa / Ngôn từ thù địch / Xâm hại" style={{ background: '#120f18' }}>Đe dọa / Ngôn từ thù địch / Xâm hại</option>
+                  <option value="Lừa đảo / Gửi link độc hại / Spam" style={{ background: '#120f18' }}>Lừa đảo / Gửi link độc hại / Spam</option>
+                  <option value="Gửi hình ảnh / video khiêu dâm trái phép" style={{ background: '#120f18' }}>Gửi hình ảnh / video khiêu dâm trái phép</option>
                 </select>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)' }}>
-                <ShieldAlert size={16} /> Gửi Báo Cáo & Khóa Chat Ngay
+              <button type="submit" className="btn btn-primary" style={{ background: '#f43f5e', color: '#fff' }}>
+                <ShieldAlert size={15} /> Gửi Báo Cáo & Khóa Chat Ngay
               </button>
             </form>
           </div>
@@ -663,8 +662,8 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(16px)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',
@@ -675,33 +674,33 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
         >
           <div 
             className="card" 
-            style={{ width: '100%', maxWidth: 460, padding: 26, animation: 'msgPop 0.25s ease' }}
+            style={{ width: '100%', maxWidth: 440, padding: 24, animation: 'msgPop 0.25s ease' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
               <div className="flex items-center g8">
-                <UserX size={20} style={{ color: '#f59e0b' }} />
-                <h2 className="rm-title" style={{ fontSize: 18 }}>Ngắt Kết Nối Trò Chuyện</h2>
+                <UserX size={18} style={{ color: 'var(--kinpaku-gold)' }} />
+                <h2 className="rm-title" style={{ fontSize: 16 }}>Ngắt Kết Nối Trò Chuyện</h2>
               </div>
-              <button type="button" onClick={() => setShowDisconnectModal(false)} className="btn-icon" style={{ width: 32, height: 32 }}>✕</button>
+              <button type="button" onClick={() => setShowDisconnectModal(false)} className="btn-icon" style={{ width: 28, height: 28 }}>✕</button>
             </div>
 
-            <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 16 }}>
+            <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 14 }}>
               Bạn có thể chọn thời gian cho phép hệ thống ghép lại người này trong tương lai:
             </p>
 
-            <form onSubmit={handleDisconnectSubmit} className="flex col g16">
+            <form onSubmit={handleDisconnectSubmit} className="flex col g14">
               <div className="field-group">
                 <label className="field-label">Tùy chọn ghép lại:</label>
                 <select className="input" value={disconnectType} onChange={(e) => setDisconnectType(e.target.value)}>
-                  <option value="temporary_24h" style={{ background: '#161320' }}>Tạm ngắt kết nối (Có thể ghép lại sau 24 giờ)</option>
-                  <option value="temporary_7d" style={{ background: '#161320' }}>Tạm ngắt kết nối (Có thể ghép lại sau 7 ngày)</option>
-                  <option value="permanent" style={{ background: '#161320' }}>Ngắt kết nối vĩnh viễn (Không bao giờ ghép lại)</option>
+                  <option value="temporary_24h" style={{ background: '#120f18' }}>Tạm ngắt kết nối (Có thể ghép lại sau 24 giờ)</option>
+                  <option value="temporary_7d" style={{ background: '#120f18' }}>Tạm ngắt kết nối (Có thể ghép lại sau 7 ngày)</option>
+                  <option value="permanent" style={{ background: '#120f18' }}>Ngắt kết nối vĩnh viễn (Không bao giờ ghép lại)</option>
                 </select>
               </div>
 
               <button type="submit" className="btn btn-primary">
-                <CheckCircle size={16} /> Xác nhận ngắt kết nối
+                <CheckCircle size={15} /> Xác nhận ngắt kết nối
               </button>
             </form>
           </div>
@@ -714,8 +713,8 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(16px)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',
@@ -726,16 +725,16 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
         >
           <div 
             className="card" 
-            style={{ width: '100%', maxWidth: 460, padding: 24, animation: 'msgPop 0.25s ease' }}
+            style={{ width: '100%', maxWidth: 440, padding: 24, animation: 'msgPop 0.25s ease' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
-              <h2 className="rm-title" style={{ fontSize: 18 }}>Tải Lên Tệp & Ảnh Từ Thiết Bị</h2>
+            <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
+              <h2 className="rm-title" style={{ fontSize: 16 }}>Tải Lên Tệp & Ảnh Từ Thiết Bị</h2>
               <button 
                 type="button" 
                 onClick={() => setShowMediaModal(false)}
                 className="btn-icon" 
-                style={{ width: 32, height: 32 }}
+                style={{ width: 28, height: 28 }}
               >
                 ✕
               </button>
@@ -745,10 +744,10 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ padding: '16px', borderStyle: 'dashed', width: '100%', borderRadius: 16 }}
+                style={{ padding: '14px', borderStyle: 'dashed', width: '100%', borderRadius: 10 }}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload size={20} style={{ color: '#ec4899' }} /> 
+                <Upload size={18} style={{ color: 'var(--kinpaku-gold)' }} /> 
                 {mediaUrl ? `✓ Đã chọn: ${fileName || 'Tệp đính kèm'}` : 'Bấm để chọn Ảnh / Video / Tệp từ máy'}
               </button>
               <input 
@@ -761,23 +760,23 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
             </div>
 
             {mediaUrl && (
-              <div style={{ marginBottom: 14, padding: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 14 }}>
+              <div style={{ marginBottom: 14, padding: 10, background: 'var(--lacquer-deep)', borderRadius: 8 }}>
                 {mediaType === 'image' && (
-                  <img src={mediaUrl} alt="Preview" style={{ maxHeight: 180, borderRadius: 10, width: '100%', objectFit: 'contain' }} />
+                  <img src={mediaUrl} alt="Preview" style={{ maxHeight: 160, borderRadius: 6, width: '100%', objectFit: 'contain' }} />
                 )}
                 {mediaType === 'video' && (
-                  <video src={mediaUrl} controls style={{ maxHeight: 180, borderRadius: 10, width: '100%' }} />
+                  <video src={mediaUrl} controls style={{ maxHeight: 160, borderRadius: 6, width: '100%' }} />
                 )}
                 {mediaType === 'file' && (
                   <div className="flex items-center g8">
-                    <FileText size={20} style={{ color: '#06b6d4' }} />
-                    <span className="semi small">{fileName}</span>
+                    <FileText size={18} style={{ color: 'var(--verdigris-patina)' }} />
+                    <span className="semi small champagne">{fileName}</span>
                   </div>
                 )}
               </div>
             )}
 
-            <form onSubmit={sendMedia} className="flex col g14">
+            <form onSubmit={sendMedia} className="flex col g12">
               <div className="field-group">
                 <label className="field-label">Lời nhắn kèm theo (Tùy chọn)</label>
                 <input 
@@ -788,8 +787,8 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 6 }} disabled={!mediaUrl.trim() || isSending}>
-                <Send size={16} /> Gửi tệp đính kèm vào phòng chat
+              <button type="submit" className="btn btn-primary" style={{ marginTop: 4 }} disabled={!mediaUrl.trim() || isSending}>
+                <Send size={15} /> Gửi tệp đính kèm vào phòng chat
               </button>
             </form>
           </div>
@@ -804,13 +803,13 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
             top: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(18, 14, 28, 0.95)',
-            border: '1px solid rgba(236, 72, 153, 0.5)',
-            boxShadow: '0 8px 32px rgba(236, 72, 153, 0.3)',
+            background: 'var(--raised-lacquer)',
+            border: '1px solid var(--gold-hairline-strong)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.65)',
             padding: '10px 20px',
-            borderRadius: 999,
-            color: '#fff',
-            fontSize: 13.5,
+            borderRadius: 8,
+            color: 'var(--champagne)',
+            fontSize: 13,
             fontWeight: 600,
             zIndex: 1000,
             animation: 'msgPop 0.25s ease'

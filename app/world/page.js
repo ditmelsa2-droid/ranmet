@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
-  Globe2, Users, MessageSquare, Volume2, Plus, 
-  Search, Sparkles, Flame, Shield, ArrowRight, Radio
+  Globe2, Users, Volume2, Plus, 
+  Search, Sparkles, Radio, ArrowRight
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -20,7 +20,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: true,
     tags: ['Minecraft', 'Survival', 'Redstone'],
     host_name: 'Kaito_Gamer',
-    color: '#10b981'
+    color: 'var(--emerald-patina)'
   },
   {
     id: 'anime-lounge',
@@ -31,7 +31,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: false,
     tags: ['Anime', 'Manga', 'Cosplay'],
     host_name: 'VyVy_Anime',
-    color: '#ec4899'
+    color: 'var(--kinpaku-gold)'
   },
   {
     id: 'dev-ai-hub',
@@ -42,7 +42,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: true,
     tags: ['Next.js', 'AI', 'Fullstack'],
     host_name: 'LinhChi_Dev',
-    color: '#06b6d4'
+    color: 'var(--verdigris-patina)'
   },
   {
     id: 'chill-lofi-room',
@@ -53,7 +53,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: true,
     tags: ['Lofi', 'Chill', 'TamSu'],
     host_name: 'MinhQuan',
-    color: '#a855f7'
+    color: 'var(--kinpaku-gold)'
   },
   {
     id: 'travel-food',
@@ -64,7 +64,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: false,
     tags: ['Foodie', 'Travel', 'Cafe'],
     host_name: 'HaMy',
-    color: '#f59e0b'
+    color: 'var(--emerald-patina)'
   }
 ]
 
@@ -149,7 +149,7 @@ export default function RanWorldPage() {
       host_name: currentUserName,
       is_voice: newRoomIsVoice,
       tags: [newRoomCategory, 'Live'],
-      color: '#ec4899'
+      color: 'var(--kinpaku-gold)'
     }
 
     const { error } = await supabase.from('world_rooms').insert(newRoom)
@@ -167,26 +167,25 @@ export default function RanWorldPage() {
 
   return (
     <AppShell>
-      <div className="flex col g24">
+      <div className="flex col g20">
         {/* Top Header Banner */}
         <div 
           className="card" 
           style={{ 
-            padding: '26px 24px',
-            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(6, 182, 212, 0.2) 100%)',
-            border: '1px solid rgba(168, 85, 247, 0.4)',
-            boxShadow: '0 16px 40px -10px rgba(168, 85, 247, 0.3)'
+            padding: '24px 24px',
+            background: 'var(--raised-lacquer)',
+            border: '1px solid var(--gold-hairline-strong)'
           }}
         >
-          <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 16 }}>
+          <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 14 }}>
             <div>
-              <div className="badge badge-glow" style={{ marginBottom: 10 }}>
-                <Globe2 size={12} /> RANWORLD ECOSYSTEM
+              <div className="tiny faint flex items-center g6" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                <Globe2 size={13} style={{ color: 'var(--verdigris-patina)' }} /> SPATIAL AUDIO & LIVE STAGES
               </div>
-              <h1 className="rm-title" style={{ fontSize: 26, marginBottom: 8, color: '#fff' }}>
+              <h1 className="rm-title" style={{ fontSize: 24, marginBottom: 6 }}>
                 {t('worldTitle')}
               </h1>
-              <p className="small" style={{ color: 'rgba(255, 255, 255, 0.85)', maxWidth: 620, lineHeight: 1.45 }}>
+              <p className="small muted" style={{ maxWidth: 620, lineHeight: 1.5 }}>
                 {t('worldDesc')}
               </p>
             </div>
@@ -194,33 +193,33 @@ export default function RanWorldPage() {
             <button
               type="button"
               className="btn btn-primary"
-              style={{ width: 'auto', padding: '12px 20px', fontSize: 14 }}
+              style={{ width: 'auto', padding: '9px 18px', fontSize: 13, borderRadius: 8 }}
               onClick={() => setShowCreateModal(true)}
             >
-              <Plus size={16} /> {t('createRoomBtn')}
+              <Plus size={15} /> {t('createRoomBtn')}
             </button>
           </div>
         </div>
 
         {/* Search & Category Filter Bar */}
-        <div className="flex col g16">
-          <div className="flex g12 items-center" style={{ flexWrap: 'wrap' }}>
-            <div className="grow" style={{ minWidth: 260 }}>
+        <div className="flex col g12">
+          <div className="flex g10 items-center" style={{ flexWrap: 'wrap' }}>
+            <div className="grow" style={{ minWidth: 240 }}>
               <input
                 className="input"
-                style={{ padding: '12px 18px', borderRadius: 999 }}
+                style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--lacquer-deep)' }}
                 placeholder={`🔍 ${t('searchRoomsPlaceholder')}`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex g8" style={{ flexWrap: 'wrap' }}>
+            <div className="flex g6" style={{ flexWrap: 'wrap' }}>
               {CATEGORY_ITEMS.map((cat) => (
                 <button
                   key={cat.key}
                   type="button"
                   className={`chip ${selectedCatKey === cat.key ? 'selected' : ''}`}
-                  style={{ padding: '8px 16px', fontSize: 13 }}
+                  style={{ padding: '7px 14px', fontSize: 12.5 }}
                   onClick={() => setSelectedCatKey(cat.key)}
                 >
                   {cat.label}
@@ -233,52 +232,53 @@ export default function RanWorldPage() {
         {/* Rooms Grid */}
         <div className="desktop-grid-3">
           {filteredRooms.map((room) => (
-            <Link key={room.id} href={`/world/${room.id}`} className="world-room-card">
+            <Link key={room.id} href={`/world/${room.id}`} className="card card-interactive flex col justify-between" style={{ padding: 18, textDecoration: 'none' }}>
               <div>
                 {/* Room Header */}
-                <div className="flex justify-between items-start" style={{ marginBottom: 12 }}>
+                <div className="flex justify-between items-start" style={{ marginBottom: 10 }}>
                   <span 
                     className="badge tiny" 
                     style={{ 
-                      background: 'rgba(255, 255, 255, 0.06)',
-                      color: room.color || '#ec4899',
-                      border: `1px solid ${room.color || '#ec4899'}40`
+                      background: 'rgba(245, 192, 66, 0.1)',
+                      color: 'var(--kinpaku-gold)',
+                      border: '1px solid var(--gold-hairline)'
                     }}
                   >
                     {room.category}
                   </span>
 
-                  <div className="flex items-center g8">
+                  <div className="flex items-center g6">
                     {room.is_voice && (
-                      <span className="badge badge-success tiny" style={{ fontSize: 10, padding: '2px 8px' }}>
-                        <Radio size={10} /> Voice Live
+                      <span className="badge badge-success tiny" style={{ fontSize: 9.5, padding: '2px 6px' }}>
+                        <Radio size={9} /> Voice Live
                       </span>
                     )}
-                    <span className="tiny faint flex items-center g4">
-                      <Users size={12} /> {room.members || 1}
+                    <span className="tiny faint flex items-center g4 rm-num">
+                      <Users size={11} /> {room.members || 1}
                     </span>
                   </div>
                 </div>
 
                 {/* Room Title & Description */}
-                <h3 className="semi" style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>
+                <h3 className="semi champagne" style={{ fontSize: 16, marginBottom: 6 }}>
                   {room.name}
                 </h3>
-                <p className="small muted" style={{ marginBottom: 16, lineHeight: 1.45 }}>
+                <p className="small muted" style={{ marginBottom: 14, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {room.description}
                 </p>
 
                 {/* Tags */}
-                <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                <div className="flex" style={{ flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
                   {(room.tags || []).map((tagItem) => (
                     <span 
                       key={tagItem} 
                       className="tiny" 
                       style={{ 
-                        padding: '3px 8px', 
-                        borderRadius: 6, 
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        color: 'var(--text-faint)' 
+                        padding: '2px 6px', 
+                        borderRadius: 4, 
+                        background: 'var(--lacquer-deep)',
+                        color: 'var(--text-faint)',
+                        border: '1px solid var(--gold-hairline)'
                       }}
                     >
                       #{tagItem}
@@ -291,14 +291,14 @@ export default function RanWorldPage() {
               <div 
                 className="flex justify-between items-center" 
                 style={{ 
-                  paddingTop: 14, 
-                  borderTop: '1px solid var(--border)',
+                  paddingTop: 10, 
+                  borderTop: '1px solid var(--gold-hairline)',
                   marginTop: 6
                 }}
               >
-                <span className="tiny faint">Host: <b style={{ color: '#fff' }}>{room.host_name || 'RanMet'}</b></span>
-                <span className="tiny bold flex items-center g4" style={{ color: '#ec4899' }}>
-                  {t('joinRoom')}
+                <span className="tiny faint">Host: <b className="champagne">{room.host_name || 'RanMet'}</b></span>
+                <span className="tiny bold gold flex items-center g4">
+                  {t('joinRoom')} <ArrowRight size={12} />
                 </span>
               </div>
             </Link>
@@ -307,8 +307,8 @@ export default function RanWorldPage() {
 
         {filteredRooms.length === 0 && (
           <div className="card center-text" style={{ padding: 40 }}>
-            <Globe2 size={40} style={{ color: 'var(--text-faint)', marginBottom: 12 }} />
-            <h3 className="semi">{t('noMatchTitle')}</h3>
+            <Globe2 size={36} style={{ color: 'var(--text-faint)', marginBottom: 12 }} />
+            <h3 className="semi champagne">{t('noMatchTitle')}</h3>
             <p className="small muted">{t('noMatchDesc')}</p>
           </div>
         )}
@@ -320,8 +320,8 @@ export default function RanWorldPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(16px)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',
@@ -332,22 +332,22 @@ export default function RanWorldPage() {
         >
           <div 
             className="card" 
-            style={{ width: '100%', maxWidth: 480, padding: 26, animation: 'msgPop 0.25s ease' }}
+            style={{ width: '100%', maxWidth: 440, padding: 24, animation: 'msgPop 0.25s ease' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center" style={{ marginBottom: 18 }}>
-              <h2 className="rm-title" style={{ fontSize: 20 }}>{t('createRoomBtn')}</h2>
+            <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
+              <h2 className="rm-title" style={{ fontSize: 17 }}>{t('createRoomBtn')}</h2>
               <button 
                 type="button" 
                 onClick={() => setShowCreateModal(false)}
                 className="btn-icon" 
-                style={{ width: 32, height: 32 }}
+                style={{ width: 28, height: 28 }}
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateRoom} className="flex col g16">
+            <form onSubmit={handleCreateRoom} className="flex col g14">
               <div className="field-group">
                 <label className="field-label">{t('displayNameLabel')}</label>
                 <input 
@@ -370,8 +370,8 @@ export default function RanWorldPage() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }}>
-                <Sparkles size={16} /> {t('createRoomBtn')}
+              <button type="submit" className="btn btn-primary" style={{ marginTop: 4 }}>
+                <Sparkles size={15} /> {t('createRoomBtn')}
               </button>
             </form>
           </div>

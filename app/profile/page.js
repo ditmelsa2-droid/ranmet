@@ -5,22 +5,15 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
   User, ShieldCheck, Award, Heart, Sparkles, 
-  Globe, Languages, Save, Plus, X, Share2, Copy, Check, MessageSquare, 
-  Image as ImageIcon, DollarSign, AlertCircle, Palette, Upload, Camera,
-  Trash2, Video as VideoIcon, Newspaper, Eye, Flame
+  Globe, Save, Plus, X, Copy, Check, MessageSquare, 
+  DollarSign, AlertCircle, Upload, Camera,
+  Trash2, Video as VideoIcon, Newspaper, Zap
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent, checkTags } from '@/lib/moderation'
 import { readFileAsDataUrl } from '@/lib/upload'
 import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
-
-const BANNER_THEMES = [
-  { id: 'cyberpunk', name: 'Cyberpunk Neon', bg: 'var(--discord-cyber)' },
-  { id: 'galaxy', name: 'Galaxy Cosmic', bg: 'var(--discord-galaxy)' },
-  { id: 'sunset', name: 'Sunset Vibe', bg: 'var(--discord-sunset)' },
-  { id: 'matrix', name: 'Matrix Emerald', bg: 'linear-gradient(135deg, #064e3b 0%, #059669 50%, #10b981 100%)' }
-]
 
 const SUGGESTED_INTERESTS = [
   'Minecraft', 'Anime', 'Lập trình', 'Bóng đá', 'AI', 'Du lịch',
@@ -40,7 +33,6 @@ export default function ProfilePage() {
   const [country, setCountry] = useState('Việt Nam')
   const [bio, setBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
-  const [bannerTheme, setBannerTheme] = useState('cyberpunk')
   const [customBannerUrl, setCustomBannerUrl] = useState('')
   const [interests, setInterests] = useState([])
   const [customInterest, setCustomInterest] = useState('')
@@ -97,7 +89,6 @@ export default function ProfilePage() {
         setCountry(profile.country || 'Việt Nam')
         setBio(profile.bio || '')
         setAvatarUrl(profile.avatar_url || '')
-        setBannerTheme(profile.banner_theme || 'cyberpunk')
         setCustomBannerUrl(profile.banner_url || '')
         setInterests(profile.interests || [])
         setStyle(profile.conversation_style || '')
@@ -178,7 +169,7 @@ export default function ProfilePage() {
     const clean = tag.trim()
     if (!clean) return
 
-    // GEMINI & DEEP VIETNAMESE SLANG MODERATION CHECK
+    // AI & SLANG MODERATION CHECK
     const modCheck = await checkContent(clean)
     if (!modCheck.isSafe) {
       setModerationError(`Từ khóa "${clean}" bị từ chối: Vi phạm tiêu chuẩn an toàn cộng đồng! ⚠️`)
@@ -231,7 +222,6 @@ export default function ProfilePage() {
       country,
       bio: bio.trim(),
       avatar_url: avatarUrl.trim() || null,
-      banner_theme: bannerTheme,
       banner_url: customBannerUrl.trim() || null,
       interests: tagsCheck.safeTags,
       conversation_style: style.trim(),
@@ -259,14 +249,13 @@ export default function ProfilePage() {
     setTimeout(() => setCopiedLink(false), 3000)
   }
 
-  const activeTheme = BANNER_THEMES.find(t => t.id === bannerTheme) || BANNER_THEMES[0]
-  const bannerBackground = customBannerUrl.trim() ? `url(${customBannerUrl})` : activeTheme.bg
+  const bannerBackground = customBannerUrl.trim() ? `url(${customBannerUrl})` : 'linear-gradient(135deg, #181424 0%, #0d0a14 50%, #201710 100%)'
 
   if (loading) {
     return (
       <AppShell>
         <div className="card center-text" style={{ padding: 40, maxWidth: 600, margin: '40px auto' }}>
-          <div className="tiny bold muted">Connecting to Profile...</div>
+          <div className="tiny muted">Đang kết nối hồ sơ...</div>
         </div>
       </AppShell>
     )
@@ -274,21 +263,21 @@ export default function ProfilePage() {
 
   return (
     <AppShell trustScore={trustScore} userProfile={{ display_name: displayName }}>
-      <div className="flex col g24" style={{ maxWidth: 880, margin: '0 auto', width: '100%' }}>
-        {/* DISCORD-STYLE PROFILE CARD WITH FLOATING BANNER */}
+      <div className="flex col g20" style={{ maxWidth: 840, margin: '0 auto', width: '100%' }}>
+        {/* NEO KINPAKU PROFILE CARD */}
         <div 
           className="card" 
           style={{ 
             padding: 0, 
             overflow: 'hidden',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8)'
+            border: '1px solid var(--gold-hairline-strong)',
+            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.75)'
           }}
         >
           {/* Top Banner */}
           <div 
-            className="discord-banner" 
             style={{ 
+              height: 140,
               background: bannerBackground,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
@@ -301,14 +290,14 @@ export default function ProfilePage() {
               className="btn btn-secondary"
               style={{
                 position: 'absolute',
-                top: 14,
-                right: 14,
+                top: 12,
+                right: 12,
                 width: 'auto',
-                padding: '6px 12px',
+                padding: '5px 10px',
                 fontSize: 11,
-                borderRadius: 999,
-                background: 'rgba(0,0,0,0.6)',
-                backdropFilter: 'blur(10px)'
+                borderRadius: 6,
+                background: 'rgba(0,0,0,0.65)',
+                backdropFilter: 'blur(8px)'
               }}
               onClick={() => bannerFileRef.current?.click()}
             >
@@ -323,15 +312,14 @@ export default function ProfilePage() {
             />
 
             {/* Avatar Wrap */}
-            <div className="discord-avatar-wrap" style={{ position: 'absolute', bottom: -40, left: 28 }}>
+            <div style={{ position: 'absolute', bottom: -36, left: 24 }}>
               <div
                 className="avatar"
                 style={{
-                  width: 80,
-                  height: 80,
-                  fontSize: 32,
-                  background: 'var(--brand-gradient)',
-                  border: 'none',
+                  width: 72,
+                  height: 72,
+                  fontSize: 28,
+                  border: '3px solid var(--lacquer-black)',
                   position: 'relative',
                   cursor: 'pointer'
                 }}
@@ -353,12 +341,13 @@ export default function ProfilePage() {
                     transition: 'opacity 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    borderRadius: '50%'
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
                 >
-                  <Camera size={20} style={{ color: '#fff' }} />
+                  <Camera size={18} style={{ color: '#fff' }} />
                 </div>
               </div>
 
@@ -373,89 +362,87 @@ export default function ProfilePage() {
           </div>
 
           {/* Profile Header Content */}
-          <div style={{ padding: '52px 28px 24px' }}>
-            <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ padding: '48px 24px 20px' }}>
+            <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 14 }}>
               <div>
-                <div className="flex items-center g10">
-                  <h1 className="rm-title" style={{ fontSize: 26, color: '#fff' }}>{displayName || 'User'}</h1>
-                  <span className="badge badge-success tiny" style={{ fontSize: 10 }}>{t('verifiedBadge')}</span>
-                  {ageVerified && <span className="badge tiny" style={{ background: 'rgba(236, 72, 153, 0.2)', color: '#f43f5e', border: '1px solid rgba(236, 72, 153, 0.4)', fontSize: 10 }}>🔞 18+</span>}
+                <div className="flex items-center g8">
+                  <h1 className="rm-title" style={{ fontSize: 22, margin: 0 }}>{displayName || 'User'}</h1>
+                  <span className="badge badge-success tiny" style={{ fontSize: 9.5 }}>{t('verifiedBadge')}</span>
+                  {ageVerified && <span className="badge tiny" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', border: '1px solid rgba(244, 63, 94, 0.3)', fontSize: 9.5 }}>🔞 18+</span>}
                 </div>
                 <div className="tiny muted" style={{ marginTop: 4 }}>
-                  {country} · {interests.length} {t('interestsCount')} · <span style={{ color: '#c084fc' }}>{t('styleLabel')}: {style || 'Casual'}</span>
+                  {country} · {interests.length} {t('interestsCount')} · <span className="gold">{t('styleLabel')}: {style || 'Casual'}</span>
                 </div>
                 {bio && (
-                  <p className="small" style={{ color: 'rgba(255,255,255,0.85)', marginTop: 8, maxWidth: 540 }}>
+                  <p className="small champagne" style={{ marginTop: 8, maxWidth: 540, lineHeight: 1.5 }}>
                     {bio}
                   </p>
                 )}
               </div>
 
-              <div className="flex g10 items-center">
-                <Link href="/creator" className="btn btn-secondary" style={{ width: 'auto', padding: '10px 18px', fontSize: 13, background: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)', color: '#fbbf24' }}>
-                  <DollarSign size={16} /> Creator Studio {trustScore < 1000 ? '🔒' : '✨'}
+              <div className="flex g8 items-center">
+                <Link href="/creator" className="btn btn-secondary" style={{ width: 'auto', padding: '8px 14px', fontSize: 12, borderRadius: 6, borderColor: 'var(--gold-hairline)', color: 'var(--kinpaku-gold)' }}>
+                  <DollarSign size={14} /> Creator Studio {trustScore < 1000 ? '🔒' : '✨'}
                 </Link>
                 <button 
                   type="button" 
                   className="btn btn-primary"
-                  style={{ width: 'auto', padding: '10px 20px', fontSize: 13 }}
+                  style={{ width: 'auto', padding: '8px 16px', fontSize: 12, borderRadius: 6 }}
                   onClick={handleSaveProfile}
                   disabled={saving}
                 >
-                  <Save size={16} /> {saving ? 'Saving...' : t('saveProfileBtn')}
+                  <Save size={14} /> {saving ? 'Saving...' : t('saveProfileBtn')}
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* AI MODERATION ALERT IF ANY */}
+        {/* AI MODERATION ALERT */}
         {moderationError && (
-          <div className="err-text" style={{ padding: '14px 18px', borderRadius: 14 }}>
-            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+          <div className="err-text" style={{ padding: '12px 16px', borderRadius: 8 }}>
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
             <div>
-              <b style={{ color: '#fff' }}>AI Moderation:</b> {moderationError}
+              <b className="champagne">AI Moderation:</b> {moderationError}
             </div>
           </div>
         )}
 
-        {/* 18+ AGE VERIFICATION CARD (XÁC THỰC ĐỘ TUỔI ĐỂ XEM NỘI DUNG 18+ ĐÃ LÀM MỜ) */}
+        {/* 18+ AGE VERIFICATION CARD */}
         <div
           className="card"
           style={{
-            background: ageVerified 
-              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.1) 100%)' 
-              : 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.1) 100%)',
-            border: ageVerified ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
-            padding: 22
+            background: 'var(--raised-lacquer)',
+            border: ageVerified ? '1px solid var(--emerald-patina)' : '1px solid var(--gold-hairline)',
+            padding: 18
           }}
         >
-          <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 14 }}>
+          <div className="flex justify-between items-start" style={{ flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <div className="flex items-center g8" style={{ marginBottom: 6 }}>
-                <ShieldCheck size={18} style={{ color: ageVerified ? '#10b981' : '#f59e0b' }} />
-                <h3 className="rm-title" style={{ fontSize: 17, color: '#fff' }}>
+              <div className="flex items-center g8" style={{ marginBottom: 4 }}>
+                <ShieldCheck size={16} style={{ color: ageVerified ? 'var(--emerald-patina)' : 'var(--kinpaku-gold)' }} />
+                <h3 className="rm-title" style={{ fontSize: 15, margin: 0 }}>
                   Xác thực độ tuổi 18+ (Age Verification)
                 </h3>
-                <span className={`badge tiny ${ageVerified ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: 10 }}>
+                <span className={`badge tiny ${ageVerified ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: 9.5 }}>
                   {ageVerified ? '🔞 ĐÃ XÁC THỰC 18+' : '🔒 CHƯA XÁC THỰC (DƯỚI 18)'}
                 </span>
               </div>
               <p className="tiny muted" style={{ maxWidth: 520, lineHeight: 1.5 }}>
                 {ageVerified 
                   ? 'Tài khoản của bạn đã được xác thực trên 18 tuổi. Bạn có quyền xem và bỏ làm mờ các nội dung / video 18+ trên bảng tin và RanVideo.'
-                  : 'Hệ thống bảo vệ trẻ vị thành niên: Toàn bộ video và bài viết 18+ NSFW sẽ bị khóa hoặc làm mờ 100% cho đến khi bạn xác thực độ tuổi.'}
+                  : 'Hệ thống bảo vệ trẻ vị thành niên: Toàn bộ video và bài viết 18+ NSFW sẽ bị làm mờ bảo vệ cho đến khi bạn xác thực độ tuổi.'}
               </p>
             </div>
 
             <button
               type="button"
               className={`btn ${ageVerified ? 'btn-secondary' : 'btn-primary'}`}
-              style={{ width: 'auto', padding: '10px 18px', fontSize: 12, borderRadius: 999 }}
+              style={{ width: 'auto', padding: '7px 14px', fontSize: 11.5, borderRadius: 6 }}
               onClick={() => {
                 const nextState = !ageVerified
                 setAgeVerified(nextState)
-                showToast(nextState ? 'Đã bật xác thực 18+! Hãy bấm "Lưu hồ sơ" để áp dụng.' : 'Đã tắt xác thực 18+ (Kích hoạt chế độ bảo vệ trẻ em)!')
+                showToast(nextState ? 'Đã bật xác thực 18+! Hãy bấm "Lưu hồ sơ" để áp dụng.' : 'Đã tắt xác thực 18+!')
               }}
             >
               {ageVerified ? 'Tắt xác thực 18+' : '🔞 Xác thực tôi trên 18 tuổi'}
@@ -463,33 +450,33 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* MY UPLOADED CONTENT MANAGER (QUẢN LÝ VIDEO, ẢNH, BÀI VIẾT) */}
-        <div className="card" style={{ padding: 26 }}>
-          <div className="flex justify-between items-center" style={{ marginBottom: 18, borderBottom: '1px solid var(--border)', paddingBottom: 14 }}>
-            <div className="flex items-center g10">
-              <Sparkles size={18} style={{ color: '#06b6d4' }} />
-              <h2 className="rm-title" style={{ fontSize: 18, color: '#fff' }}>
+        {/* MY UPLOADED CONTENT MANAGER */}
+        <div className="card" style={{ padding: 20 }}>
+          <div className="flex justify-between items-center" style={{ marginBottom: 14, borderBottom: '1px solid var(--gold-hairline)', paddingBottom: 12 }}>
+            <div className="flex items-center g8">
+              <Sparkles size={16} style={{ color: 'var(--kinpaku-gold)' }} />
+              <h2 className="rm-title" style={{ fontSize: 16, margin: 0 }}>
                 {t('myContentTitle')} ({myVideos.length + myPosts.length})
               </h2>
             </div>
 
             {/* Tabs */}
-            <div className="flex g8">
+            <div className="flex g6">
               <button
                 type="button"
                 className={`chip ${activeContentTab === 'videos' ? 'selected' : ''}`}
                 onClick={() => setActiveContentTab('videos')}
-                style={{ padding: '6px 14px', fontSize: 12 }}
+                style={{ padding: '5px 12px', fontSize: 11.5 }}
               >
-                <VideoIcon size={13} /> {t('videosTab')} ({myVideos.length})
+                <VideoIcon size={12} /> {t('videosTab')} ({myVideos.length})
               </button>
               <button
                 type="button"
                 className={`chip ${activeContentTab === 'posts' ? 'selected' : ''}`}
                 onClick={() => setActiveContentTab('posts')}
-                style={{ padding: '6px 14px', fontSize: 12 }}
+                style={{ padding: '5px 12px', fontSize: 11.5 }}
               >
-                <Newspaper size={13} /> {t('postsTab')} ({myPosts.length})
+                <Newspaper size={12} /> {t('postsTab')} ({myPosts.length})
               </button>
             </div>
           </div>
@@ -498,31 +485,31 @@ export default function ProfilePage() {
           {activeContentTab === 'videos' && (
             <div>
               {myVideos.length === 0 ? (
-                <div className="center-text tiny faint" style={{ padding: 24 }}>
+                <div className="center-text tiny faint" style={{ padding: 20 }}>
                   {t('noMyVideos')}
                 </div>
               ) : (
-                <div className="flex col g12">
+                <div className="flex col g8">
                   {myVideos.map((v) => (
-                    <div key={v.id} className="card flex items-center justify-between" style={{ padding: 14, background: 'rgba(255,255,255,0.03)' }}>
-                      <div className="flex items-center g12">
-                        <div style={{ width: 44, height: 44, borderRadius: 10, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <VideoIcon size={20} style={{ color: '#f43f5e' }} />
+                    <div key={v.id} className="card flex items-center justify-between" style={{ padding: 12, background: 'var(--lacquer-deep)' }}>
+                      <div className="flex items-center g10">
+                        <div style={{ width: 38, height: 38, borderRadius: 6, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <VideoIcon size={18} style={{ color: 'var(--kinpaku-gold)' }} />
                         </div>
                         <div>
-                          <div className="semi small" style={{ color: '#fff' }}>{v.caption}</div>
-                          <div className="tiny faint">{v.tags?.join(' ')} · {new Date(v.created_at).toLocaleDateString()}</div>
+                          <div className="semi small champagne">{v.caption}</div>
+                          <div className="tiny faint rm-num">{v.tags?.join(' ')} · {new Date(v.created_at).toLocaleDateString()}</div>
                         </div>
                       </div>
 
                       <button
                         type="button"
                         className="btn-icon"
-                        style={{ width: 34, height: 34, color: '#fb7185' }}
+                        style={{ width: 30, height: 30, color: '#fb7185' }}
                         onClick={() => handleDeleteVideo(v.id)}
                         title="Delete video"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   ))}
@@ -535,31 +522,31 @@ export default function ProfilePage() {
           {activeContentTab === 'posts' && (
             <div>
               {myPosts.length === 0 ? (
-                <div className="center-text tiny faint" style={{ padding: 24 }}>
+                <div className="center-text tiny faint" style={{ padding: 20 }}>
                   {t('noMyPosts')}
                 </div>
               ) : (
-                <div className="flex col g12">
+                <div className="flex col g8">
                   {myPosts.map((p) => (
-                    <div key={p.id} className="card flex items-center justify-between" style={{ padding: 14, background: 'rgba(255,255,255,0.03)' }}>
-                      <div className="flex items-center g12">
-                        <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(6,182,212,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Newspaper size={20} style={{ color: '#06b6d4' }} />
+                    <div key={p.id} className="card flex items-center justify-between" style={{ padding: 12, background: 'var(--lacquer-deep)' }}>
+                      <div className="flex items-center g10">
+                        <div style={{ width: 38, height: 38, borderRadius: 6, background: 'rgba(245,192,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Newspaper size={18} style={{ color: 'var(--kinpaku-gold)' }} />
                         </div>
                         <div>
-                          <div className="semi small" style={{ color: '#fff' }}>{p.content?.slice(0, 50)}...</div>
-                          <div className="tiny faint">{new Date(p.created_at).toLocaleDateString()}</div>
+                          <div className="semi small champagne">{p.content?.slice(0, 50)}...</div>
+                          <div className="tiny faint rm-num">{new Date(p.created_at).toLocaleDateString()}</div>
                         </div>
                       </div>
 
                       <button
                         type="button"
                         className="btn-icon"
-                        style={{ width: 34, height: 34, color: '#fb7185' }}
+                        style={{ width: 30, height: 30, color: '#fb7185' }}
                         onClick={() => handleDeletePost(p.id)}
                         title="Delete post"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   ))}
@@ -573,17 +560,17 @@ export default function ProfilePage() {
         <div 
           className="card"
           style={{
-            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%)',
-            border: '1px solid rgba(245, 158, 11, 0.4)',
-            padding: 22
+            background: 'var(--raised-lacquer)',
+            border: '1px solid var(--gold-hairline-strong)',
+            padding: 18
           }}
         >
-          <div className="flex justify-between items-start" style={{ marginBottom: 14 }}>
+          <div className="flex justify-between items-start" style={{ marginBottom: 12 }}>
             <div>
-              <div className="badge tiny" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid #f59e0b50', marginBottom: 6 }}>
+              <div className="badge badge-gold tiny" style={{ marginBottom: 6 }}>
                 {t('referralProgramBadge')}
               </div>
-              <h3 className="rm-title" style={{ fontSize: 18, color: '#fff' }}>
+              <h3 className="rm-title" style={{ fontSize: 16, margin: 0 }}>
                 {t('referralProgramTitle')}
               </h3>
               <p className="tiny muted" style={{ marginTop: 4 }}>
@@ -594,19 +581,19 @@ export default function ProfilePage() {
             <button 
               type="button" 
               className="btn btn-secondary" 
-              style={{ width: 'auto', padding: '8px 16px', fontSize: 12, borderRadius: 999 }}
+              style={{ width: 'auto', padding: '6px 14px', fontSize: 11.5, borderRadius: 6 }}
               onClick={copyReferralLink}
             >
-              {copiedLink ? <><Check size={14} style={{ color: '#10b981' }} /> {t('copiedInviteLink')}</> : <><Copy size={14} /> {t('copyInviteLink')}</>}
+              {copiedLink ? <><Check size={13} style={{ color: 'var(--emerald-patina)' }} /> {t('copiedInviteLink')}</> : <><Copy size={13} /> {t('copyInviteLink')}</>}
             </button>
           </div>
 
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 8 }}>
             <div className="flex justify-between tiny bold" style={{ marginBottom: 6 }}>
-              <span>{t('progressLabel')} <b style={{ color: '#f59e0b' }}>{referralCount} {t('friendsCountSuffix')}</b></span>
+              <span>{t('progressLabel')} <b className="gold rm-num">{referralCount} {t('friendsCountSuffix')}</b></span>
               <span className="muted">{t('max10Friends')}</span>
             </div>
-            <div className="compat-bar-track" style={{ height: 8 }}>
+            <div className="compat-bar-track" style={{ height: 6 }}>
               <div 
                 className="compat-bar-fill" 
                 style={{ 
@@ -618,14 +605,14 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* EDIT PROFILE DETAILS & TAGS WITH AI MODERATION */}
-        <form onSubmit={handleSaveProfile} className="card flex col g20" style={{ padding: 26 }}>
-          <div className="rm-title" style={{ fontSize: 18, color: '#fff', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+        {/* EDIT PROFILE DETAILS & TAGS */}
+        <form onSubmit={handleSaveProfile} className="card flex col g16" style={{ padding: 22 }}>
+          <div className="rm-title" style={{ fontSize: 16, borderBottom: '1px solid var(--gold-hairline)', paddingBottom: 10 }}>
             {t('profileFormTitle')}
           </div>
 
           <div className="field-group">
-            <label className="field-label"><User size={14} /> {t('displayNameLabel')}</label>
+            <label className="field-label"><User size={13} /> {t('displayNameLabel')}</label>
             <input 
               className="input" 
               value={displayName} 
@@ -636,7 +623,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="field-group">
-            <label className="field-label"><Globe size={14} /> {t('countryLabel')}</label>
+            <label className="field-label"><Globe size={13} /> {t('countryLabel')}</label>
             <input 
               className="input" 
               value={country} 
@@ -646,7 +633,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="field-group">
-            <label className="field-label"><MessageSquare size={14} /> {t('bioLabel')}</label>
+            <label className="field-label"><MessageSquare size={13} /> {t('bioLabel')}</label>
             <textarea 
               className="input" 
               rows={3} 
@@ -659,11 +646,11 @@ export default function ProfilePage() {
           {/* CUSTOM INTERESTS / HOBBIES */}
           <div className="field-group">
             <div className="flex justify-between items-center">
-              <label className="field-label"><Heart size={14} /> {t('interestsLabel')}</label>
-              <span className="tiny faint flex items-center g4"><ShieldCheck size={12} style={{ color: '#10b981' }} /> AI Active</span>
+              <label className="field-label"><Heart size={13} /> {t('interestsLabel')}</label>
+              <span className="tiny faint flex items-center g4"><ShieldCheck size={11} style={{ color: 'var(--emerald-patina)' }} /> AI Active</span>
             </div>
             
-            <div className="flex g8 items-center" style={{ marginBottom: 10 }}>
+            <div className="flex g6 items-center" style={{ marginBottom: 8 }}>
               <input 
                 className="input" 
                 placeholder="Enter interest tag..."
@@ -679,24 +666,24 @@ export default function ProfilePage() {
               <button 
                 type="button" 
                 className="btn btn-secondary" 
-                style={{ width: 'auto', padding: '12px 18px', flexShrink: 0 }}
+                style={{ width: 'auto', padding: '10px 14px', flexShrink: 0, borderRadius: 6 }}
                 onClick={() => addInterest(customInterest)}
               >
-                <Plus size={16} /> {t('addTagBtn')}
+                <Plus size={14} /> {t('addTagBtn')}
               </button>
             </div>
 
             {/* Current Selected Tags */}
-            <div className="flex" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
               {interests.map((tItem) => (
                 <span 
                   key={tItem} 
                   className="chip selected" 
-                  style={{ padding: '6px 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                  style={{ padding: '4px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
                   <span>{tItem}</span>
                   <X 
-                    size={14} 
+                    size={12} 
                     style={{ cursor: 'pointer', opacity: 0.8 }} 
                     onClick={() => removeInterest(tItem)}
                   />
@@ -706,14 +693,14 @@ export default function ProfilePage() {
 
             {/* Quick Suggestions */}
             <div>
-              <div className="tiny faint" style={{ marginBottom: 6 }}>{t('quickSuggestLabel')}</div>
-              <div className="flex" style={{ flexWrap: 'wrap', gap: 6 }}>
+              <div className="tiny faint" style={{ marginBottom: 4 }}>{t('quickSuggestLabel')}</div>
+              <div className="flex" style={{ flexWrap: 'wrap', gap: 4 }}>
                 {SUGGESTED_INTERESTS.filter(s => !interests.includes(s)).map((s) => (
                   <button
                     key={s}
                     type="button"
                     className="chip"
-                    style={{ padding: '4px 10px', fontSize: 11 }}
+                    style={{ padding: '3px 8px', fontSize: 11 }}
                     onClick={() => addInterest(s)}
                   >
                     + {s}
@@ -725,7 +712,7 @@ export default function ProfilePage() {
 
           {/* CUSTOM CONVERSATION STYLE / PERSONALITY */}
           <div className="field-group">
-            <label className="field-label"><Sparkles size={14} /> {t('personalityLabel')}</label>
+            <label className="field-label"><Sparkles size={13} /> {t('personalityLabel')}</label>
             <input 
               className="input" 
               value={style} 
@@ -734,8 +721,8 @@ export default function ProfilePage() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ marginTop: 10, padding: 15 }} disabled={saving}>
-            <Save size={18} /> {saving ? 'Saving...' : t('saveAllChangesBtn')}
+          <button type="submit" className="btn btn-primary" style={{ marginTop: 6, padding: 12 }} disabled={saving}>
+            <Save size={15} /> {saving ? 'Saving...' : t('saveAllChangesBtn')}
           </button>
         </form>
       </div>
@@ -748,13 +735,13 @@ export default function ProfilePage() {
             top: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(18, 14, 28, 0.95)',
-            border: '1px solid rgba(236, 72, 153, 0.5)',
-            boxShadow: '0 8px 32px rgba(236, 72, 153, 0.3)',
-            padding: '10px 20px',
-            borderRadius: 999,
-            color: '#fff',
-            fontSize: 13.5,
+            background: 'var(--raised-lacquer)',
+            border: '1px solid var(--gold-hairline-strong)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.65)',
+            padding: '9px 18px',
+            borderRadius: 8,
+            color: 'var(--champagne)',
+            fontSize: 13,
             fontWeight: 600,
             zIndex: 1000,
             animation: 'msgPop 0.25s ease'

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { 
   ShieldCheck, Sparkles, Compass, LogOut, Video, 
-  Globe2, Lock, ArrowUpRight, Zap, Award, ArrowRight, Flame, Users, Radio, Newspaper, Share2, Copy
+  Globe2, ArrowUpRight, Zap, Award, ArrowRight, Radio, Newspaper, Gift
 } from 'lucide-react'
 import { trustTier, nextTierInfo } from '@/lib/trust'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -11,7 +11,7 @@ import { logoutAction } from './actions'
 import AppShell from '../components/AppShell'
 
 export default function HomeView({ profile, trust, refCount }) {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
 
   const score = trust?.score ?? 100
   const tier = trustTier(score)
@@ -32,10 +32,9 @@ export default function HomeView({ profile, trust, refCount }) {
                 <div
                   className="avatar"
                   style={{
-                    width: 52,
-                    height: 52,
-                    fontSize: 20,
-                    background: 'var(--brand-gradient)',
+                    width: 48,
+                    height: 48,
+                    fontSize: 18,
                     cursor: 'pointer'
                   }}
                 >
@@ -44,12 +43,12 @@ export default function HomeView({ profile, trust, refCount }) {
               </Link>
               <div>
                 <div className="flex items-center g8">
-                  <span className="rm-title" style={{ fontSize: 22 }}>{t('welcome')}, {name} 👋</span>
-                  <span className="badge badge-success tiny" style={{ fontSize: 10, padding: '2px 8px' }}>
+                  <h1 className="rm-title" style={{ fontSize: 20, margin: 0 }}>{t('welcome')}, {name}</h1>
+                  <span className="badge badge-success tiny">
                     {t('online')}
                   </span>
                 </div>
-                <div className="tiny muted" style={{ marginTop: 2 }}>
+                <div className="tiny faint" style={{ marginTop: 2 }}>
                   {profile?.country || 'Việt Nam'} · {profile?.interests?.length || 0} {t('interestsCount')} · {t('styleLabel')}: {profile?.conversation_style || 'Tự do'}
                 </div>
               </div>
@@ -61,189 +60,169 @@ export default function HomeView({ profile, trust, refCount }) {
                 title="Đăng xuất"
                 type="submit"
               >
-                <LogOut size={18} style={{ color: 'var(--text-muted)' }} />
+                <LogOut size={16} />
               </button>
             </form>
           </div>
 
-          {/* MAIN HERO ACTION: AI Matching Radar */}
+          {/* MAIN HERO ACTION: AI Matching Radar Console */}
           <Link href="/match" style={{ textDecoration: 'none' }}>
             <div
               className="card card-interactive"
               style={{
-                background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.22) 0%, rgba(139, 92, 246, 0.3) 50%, rgba(6, 182, 212, 0.2) 100%)',
-                border: '1px solid rgba(236, 72, 153, 0.5)',
-                boxShadow: '0 20px 50px -10px rgba(236, 72, 153, 0.35)',
-                padding: '28px 24px',
+                background: 'linear-gradient(135deg, rgba(28, 22, 36, 0.95) 0%, rgba(16, 13, 22, 0.98) 100%)',
+                border: '1px solid var(--gold-hairline-strong)',
+                padding: '28px 26px',
                 overflow: 'hidden',
               }}
             >
               <div className="flex justify-between items-start" style={{ marginBottom: 16 }}>
-                <div className="badge" style={{ background: 'rgba(236, 72, 153, 0.3)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', padding: '6px 12px' }}>
-                  <Zap size={14} style={{ color: '#facc15' }} /> RANCHAT · AI MATCHING RADAR
+                <div className="badge badge-gold tiny">
+                  <Zap size={13} /> RANCHAT · AI RADAR
                 </div>
                 <div 
                   style={{ 
-                    width: 40, 
-                    height: 40, 
-                    borderRadius: '50%', 
-                    background: 'rgba(255,255,255,0.15)', 
+                    width: 36, 
+                    height: 36, 
+                    borderRadius: 8, 
+                    background: 'rgba(255, 255, 255, 0.04)', 
+                    border: '1px solid var(--gold-hairline)',
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'center' 
+                    justifyContent: 'center',
+                    color: 'var(--kinpaku-gold)'
                   }} 
                 >
-                  <ArrowUpRight size={20} style={{ color: '#fff' }} />
+                  <ArrowUpRight size={18} />
                 </div>
               </div>
 
-              <div style={{ marginBottom: 14 }}>
-                <h2 className="rm-title" style={{ fontSize: 26, marginBottom: 8, color: '#fff' }}>
+              <div style={{ marginBottom: 16 }}>
+                <h2 className="rm-title" style={{ fontSize: 24, marginBottom: 8 }}>
                   {t('matchBannerTitle')}
                 </h2>
-                <p className="small" style={{ color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.5, maxWidth: 520 }}>
+                <p className="small muted" style={{ lineHeight: 1.6, maxWidth: 540 }}>
                   {t('matchBannerSub')}
                 </p>
               </div>
 
-              <div className="flex items-center g10 tiny bold" style={{ color: '#fbcfe8', marginTop: 18 }}>
-                <Compass size={18} /> {t('startScan')} <ArrowRight size={14} />
+              <div className="flex items-center g8 tiny bold gold">
+                <Compass size={16} /> {t('startScan')} <ArrowRight size={14} />
               </div>
             </div>
           </Link>
 
-          {/* REFERRAL / TRUST REWARDS BANNER */}
-          <Link href="/profile" style={{ textDecoration: 'none' }}>
-            <div 
-              className="card card-interactive"
-              style={{
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(236, 72, 153, 0.15) 100%)',
-                border: '1px solid rgba(245, 158, 11, 0.45)',
-                padding: '20px 22px'
-              }}
-            >
-              <div className="flex justify-between items-center" style={{ marginBottom: 8 }}>
-                <span className="badge tiny" style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#f59e0b', border: '1px solid #f59e0b60' }}>
-                  🎁 {t('referralTitle')}
+          {/* TRUST SCORE & REFERRAL METER (Asymmetric 2-Col Grid) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+            {/* Trust Engine Card */}
+            <div className="card" style={{ padding: 20 }}>
+              <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
+                <div className="flex items-center g6 tiny faint">
+                  <ShieldCheck size={15} style={{ color: 'var(--emerald-patina)' }} />
+                  {t('trustEngine')}
+                </div>
+                <span className="badge badge-gold tiny">
+                  <Award size={12} /> {tier.name}
                 </span>
-                <span className="tiny bold" style={{ color: '#f59e0b' }}>+100 Trust →</span>
               </div>
-              <div className="semi small" style={{ color: '#fff', marginBottom: 4 }}>
-                {t('referralSub')}
-              </div>
-              <div className="tiny faint">
-                {t('referralProgress')}: <b>{referrals}/10</b>
-              </div>
-            </div>
-          </Link>
 
-          {/* TRUST SCORE HERO CARD */}
-          <div 
-            className="card" 
-            style={{ 
-              background: 'linear-gradient(135deg, rgba(26, 20, 48, 0.9) 0%, rgba(16, 13, 28, 0.95) 100%)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-              boxShadow: '0 12px 32px -8px rgba(168, 85, 247, 0.25)'
-            }}
-          >
-            <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
-              <div className="flex items-center g6 tiny faint" style={{ letterSpacing: '0.06em' }}>
-                <ShieldCheck size={16} style={{ color: tier.color }} />
-                {t('trustEngine')}
-              </div>
-              <div className="badge badge-glow" style={{ color: tier.color, borderColor: tier.color }}>
-                <Award size={13} /> {tier.name}
-              </div>
-            </div>
-
-            <div className="flex items-end justify-between" style={{ marginBottom: 14 }}>
-              <div>
-                <div className="rm-num bold" style={{ fontSize: 40, color: tier.color, lineHeight: 1 }}>
-                  {score} <span style={{ fontSize: 16, color: 'var(--text-muted)' }}>pts</span>
+              <div className="flex items-end justify-between" style={{ marginBottom: 10 }}>
+                <div className="rm-num bold" style={{ fontSize: 32, color: 'var(--kinpaku-gold)', lineHeight: 1 }}>
+                  {score} <span className="tiny faint">PTS</span>
                 </div>
-                <div className="tiny muted" style={{ marginTop: 6 }}>
-                  {t('trustDesc')}
-                </div>
+                {next && (
+                  <div className="tiny faint">
+                    {t('neededToRank')} <b className="champagne">{next.needed}</b> {t('ptsToRank')} <b className="gold">{next.label}</b>
+                  </div>
+                )}
               </div>
 
               {next && (
-                <div className="tiny faint center-text" style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 14px', borderRadius: 12 }}>
-                  {t('neededToRank')} <b style={{ color: '#fff' }}>{next.needed}</b> {t('ptsToRank')} <b style={{ color: '#ec4899' }}>{next.label}</b>
+                <div className="compat-bar-track">
+                  <div 
+                    className="compat-bar-fill" 
+                    style={{ width: `${Math.min(100, (score / (score + next.needed)) * 100)}%` }} 
+                  />
                 </div>
               )}
             </div>
 
-            {/* Progress to next tier */}
-            {next && (
-              <div className="compat-bar-track" style={{ height: 8 }}>
-                <div 
-                  className="compat-bar-fill" 
-                  style={{ 
-                    width: `${Math.min(100, (score / (score + next.needed)) * 100)}%`,
-                    background: 'var(--brand-gradient)'
-                  }} 
-                />
+            {/* Referral Card */}
+            <Link href="/profile" style={{ textDecoration: 'none' }}>
+              <div className="card card-interactive" style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div className="flex justify-between items-center" style={{ marginBottom: 8 }}>
+                  <span className="badge badge-patina tiny">
+                    <Gift size={12} /> {t('referralTitle')}
+                  </span>
+                  <span className="tiny bold gold">+100 Trust →</span>
+                </div>
+                <div className="semi small champagne" style={{ marginBottom: 4 }}>
+                  {t('referralSub')}
+                </div>
+                <div className="tiny faint">
+                  {t('referralProgress')}: <b className="champagne">{referrals}/10</b>
+                </div>
               </div>
-            )}
+            </Link>
           </div>
 
           {/* ECOSYSTEM ACCESS (RanNews, RanVideo, RanWorld) */}
           <div>
-            <div className="tiny faint" style={{ marginBottom: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            <div className="tiny faint" style={{ marginBottom: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               {t('ecosystemTitle')}
             </div>
             <div className="flex col g12">
               <Link href="/news" style={{ textDecoration: 'none' }}>
-                <div className="card card-interactive flex items-center justify-between" style={{ padding: 18 }}>
+                <div className="card card-interactive flex items-center justify-between" style={{ padding: 16 }}>
                   <div className="flex items-center g14">
-                    <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(6, 182, 212, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Newspaper size={22} style={{ color: '#06b6d4' }} />
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(56, 189, 248, 0.1)', border: '1px solid var(--patina-hairline)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Newspaper size={20} style={{ color: 'var(--verdigris-patina)' }} />
                     </div>
                     <div>
                       <div className="flex items-center g8">
-                        <span className="semi" style={{ fontSize: 16, color: '#fff' }}>RanNews</span>
-                        <span className="badge badge-glow tiny" style={{ fontSize: 10, padding: '2px 8px' }}>MỚI</span>
+                        <span className="semi champagne" style={{ fontSize: 15 }}>RanNews</span>
+                        <span className="badge badge-patina tiny" style={{ fontSize: 9 }}>MỚI</span>
                       </div>
                       <div className="tiny muted" style={{ marginTop: 2 }}>{t('news')}</div>
                     </div>
                   </div>
-                  <ArrowRight size={18} style={{ color: 'var(--text-muted)' }} />
+                  <ArrowRight size={16} style={{ color: 'var(--text-faint)' }} />
                 </div>
               </Link>
 
               <Link href="/videos" style={{ textDecoration: 'none' }}>
-                <div className="card card-interactive flex items-center justify-between" style={{ padding: 18 }}>
+                <div className="card card-interactive flex items-center justify-between" style={{ padding: 16 }}>
                   <div className="flex items-center g14">
-                    <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(244, 63, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Video size={22} style={{ color: '#f43f5e' }} />
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(245, 192, 66, 0.1)', border: '1px solid var(--gold-hairline-strong)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Video size={20} style={{ color: 'var(--kinpaku-gold)' }} />
                     </div>
                     <div>
                       <div className="flex items-center g8">
-                        <span className="semi" style={{ fontSize: 16, color: '#fff' }}>RanVideo</span>
-                        <span className="badge badge-glow tiny" style={{ fontSize: 10, padding: '2px 8px' }}>🔥 HOT</span>
+                        <span className="semi champagne" style={{ fontSize: 15 }}>RanVideo</span>
+                        <span className="badge badge-gold tiny" style={{ fontSize: 9 }}>HOT</span>
                       </div>
                       <div className="tiny muted" style={{ marginTop: 2 }}>{t('videos')}</div>
                     </div>
                   </div>
-                  <ArrowRight size={18} style={{ color: 'var(--text-muted)' }} />
+                  <ArrowRight size={16} style={{ color: 'var(--text-faint)' }} />
                 </div>
               </Link>
 
               <Link href="/world" style={{ textDecoration: 'none' }}>
-                <div className="card card-interactive flex items-center justify-between" style={{ padding: 18 }}>
+                <div className="card card-interactive flex items-center justify-between" style={{ padding: 16 }}>
                   <div className="flex items-center g14">
-                    <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Globe2 size={22} style={{ color: '#a855f7' }} />
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(45, 212, 191, 0.1)', border: '1px solid rgba(45, 212, 191, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Globe2 size={20} style={{ color: 'var(--emerald-patina)' }} />
                     </div>
                     <div>
                       <div className="flex items-center g8">
-                        <span className="semi" style={{ fontSize: 16, color: '#fff' }}>RanWorld</span>
-                        <span className="badge badge-success tiny" style={{ fontSize: 10, padding: '2px 8px' }}>🎙️ LIVE</span>
+                        <span className="semi champagne" style={{ fontSize: 15 }}>RanWorld</span>
+                        <span className="badge badge-success tiny" style={{ fontSize: 9 }}>LIVE</span>
                       </div>
                       <div className="tiny muted" style={{ marginTop: 2 }}>{t('world')}</div>
                     </div>
                   </div>
-                  <ArrowRight size={18} style={{ color: 'var(--text-muted)' }} />
+                  <ArrowRight size={16} style={{ color: 'var(--text-faint)' }} />
                 </div>
               </Link>
             </div>
@@ -252,46 +231,48 @@ export default function HomeView({ profile, trust, refCount }) {
 
         {/* RIGHT DESKTOP SIDEBAR WIDGETS */}
         <div className="flex col g20">
-          <div className="card">
+          {/* Voice Lounge Widget */}
+          <div className="card" style={{ padding: 20 }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
               <div className="flex items-center g8">
-                <Radio size={16} style={{ color: '#10b981' }} />
-                <span className="semi small">{t('voiceLive')}</span>
+                <Radio size={15} style={{ color: 'var(--emerald-patina)' }} />
+                <span className="semi small champagne">{t('voiceLive')}</span>
               </div>
-              <Link href="/world" className="tiny bold" style={{ color: '#ec4899' }}>{t('viewAll')}</Link>
+              <Link href="/world" className="tiny bold gold">{t('viewAll')}</Link>
             </div>
 
-            <div className="flex col g10">
-              <Link href="/world/minecraft-builders" className="card card-interactive" style={{ padding: 12, background: 'rgba(255,255,255,0.03)' }}>
-                <div className="semi small" style={{ color: '#fff' }}>Minecraft Builders ⛏️</div>
+            <div className="flex col g8">
+              <Link href="/world/minecraft-builders" className="card card-interactive" style={{ padding: 12, background: 'var(--lacquer-deep)' }}>
+                <div className="semi small champagne">Minecraft Builders ⛏️</div>
                 <div className="flex items-center justify-between tiny faint" style={{ marginTop: 4 }}>
                   <span>148 members</span>
-                  <span className="badge badge-success tiny" style={{ padding: '1px 6px' }}>Voice</span>
+                  <span className="badge badge-success tiny" style={{ padding: '1px 6px', fontSize: 10 }}>Voice</span>
                 </div>
               </Link>
 
-              <Link href="/world/anime-lounge" className="card card-interactive" style={{ padding: 12, background: 'rgba(255,255,255,0.03)' }}>
-                <div className="semi small" style={{ color: '#fff' }}>Anime Lounge ✨</div>
+              <Link href="/world/anime-lounge" className="card card-interactive" style={{ padding: 12, background: 'var(--lacquer-deep)' }}>
+                <div className="semi small champagne">Anime Lounge ✨</div>
                 <div className="flex items-center justify-between tiny faint" style={{ marginTop: 4 }}>
                   <span>112 members</span>
-                  <span className="badge tiny" style={{ padding: '1px 6px' }}>Chat</span>
+                  <span className="badge badge-patina tiny" style={{ padding: '1px 6px', fontSize: 10 }}>Chat</span>
                 </div>
               </Link>
             </div>
           </div>
 
-          <div className="card" style={{ background: 'rgba(255,255,255,0.02)' }}>
+          {/* Community Standards Card */}
+          <div className="card" style={{ padding: 20, background: 'var(--lacquer-deep)' }}>
             <div className="flex items-center g8" style={{ marginBottom: 10 }}>
-              <ShieldCheck size={16} style={{ color: '#ec4899' }} />
-              <span className="semi small">{t('communityRules')}</span>
+              <ShieldCheck size={16} style={{ color: 'var(--kinpaku-gold)' }} />
+              <span className="semi small champagne">{t('communityRules')}</span>
             </div>
-            <p className="tiny muted" style={{ lineHeight: 1.5, marginBottom: 10 }}>
+            <p className="tiny muted" style={{ lineHeight: 1.6, marginBottom: 12 }}>
               • {t('rule1')}<br />
               • {t('rule2')}<br />
               • {t('rule3')}
             </p>
-            <div className="tiny faint center-text" style={{ paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              RanMet Social v1.0 · Official Release
+            <div className="tiny faint center-text" style={{ paddingTop: 8, borderTop: '1px solid var(--gold-hairline)' }}>
+              RanMet Social v1.0 · Impeccable Craft
             </div>
           </div>
         </div>

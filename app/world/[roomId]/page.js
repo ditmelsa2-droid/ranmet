@@ -4,7 +4,7 @@ import { useState, use, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   ArrowLeft, Users, Mic, MicOff, Volume2, 
-  Send, Sparkles, MessageSquare, Radio, ShieldCheck, Heart, Smile
+  Send, Sparkles, MessageSquare, Radio, ShieldCheck
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import AppShell from '../../components/AppShell'
@@ -99,7 +99,6 @@ export default function RoomDetailPage({ params }) {
     const { error } = await supabase.from('world_messages').insert(newMsg)
     if (error) {
       console.error('Error inserting message:', error)
-      // optimistic
       setMessages((prev) => [...prev, { id: Date.now(), ...newMsg, created_at: new Date().toISOString() }])
     }
   }
@@ -111,35 +110,35 @@ export default function RoomDetailPage({ params }) {
 
   return (
     <AppShell>
-      <div className="flex col g20" style={{ height: 'calc(100vh - 80px)', minHeight: 600 }}>
+      <div className="flex col g16" style={{ height: 'calc(100vh - 80px)', minHeight: 560 }}>
         {/* ROOM TOP HEADER */}
         <div 
           className="card flex items-center justify-between" 
           style={{ 
-            padding: '16px 20px', 
-            background: 'rgba(20, 16, 32, 0.9)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+            padding: '12px 18px', 
+            background: 'var(--lacquer-deep)',
+            border: '1px solid var(--gold-hairline)' 
           }}
         >
-          <div className="flex items-center g14">
-            <Link href="/world" className="btn-icon" style={{ width: 38, height: 38 }}>
-              <ArrowLeft size={18} />
+          <div className="flex items-center g12">
+            <Link href="/world" className="btn-icon" style={{ width: 34, height: 34 }}>
+              <ArrowLeft size={16} />
             </Link>
             <div>
-              <h2 className="rm-title" style={{ fontSize: 19, color: '#fff' }}>
+              <h2 className="rm-title" style={{ fontSize: 17, margin: 0 }}>
                 {roomInfo.name}
               </h2>
               <div className="flex items-center g8 tiny muted">
-                <span className="badge badge-success tiny" style={{ fontSize: 10, padding: '2px 8px' }}>
-                  <Radio size={10} /> Live
+                <span className="badge badge-success tiny" style={{ fontSize: 9, padding: '1px 6px' }}>
+                  <Radio size={9} /> Live
                 </span>
                 <span>{roomInfo.category}</span> · 
-                <span className="flex items-center g4"><Users size={12} /> Host: {roomInfo.host_name}</span>
+                <span className="flex items-center g4"><Users size={11} /> Host: {roomInfo.host_name}</span>
               </div>
             </div>
           </div>
 
-          <Link href="/world" className="btn btn-secondary" style={{ width: 'auto', padding: '8px 16px', fontSize: 13 }}>
+          <Link href="/world" className="btn btn-secondary" style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 6 }}>
             Rời phòng
           </Link>
         </div>
@@ -149,42 +148,41 @@ export default function RoomDetailPage({ params }) {
           <div 
             className="card" 
             style={{ 
-              padding: 20, 
-              background: 'linear-gradient(135deg, rgba(26, 20, 48, 0.8) 0%, rgba(16, 12, 28, 0.9) 100%)',
-              border: '1px solid rgba(168, 85, 247, 0.25)' 
+              padding: 16, 
+              background: 'var(--raised-lacquer)',
+              border: '1px solid var(--gold-hairline-strong)' 
             }}
           >
-            <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
-              <span className="tiny bold flex items-center g6" style={{ color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                <Volume2 size={14} /> Sân Khấu Voice Trực Tiếp
+            <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
+              <span className="tiny bold flex items-center g6 gold" style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <Volume2 size={13} /> Sân Khấu Voice Trực Tiếp
               </span>
               <button
                 type="button"
                 className={`btn ${isMicOn ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 999 }}
+                style={{ width: 'auto', padding: '5px 12px', fontSize: 11.5, borderRadius: 6 }}
                 onClick={() => setIsMicOn(!isMicOn)}
               >
-                {isMicOn ? <><Mic size={14} /> Mic đang bật</> : <><MicOff size={14} /> Bật Micro</>}
+                {isMicOn ? <><Mic size={13} /> Mic đang bật</> : <><MicOff size={13} /> Bật Micro</>}
               </button>
             </div>
 
-            <div className="flex g16" style={{ flexWrap: 'wrap' }}>
-              <div className="flex col items-center g6">
+            <div className="flex g14" style={{ flexWrap: 'wrap' }}>
+              <div className="flex col items-center g4">
                 <div 
                   className="avatar" 
                   style={{ 
-                    width: 52, 
-                    height: 52, 
-                    fontSize: 18, 
-                    background: 'var(--brand-gradient)',
-                    boxShadow: isMicOn ? '0 0 20px #ec4899' : 'none',
-                    border: isMicOn ? '2px solid #ec4899' : '2px solid rgba(255,255,255,0.2)'
-                  }}
+                    width: 48, 
+                    height: 48, 
+                    fontSize: 16, 
+                    boxShadow: isMicOn ? '0 0 16px rgba(245, 192, 66, 0.4)' : 'none',
+                    border: isMicOn ? '2px solid var(--kinpaku-gold)' : '1px solid var(--gold-hairline)'
+                  }} 
                 >
                   {currentUserName.charAt(0).toUpperCase()}
                 </div>
-                <span className="tiny bold" style={{ color: '#fff' }}>{currentUserName}</span>
-                <span className="tiny faint" style={{ fontSize: 10 }}>{isMicOn ? 'Đang nói 🎙️' : 'Muted'}</span>
+                <span className="tiny bold champagne">{currentUserName}</span>
+                <span className="tiny faint" style={{ fontSize: 9.5 }}>{isMicOn ? 'Đang nói 🎙️' : 'Muted'}</span>
               </div>
             </div>
           </div>
@@ -196,7 +194,8 @@ export default function RoomDetailPage({ params }) {
           style={{ 
             padding: 0, 
             overflow: 'hidden',
-            background: 'rgba(14, 10, 24, 0.85)'
+            background: 'var(--lacquer-black)',
+            border: '1px solid var(--gold-hairline)'
           }}
         >
           {/* Messages list */}
@@ -205,10 +204,10 @@ export default function RoomDetailPage({ params }) {
             className="grow" 
             style={{ 
               overflowY: 'auto', 
-              padding: '16px 20px', 
+              padding: '14px 18px', 
               display: 'flex', 
               flexDirection: 'column', 
-              gap: 12 
+              gap: 8 
             }}
           >
             {messages.length === 0 ? (
@@ -220,27 +219,18 @@ export default function RoomDetailPage({ params }) {
                 const isMe = m.sender_id === currentUserId
                 const time = new Date(m.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 return (
-                  <div key={m.id} className={`flex g10 ${isMe ? 'justify-end' : ''}`}>
+                  <div key={m.id} className={`msg-row ${isMe ? 'me' : ''}`}>
                     {!isMe && (
-                      <div className="avatar" style={{ width: 34, height: 34, fontSize: 13, background: 'var(--brand-gradient)' }}>
+                      <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, marginRight: 8, flexShrink: 0 }}>
                         {(m.sender_name || 'U').charAt(0)}
                       </div>
                     )}
-                    <div style={{ maxWidth: '75%' }}>
-                      {!isMe && <div className="tiny bold" style={{ color: '#c084fc', marginBottom: 2 }}>{m.sender_name}</div>}
-                      <div 
-                        style={{ 
-                          padding: '10px 14px', 
-                          borderRadius: 16, 
-                          background: isMe ? 'var(--brand-gradient)' : 'rgba(255,255,255,0.06)',
-                          color: '#fff',
-                          fontSize: 14,
-                          lineHeight: 1.4
-                        }}
-                      >
+                    <div className={`msg-bubble ${isMe ? 'me' : 'them'}`} style={{ maxWidth: '78%' }}>
+                      {!isMe && <div className="tiny bold gold" style={{ marginBottom: 2 }}>{m.sender_name}</div>}
+                      <div>
                         {m.content}
                       </div>
-                      <div className="tiny faint" style={{ fontSize: 10, marginTop: 2, textAlign: isMe ? 'right' : 'left' }}>
+                      <div className="tiny rm-num" style={{ fontSize: 9.5, opacity: 0.65, marginTop: 3, textAlign: isMe ? 'right' : 'left' }}>
                         {time}
                       </div>
                     </div>
@@ -251,14 +241,14 @@ export default function RoomDetailPage({ params }) {
           </div>
 
           {/* Quick Emoji Reactions */}
-          <div className="flex g8 items-center" style={{ padding: '8px 16px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border)' }}>
-            <span className="tiny faint">Cảm xúc nhanh:</span>
+          <div className="flex g6 items-center" style={{ padding: '6px 14px', background: 'var(--lacquer-deep)', borderTop: '1px solid var(--gold-hairline)' }}>
+            <span className="tiny faint">Cảm xúc:</span>
             {['🔥', '✨', '❤️', '👏', '😂', '⛏️'].map((emoji) => (
               <button 
                 key={emoji}
                 type="button"
                 onClick={() => triggerReaction(emoji)}
-                style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: '2px 4px' }}
+                style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', padding: '2px 4px' }}
               >
                 {emoji}
               </button>
@@ -266,10 +256,10 @@ export default function RoomDetailPage({ params }) {
           </div>
 
           {/* Message Input Dock */}
-          <form onSubmit={sendMessage} className="flex g10 items-center" style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
+          <form onSubmit={sendMessage} className="flex g8 items-center" style={{ padding: '10px 14px', borderTop: '1px solid var(--gold-hairline)' }}>
             <input
               className="input"
-              style={{ padding: '12px 18px', borderRadius: 999 }}
+              style={{ padding: '10px 14px', borderRadius: 6, fontSize: 13, background: 'var(--raised-lacquer)' }}
               placeholder="Nhập tin nhắn vào phòng..."
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -277,9 +267,9 @@ export default function RoomDetailPage({ params }) {
             <button
               type="submit"
               className="btn btn-primary"
-              style={{ width: 44, height: 44, borderRadius: '50%', padding: 0, flexShrink: 0 }}
+              style={{ width: 38, height: 38, borderRadius: 6, padding: 0, flexShrink: 0 }}
             >
-              <Send size={18} />
+              <Send size={15} />
             </button>
           </form>
         </div>
