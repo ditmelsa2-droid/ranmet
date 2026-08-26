@@ -153,7 +153,7 @@ export default function AppShell({ children, userProfile, trustScore }) {
               <div className="compat-bar-track" style={{ height: 4 }}>
                 <div 
                   className="compat-bar-fill" 
-                  style={{ width: `${Math.min(100, (trustScore / 500) * 100)}%` }} 
+                  style={{ transform: `scaleX(${Math.min(1, (trustScore || 100) / 500)})` }} 
                 />
               </div>
             </div>

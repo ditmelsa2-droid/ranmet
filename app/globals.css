@@ -1,45 +1,50 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+/* ==========================================================================
+   RANMET — LANDO NORRIS HIGH-OCTANE LUXURY DESIGN SYSTEM
+   Combines pbakaus/impeccable + Leonxlnx/taste-skill + landonorris.com DNA
+   ========================================================================== */
 
 :root {
-  /* OKLCH Color Palette — Neo Kinpaku Urushi */
-  --lacquer-black: oklch(6.5% 0.005 95);
-  --lacquer-deep: oklch(3.5% 0.003 95);
-  --raised-lacquer: oklch(10.5% 0.006 95);
-  --inset-lacquer: oklch(8.5% 0.005 95);
+  /* Ultra-Deep Luxury Obsidian Palette */
+  --ln-black: #060608;
+  --ln-dark-1: #0d0d12;
+  --ln-dark-2: #14141c;
+  --ln-dark-3: #1c1c28;
+  --ln-glass: rgba(14, 14, 20, 0.78);
   
-  --kinpaku-gold: oklch(84% 0.19 80.46);
-  --kinpaku-gold-hover: oklch(88% 0.21 80.46);
-  --kinpaku-gold-dim: oklch(75% 0.16 80.46);
-  --dark-ink: oklch(13% 0.015 95);
+  /* High-Voltage Electric Accents */
+  --ln-lime: #d2ff00;
+  --ln-lime-glow: rgba(210, 255, 0, 0.35);
+  --ln-cyan: #00f0ff;
+  --ln-cyan-glow: rgba(0, 240, 255, 0.35);
+  --ln-magenta: #f43f5e;
+  --ln-violet: #a855f7;
   
-  --verdigris-patina: oklch(72% 0.12 188);
-  --emerald-patina: oklch(75% 0.14 155);
-  --danger-crimson: oklch(65% 0.22 25);
-
-  --champagne: oklch(95% 0.01 85);
-  --text-muted: oklch(70% 0.01 85);
-  --text-faint: oklch(50% 0.01 85);
-
-  /* Hairlines */
-  --gold-hairline: oklch(80% 0.01 90 / 0.08);
-  --gold-hairline-strong: oklch(84% 0.19 80.46 / 0.25);
-  --gold-hairline-focus: oklch(84% 0.19 80.46 / 0.6);
-
-  /* Gradients */
-  --gold-gradient: linear-gradient(135deg, oklch(86% 0.2 80) 0%, oklch(78% 0.18 75) 100%);
-  --brand-aurora: linear-gradient(135deg, #f472b6 0%, #a855f7 50%, #38bdf8 100%);
-  --brand-aurora-subtle: linear-gradient(135deg, rgba(244, 114, 182, 0.12) 0%, rgba(168, 85, 247, 0.12) 50%, rgba(56, 189, 248, 0.12) 100%);
-  --brand-glow: 0 4px 24px rgba(168, 85, 247, 0.3);
-  --lacquer-gradient: linear-gradient(180deg, var(--raised-lacquer) 0%, var(--lacquer-black) 100%);
-  --stage-gradient: linear-gradient(135deg, oklch(12% 0.008 95) 0%, oklch(8% 0.005 95) 100%);
+  /* Aurora Brand Gradient (Official RanMet Logo Colors) */
+  --brand-aurora: linear-gradient(135deg, #f43f5e 0%, #a855f7 50%, #38bdf8 100%);
+  --brand-aurora-glow: rgba(168, 85, 247, 0.45);
   
-  --font-display: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Gold & Champagne Trims */
+  --kinpaku-gold: #f5c042;
+  --gold-glow: rgba(245, 192, 66, 0.3);
+  --gold-hairline: rgba(245, 192, 66, 0.12);
+  --gold-hairline-strong: rgba(245, 192, 66, 0.28);
+  --champagne: #f7f1e6;
+  
+  /* Text Hues */
+  --text-pure: #ffffff;
+  --text-muted: #9494a8;
+  --text-faint: #5a5a70;
+  
+  /* Fonts */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Be Vietnam Pro', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-
-  --sidebar-w: 260px;
+  
+  /* Smooth Physics */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Base resets */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -47,40 +52,59 @@
 }
 
 html, body {
-  background-color: var(--lacquer-black);
+  background-color: var(--ln-black);
   color: var(--champagne);
   font-family: var(--font-body);
-  font-size: 14.5px;
-  line-height: 1.55;
+  min-height: 100dvh;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
-  overflow-x: hidden;
 }
 
-/* Custom Scrollbars */
+/* Custom Scrollbars (Sleek Dark) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--lacquer-deep);
+  background: var(--ln-black);
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(30% 0.01 95);
-  border-radius: 3px;
+  background: var(--ln-dark-3);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(50% 0.05 80);
+  background: var(--ln-lime);
 }
 
 /* Selection */
 ::selection {
-  background: var(--kinpaku-gold);
-  color: var(--dark-ink);
+  background: var(--ln-lime);
+  color: var(--ln-black);
 }
 
-/* Typography Classes */
+/* ==========================================================================
+   TYPOGRAPHY & IMPACT HEADINGS (Lando Norris Style)
+   ========================================================================== */
+
+.ln-impact-title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5.5vw, 56px);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  color: var(--text-pure);
+}
+
+.ln-sub-hero {
+  font-family: var(--font-body);
+  font-size: clamp(14px, 1.8vw, 17px);
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 680px;
+}
+
 .rm-title {
   font-family: var(--font-display);
   font-weight: 700;
@@ -97,11 +121,12 @@ html, body {
 .semi { font-weight: 600; }
 .medium { font-weight: 500; }
 .tiny { font-size: 11.5px; }
-.small { font-size: 13px; }
+.small { font-size: 13.5px; }
 .faint { color: var(--text-faint); }
 .muted { color: var(--text-muted); }
 .champagne { color: var(--champagne); }
 .gold { color: var(--kinpaku-gold); }
+.lime { color: var(--ln-lime); }
 
 /* Flex & Layout Utilities */
 .flex { display: flex; }
@@ -123,321 +148,345 @@ html, body {
 .g16 { gap: 16px; }
 .g20 { gap: 20px; }
 .g24 { gap: 24px; }
+.g32 { gap: 32px; }
 
-/* Buttons */
+/* ==========================================================================
+   CARDS & MATERIAL CONTAINERS
+   ========================================================================== */
+
+.card {
+  background: var(--ln-dark-1);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.7);
+  transition: all 0.25s var(--ease-spring);
+}
+
+.card-glass {
+  background: var(--ln-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-hairline-strong);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.9);
+}
+
+/* ==========================================================================
+   BUTTONS & CAPSULES
+   ========================================================================== */
+
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 10px 20px;
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 10px;
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
-  user-select: none;
-  white-space: nowrap;
-}
-
-.btn:active {
-  transform: scale(0.98);
+  transition: all 0.2s var(--ease-spring);
 }
 
 .btn-primary {
-  background: var(--gold-gradient);
-  color: var(--dark-ink);
-  box-shadow: 0 4px 14px rgba(245, 192, 66, 0.18);
-  font-weight: 700;
+  background: var(--brand-aurora);
+  color: #ffffff;
+  box-shadow: 0 4px 20px var(--brand-aurora-glow);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 28px rgba(168, 85, 247, 0.65);
+}
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
-.btn-primary:hover {
-  background: var(--kinpaku-gold-hover);
-  color: var(--dark-ink);
+.btn-lime {
+  background: var(--ln-lime);
+  color: var(--ln-black);
+  box-shadow: 0 4px 18px var(--ln-lime-glow);
+}
+.btn-lime:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 26px var(--ln-lime-glow);
 }
 
 .btn-secondary {
-  background: var(--inset-lacquer);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--champagne);
-  border: 1px solid var(--gold-hairline);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
-
 .btn-secondary:hover {
-  background: var(--raised-lacquer);
-  border-color: var(--gold-hairline-strong);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
 
 .btn-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--inset-lacquer);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--champagne);
-  border: 1px solid var(--gold-hairline);
   cursor: pointer;
-  transition: transform 0.15s ease, background 0.15s ease;
+  transition: all 0.2s var(--ease-spring);
 }
-
 .btn-icon:hover {
-  background: var(--raised-lacquer);
-  border-color: var(--gold-hairline-strong);
-}
-
-/* Inputs & Form Elements */
-.input {
-  width: 100%;
-  padding: 10px 14px;
-  background: var(--inset-lacquer);
-  border: 1px solid var(--gold-hairline);
-  border-radius: 8px;
-  color: var(--champagne);
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.input:focus {
-  border-color: var(--gold-hairline-focus);
-  box-shadow: 0 0 0 2px rgba(245, 192, 66, 0.12);
-}
-
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.field-label {
-  font-size: 11.5px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-}
-
-/* Cards & Surfaces */
-.card {
-  background: var(--raised-lacquer);
-  border: 1px solid var(--gold-hairline);
-  border-radius: 12px;
-  padding: 18px;
-}
-
-.card-interactive {
-  transition: transform 0.15s ease, border-color 0.15s ease;
-  cursor: pointer;
-  text-decoration: none;
-  color: inherit;
-}
-
-.card-interactive:hover {
-  border-color: var(--gold-hairline-strong);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
-/* Badges & Chips */
+/* ==========================================================================
+   SUB-TABS BAR & SEGMENTED CONTROLS (Lando Norris Aesthetic)
+   ========================================================================== */
+
+.subtab-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(18, 18, 24, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.subtab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s var(--ease-spring);
+}
+.subtab-btn:hover {
+  color: var(--text-pure);
+  background: rgba(255, 255, 255, 0.06);
+}
+.subtab-btn.active {
+  color: #ffffff;
+  background: var(--brand-aurora);
+  box-shadow: 0 4px 18px var(--brand-aurora-glow);
+}
+.subtab-btn.active-lime {
+  color: var(--ln-black);
+  background: var(--ln-lime);
+  box-shadow: 0 4px 18px var(--ln-lime-glow);
+}
+.subtab-btn.active-gold {
+  color: var(--ln-black);
+  background: var(--gold-gradient);
+  box-shadow: 0 4px 18px rgba(245, 192, 66, 0.35);
+}
+
+/* ==========================================================================
+   TELEMETRY TICKER (F1 Running Stream)
+   ========================================================================== */
+
+.telemetry-ticker {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 20px;
+  background: rgba(10, 10, 14, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+.telemetry-ticker::-webkit-scrollbar {
+  display: none;
+}
+
+.telemetry-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.telemetry-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ln-lime);
+  box-shadow: 0 0 10px var(--ln-lime);
+  animation: telemetryPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes telemetryPulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+/* ==========================================================================
+   BADGES & CHIPS
+   ========================================================================== */
+
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 10.5px;
+  gap: 5px;
+  padding: 3px 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-
 .badge-gold {
   background: rgba(245, 192, 66, 0.12);
   color: var(--kinpaku-gold);
-  border: 1px solid rgba(245, 192, 66, 0.3);
+  border: 1px solid var(--gold-hairline-strong);
 }
-
+.badge-lime {
+  background: rgba(210, 255, 0, 0.12);
+  color: var(--ln-lime);
+  border: 1px solid rgba(210, 255, 0, 0.3);
+}
 .badge-success {
-  background: rgba(52, 211, 153, 0.12);
-  color: var(--emerald-patina);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-}
-
-.badge-danger {
-  background: rgba(244, 63, 94, 0.12);
-  color: var(--danger-crimson);
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  background: rgba(45, 212, 191, 0.12);
+  color: #2dd4bf;
+  border: 1px solid rgba(45, 212, 191, 0.3);
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 14px;
-  border-radius: 6px;
-  background: var(--inset-lacquer);
-  border: 1px solid var(--gold-hairline);
-  color: var(--text-muted);
-  font-size: 12.5px;
+  font-family: var(--font-body);
+  font-size: 13px;
   font-weight: 500;
+  border-radius: 8px;
+  background: var(--ln-dark-2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--champagne);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s var(--ease-spring);
+}
+.chip:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--ln-dark-3);
+}
+.chip.selected {
+  background: rgba(245, 192, 66, 0.12);
+  border-color: var(--gold-hairline-strong);
+  color: var(--kinpaku-gold);
+  font-weight: 600;
 }
 
-.chip.selected, .chip:hover {
-  background: rgba(245, 192, 66, 0.12);
-  color: var(--kinpaku-gold);
-  border-color: var(--gold-hairline-strong);
+/* ==========================================================================
+   INPUTS & FORMS
+   ========================================================================== */
+
+.input {
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--ln-dark-2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: var(--champagne);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.input:focus {
+  border-color: var(--kinpaku-gold);
+  box-shadow: 0 0 16px rgba(245, 192, 66, 0.2);
 }
 
 /* Avatar */
 .avatar {
-  border-radius: 50%;
-  background: var(--inset-lacquer);
-  border: 1px solid var(--gold-hairline);
-  color: var(--champagne);
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  font-family: var(--font-display);
   font-weight: 700;
+  background: var(--ln-dark-2);
+  color: var(--kinpaku-gold);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
-  flex-shrink: 0;
 }
-
 .avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* App Shell Structure */
-.app-container {
-  display: flex;
-  min-height: 100vh;
-}
-
-.app-sidebar {
-  width: var(--sidebar-w);
-  background: var(--lacquer-deep);
-  border-right: 1px solid var(--gold-hairline);
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px 14px;
-  z-index: 50;
-}
-
-.app-main {
-  margin-left: var(--sidebar-w);
-  flex: 1;
-  min-width: 0;
-  padding: 24px 32px 60px;
-}
-
-/* Sidebar Links (No Side-Tab Slop) */
-.sidebar-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  color: var(--text-muted);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 13.5px;
-  transition: all 0.15s ease;
-  position: relative;
-}
-
-.sidebar-link:hover {
-  background: var(--raised-lacquer);
-  color: var(--champagne);
-}
-
-.sidebar-link.active {
-  background: rgba(245, 192, 66, 0.1);
-  color: var(--kinpaku-gold);
-  font-weight: 600;
-  border: 1px solid var(--gold-hairline);
-}
-
-/* Mobile Bottom Dock */
-.mobile-dock {
-  display: none;
-  position: fixed;
-  bottom: 14px;
-  left: 14px;
-  right: 14px;
-  height: 60px;
-  background: rgba(14, 12, 17, 0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--gold-hairline-strong);
-  border-radius: 16px;
-  z-index: 100;
-  padding: 0 10px;
-  align-items: center;
-  justify-content: space-around;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
-}
-
-.dock-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 6px 10px;
-  border-radius: 10px;
-  transition: color 0.15s ease;
-}
-
-.dock-item.active {
-  color: var(--kinpaku-gold);
-}
-
-/* Progress bar without width layout thrash */
+/* Compatibility Bar */
 .compat-bar-track {
   width: 100%;
-  background: var(--lacquer-deep);
-  border-radius: 4px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ln-dark-3);
   overflow: hidden;
-  border: 1px solid var(--gold-hairline);
 }
-
 .compat-bar-fill {
   height: 100%;
-  background: var(--gold-gradient);
+  background: var(--brand-aurora);
+  border-radius: 3px;
   transform-origin: left center;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s var(--ease-spring);
 }
 
-/* ========================================================
-   THEATER SPLIT VIEW FOR RANVIDEO (DESKTOP TIKTOK/REELS)
-   ======================================================== */
+/* ==========================================================================
+   THEATER & DESKTOP SPLIT LAYOUTS
+   ========================================================================== */
+
 .theater-container {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: minmax(0, 1.45fr) 420px;
   gap: 20px;
-  height: calc(100vh - 100px);
-  min-height: 620px;
-  max-width: 1100px;
+  max-width: 1240px;
   margin: 0 auto;
+  height: calc(100dvh - 120px);
+  min-height: 640px;
 }
 
 .theater-stage {
   position: relative;
-  background: #040306;
-  border-radius: 16px;
+  background: #000000;
+  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid var(--gold-hairline-strong);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -447,50 +496,107 @@ html, body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #000;
 }
 
 .theater-panel {
-  background: var(--raised-lacquer);
-  border-radius: 16px;
-  border: 1px solid var(--gold-hairline);
+  background: var(--ln-dark-1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   overflow: hidden;
 }
 
-/* Message bubbles */
-.msg-row {
+/* Desktop Grid 3 */
+.desktop-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+/* ==========================================================================
+   APPLICATION SHELL & NAVIGATION DOCK
+   ========================================================================== */
+
+.app-container {
+  min-height: 100dvh;
   display: flex;
-  margin-bottom: 6px;
+  background: var(--ln-black);
 }
 
-.msg-row.me {
-  justify-content: flex-end;
+.app-sidebar {
+  width: 240px;
+  height: 100dvh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: rgba(10, 10, 14, 0.95);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 16px;
+  z-index: 50;
 }
 
-.msg-bubble {
-  max-width: 78%;
-  padding: 10px 14px;
-  border-radius: 12px;
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
   font-size: 13.5px;
-  line-height: 1.45;
-  word-break: break-word;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all 0.2s var(--ease-spring);
+}
+.sidebar-link:hover {
+  color: var(--text-pure);
+  background: rgba(255, 255, 255, 0.05);
+}
+.sidebar-link.active {
+  color: #ffffff;
+  background: var(--brand-aurora);
+  box-shadow: 0 4px 18px var(--brand-aurora-glow);
 }
 
-.msg-bubble.them {
-  background: var(--raised-lacquer);
-  border: 1px solid var(--gold-hairline);
-  color: var(--champagne);
-  border-bottom-left-radius: 3px;
+.app-main {
+  flex: 1 1 0%;
+  margin-left: 240px;
+  padding: 24px 32px 60px;
+  min-height: 100dvh;
 }
 
-.msg-bubble.me {
-  background: var(--gold-gradient);
-  color: var(--dark-ink);
-  font-weight: 500;
-  border-bottom-right-radius: 3px;
+.mobile-dock {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(8, 8, 12, 0.92);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 8px;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+}
+
+.mobile-dock-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.mobile-dock-btn.active {
+  color: var(--ln-lime);
 }
 
 /* Animations */
@@ -498,9 +604,7 @@ html, body {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-.spin {
-  animation: spin 1s linear infinite;
-}
+.spin { animation: spin 1s linear infinite; }
 
 @keyframes radarSweep {
   0% { transform: rotate(0deg); }
@@ -518,109 +622,7 @@ html, body {
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* Sub-Tab Navigation Bar & Segmented Controls (High-End Tactile UI) */
-.subtab-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px;
-  background: rgba(18, 14, 24, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--gold-hairline);
-  border-radius: 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.subtab-bar::-webkit-scrollbar {
-  display: none;
-}
-
-.subtab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 16px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.subtab-btn:hover {
-  color: var(--champagne);
-  background: rgba(255, 255, 255, 0.04);
-}
-.subtab-btn.active {
-  color: var(--dark-ink);
-  background: var(--brand-aurora);
-  border-color: transparent;
-  box-shadow: 0 4px 14px var(--brand-glow);
-  font-weight: 700;
-}
-.subtab-btn.active-gold {
-  color: var(--dark-ink);
-  background: var(--gold-gradient);
-  border-color: transparent;
-  box-shadow: 0 4px 14px rgba(245, 192, 66, 0.3);
-  font-weight: 700;
-}
-
-/* Telemetry Ticker Marquee (Lando Norris / F1 Live Stats Look) */
-.telemetry-ticker {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 8px 16px;
-  background: rgba(14, 11, 19, 0.85);
-  border: 1px solid var(--gold-hairline);
-  border-radius: 8px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--text-faint);
-  overflow-x: auto;
-  scrollbar-width: none;
-  white-space: nowrap;
-}
-.telemetry-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.telemetry-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--emerald-patina);
-  box-shadow: 0 0 8px var(--emerald-patina);
-  animation: radarPulse 2s infinite ease-in-out;
-}
-
-/* High-Contrast Lando Norris Style Hero Showcase */
-.f1-hero-banner {
-  position: relative;
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid var(--gold-hairline-strong);
-  background: linear-gradient(135deg, #130f1c 0%, #0c0912 100%);
-  padding: 32px 28px;
-}
-.f1-hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(26px, 4vw, 40px);
-  font-weight: 800;
-  line-height: 1.08;
-  letter-spacing: -0.03em;
-  color: #ffffff;
-  text-transform: uppercase;
-}
-
-/* Responsive Breakpoints */
+/* Responsive Media Queries */
 @media (max-width: 1024px) {
   .theater-container {
     grid-template-columns: 1fr;
@@ -638,7 +640,7 @@ html, body {
   }
   .app-main {
     margin-left: 0;
-    padding: 16px 12px 90px;
+    padding: 16px 14px 90px;
   }
   .mobile-dock {
     display: flex;
@@ -646,8 +648,4 @@ html, body {
   .theater-stage {
     height: 80vh;
   }
-  .f1-hero-banner {
-    padding: 22px 18px;
-  }
 }
-
