@@ -16,6 +16,7 @@ export default function CreatorStudioPage() {
   const { t } = useLanguage()
   const [supabase] = useState(() => createClient())
   const [loading, setLoading] = useState(true)
+  const [activeCreatorTab, setActiveCreatorTab] = useState('overview')
   const [profile, setProfile] = useState(null)
   const [trustScore, setTrustScore] = useState(0)
   const [earnings, setEarnings] = useState(0)
@@ -205,6 +206,31 @@ export default function CreatorStudioPage() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* CREATOR STUDIO SUB-TABS */}
+        <div className="subtab-bar">
+          <button 
+            type="button" 
+            className={`subtab-btn ${activeCreatorTab === 'overview' ? 'active' : ''}`}
+            onClick={() => setActiveCreatorTab('overview')}
+          >
+            <DollarSign size={14} /> Tổng Quan Doanh Thu & Ví
+          </button>
+          <button 
+            type="button" 
+            className={`subtab-btn ${activeCreatorTab === 'content' ? 'active' : ''}`}
+            onClick={() => setActiveCreatorTab('content')}
+          >
+            <Video size={14} /> Quản Lý Nội Dung ({totalContentCount})
+          </button>
+          <button 
+            type="button" 
+            className={`subtab-btn ${activeCreatorTab === 'analytics' ? 'active' : ''}`}
+            onClick={() => setActiveCreatorTab('analytics')}
+          >
+            <Eye size={14} /> Telemetry & Tương Tác
+          </button>
         </div>
 
         {/* METRICS STATS CARDS GRID */}

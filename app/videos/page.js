@@ -30,6 +30,10 @@ export default function RanVideoPage() {
   const [newCommentText, setNewCommentText] = useState('')
   const [showMobileComments, setShowMobileComments] = useState(false)
   
+  // Sub-tabs state
+  const [activeCategoryTab, setActiveCategoryTab] = useState('all')
+  const [activePanelTab, setActivePanelTab] = useState('comments')
+  
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [videoUrl, setVideoUrl] = useState('')
@@ -369,6 +373,45 @@ export default function RanVideoPage() {
         </button>
       </div>
 
+      {/* CATEGORY SUB-TABS */}
+      <div className="subtab-bar" style={{ maxWidth: 1100, margin: '0 auto 16px' }}>
+        <button 
+          type="button" 
+          className={`subtab-btn ${activeCategoryTab === 'all' ? 'active' : ''}`}
+          onClick={() => { setActiveCategoryTab('all'); setCurrentIndex(0); }}
+        >
+          <Sparkles size={14} /> Dành Cho Bạn (FYP)
+        </button>
+        <button 
+          type="button" 
+          className={`subtab-btn ${activeCategoryTab === 'trending' ? 'active' : ''}`}
+          onClick={() => { setActiveCategoryTab('trending'); setCurrentIndex(0); }}
+        >
+          <Flame size={14} /> Thịnh Hành 🔥
+        </button>
+        <button 
+          type="button" 
+          className={`subtab-btn ${activeCategoryTab === 'gaming' ? 'active' : ''}`}
+          onClick={() => { setActiveCategoryTab('gaming'); setCurrentIndex(0); }}
+        >
+          🎮 Gaming & Anime
+        </button>
+        <button 
+          type="button" 
+          className={`subtab-btn ${activeCategoryTab === 'ai' ? 'active' : ''}`}
+          onClick={() => { setActiveCategoryTab('ai'); setCurrentIndex(0); }}
+        >
+          🤖 AI & Sáng Tạo
+        </button>
+        <button 
+          type="button" 
+          className={`subtab-btn ${activeCategoryTab === 'music' ? 'active' : ''}`}
+          onClick={() => { setActiveCategoryTab('music'); setCurrentIndex(0); }}
+        >
+          🎵 Âm Nhạc & Trend
+        </button>
+      </div>
+
       {loading ? (
         <div className="card center-text" style={{ padding: 60, maxWidth: 600, margin: '40px auto' }}>
           <div className="tiny muted">Đang kết nối kho RanVideo...</div>
@@ -670,68 +713,161 @@ export default function RanVideoPage() {
               </div>
             </div>
 
-            {/* 2. REAL-TIME COMMENTS STREAM */}
-            <div 
-              ref={commentsScrollRef} 
-              className="grow" 
-              style={{ 
-                overflowY: 'auto', 
-                padding: '14px 18px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10
-              }}
-            >
-              <div className="tiny bold faint" style={{ letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2 }}>
-                Bình luận ({activeComments.length})
-              </div>
-
-              {activeComments.length === 0 ? (
-                <div className="center-text tiny faint" style={{ margin: 'auto 0' }}>
-                  Chưa có bình luận nào. Hãy là người đầu tiên!
-                </div>
-              ) : (
-                activeComments.map((c) => (
-                  <div key={c.id} className="flex g8 items-start">
-                    <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, flexShrink: 0 }}>
-                      {(c.user_name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                    <div style={{ background: 'var(--lacquer-deep)', padding: '8px 12px', borderRadius: 8, grow: 1, width: '100%', border: '1px solid var(--gold-hairline)' }}>
-                      <div className="flex justify-between items-center">
-                        <span className="semi tiny gold">{c.user_name}</span>
-                        <span className="tiny faint rm-num" style={{ fontSize: 9.5 }}>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <div className="small champagne" style={{ marginTop: 2 }}>
-                        {c.content}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            {/* PANEL SUB-TABS */}
+            <div className="subtab-bar" style={{ borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none', padding: '6px 12px', background: 'var(--lacquer-deep)' }}>
+              <button 
+                type="button" 
+                className={`subtab-btn ${activePanelTab === 'comments' ? 'active-gold' : ''}`}
+                style={{ fontSize: 11.5, padding: '5px 12px' }}
+                onClick={() => setActivePanelTab('comments')}
+              >
+                <MessageCircle size={13} /> Bình Luận ({activeComments.length})
+              </button>
+              <button 
+                type="button" 
+                className={`subtab-btn ${activePanelTab === 'creator' ? 'active-gold' : ''}`}
+                style={{ fontSize: 11.5, padding: '5px 12px' }}
+                onClick={() => setActivePanelTab('creator')}
+              >
+                👤 Creator Bio
+              </button>
+              <button 
+                type="button" 
+                className={`subtab-btn ${activePanelTab === 'stats' ? 'active-gold' : ''}`}
+                style={{ fontSize: 11.5, padding: '5px 12px' }}
+                onClick={() => setActivePanelTab('stats')}
+              >
+                📊 Telemetry AI
+              </button>
             </div>
 
-            {/* 3. STICKY COMMENT INPUT DOCK */}
-            <form 
-              onSubmit={handleSendComment} 
-              className="flex g8 items-center" 
-              style={{ padding: '12px 16px', borderTop: '1px solid var(--gold-hairline)', background: 'var(--lacquer-deep)' }}
-            >
-              <input
-                className="input"
-                placeholder="Thêm bình luận cho video này..."
-                value={newCommentText}
-                onChange={(e) => setNewCommentText(e.target.value)}
-                style={{ padding: '9px 14px', fontSize: 13, borderRadius: 6 }}
-              />
-              <button 
-                type="submit" 
-                className="btn btn-primary" 
-                style={{ width: 36, height: 36, borderRadius: 6, padding: 0, flexShrink: 0 }}
-                disabled={!newCommentText.trim()}
-              >
-                <Send size={15} />
-              </button>
-            </form>
+            {/* TAB VIEW 1: COMMENTS */}
+            {activePanelTab === 'comments' && (
+              <>
+                <div 
+                  ref={commentsScrollRef} 
+                  className="grow" 
+                  style={{ 
+                    overflowY: 'auto', 
+                    padding: '14px 18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10
+                  }}
+                >
+                  {activeComments.length === 0 ? (
+                    <div className="center-text tiny faint" style={{ margin: 'auto 0' }}>
+                      Chưa có bình luận nào. Hãy là người đầu tiên!
+                    </div>
+                  ) : (
+                    activeComments.map((c) => (
+                      <div key={c.id} className="flex g8 items-start">
+                        <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, flexShrink: 0 }}>
+                          {(c.user_name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ background: 'var(--lacquer-deep)', padding: '8px 12px', borderRadius: 8, grow: 1, width: '100%', border: '1px solid var(--gold-hairline)' }}>
+                          <div className="flex justify-between items-center">
+                            <span className="semi tiny gold">{c.user_name}</span>
+                            <span className="tiny faint rm-num" style={{ fontSize: 9.5 }}>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          <div className="small champagne" style={{ marginTop: 2 }}>
+                            {c.content}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* STICKY COMMENT INPUT DOCK */}
+                <form 
+                  onSubmit={handleSendComment} 
+                  className="flex g8 items-center" 
+                  style={{ padding: '12px 16px', borderTop: '1px solid var(--gold-hairline)', background: 'var(--lacquer-deep)' }}
+                >
+                  <input
+                    className="input"
+                    placeholder="Thêm bình luận cho video này..."
+                    value={newCommentText}
+                    onChange={(e) => setNewCommentText(e.target.value)}
+                    style={{ padding: '9px 14px', fontSize: 13, borderRadius: 6 }}
+                  />
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    style={{ width: 36, height: 36, borderRadius: 6, padding: 0, flexShrink: 0 }}
+                    disabled={!newCommentText.trim()}
+                  >
+                    <Send size={15} />
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* TAB VIEW 2: CREATOR BIO */}
+            {activePanelTab === 'creator' && (
+              <div className="grow flex col g14" style={{ padding: 18, overflowY: 'auto' }}>
+                <div className="card flex col items-center center-text" style={{ padding: 18, background: 'var(--lacquer-deep)' }}>
+                  <div className="avatar" style={{ width: 56, height: 56, fontSize: 22, marginBottom: 8 }}>
+                    {currentVideo?.avatar_letter || 'R'}
+                  </div>
+                  <div className="semi champagne" style={{ fontSize: 16 }}>{currentVideo?.creator_name}</div>
+                  <div className="tiny faint">{currentVideo?.creator_handle}</div>
+                  <span className="badge badge-gold tiny" style={{ marginTop: 8 }}>
+                    ⭐ Verified Creator · Hạng Bạch Kim
+                  </span>
+                </div>
+
+                <div className="card" style={{ padding: 14, background: 'var(--lacquer-deep)' }}>
+                  <div className="tiny faint" style={{ marginBottom: 4 }}>Sở thích & Kênh sáng tạo</div>
+                  <div className="small champagne">Shorts Cinema, Lo-Fi Vibe, Anime & AI Visuals.</div>
+                </div>
+
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  style={{ width: '100%', marginTop: 'auto' }}
+                  onClick={() => showToast('Đang kết nối tin nhắn trực tiếp... 💬')}
+                >
+                  Nhắn tin với Creator
+                </button>
+              </div>
+            )}
+
+            {/* TAB VIEW 3: TELEMETRY & AI STATS */}
+            {activePanelTab === 'stats' && (
+              <div className="grow flex col g12" style={{ padding: 18, overflowY: 'auto' }}>
+                <div className="tiny bold faint" style={{ letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Thông Số Kỹ Thuật (Telemetry)
+                </div>
+
+                <div className="card" style={{ padding: 14, background: 'var(--lacquer-deep)' }}>
+                  <div className="flex justify-between items-center tiny faint">
+                    <span>Độ Phân Giải:</span>
+                    <b className="champagne rm-num">1080 × 1920 (Vertical FHD)</b>
+                  </div>
+                  <div className="flex justify-between items-center tiny faint" style={{ marginTop: 8 }}>
+                    <span>Tần Số Quét:</span>
+                    <b className="champagne rm-num">60 FPS Cinematic</b>
+                  </div>
+                  <div className="flex justify-between items-center tiny faint" style={{ marginTop: 8 }}>
+                    <span>Âm Thanh:</span>
+                    <b className="gold">Spatial Stereo 48kHz</b>
+                  </div>
+                </div>
+
+                <div className="card" style={{ padding: 14, background: 'var(--lacquer-deep)' }}>
+                  <div className="flex items-center g6 tiny bold" style={{ color: 'var(--emerald-patina)', marginBottom: 6 }}>
+                    <ShieldCheck size={14} /> AI VISION INSPECTOR
+                  </div>
+                  <div className="tiny muted" style={{ lineHeight: 1.5 }}>
+                    {isVideoNsfw 
+                      ? '⚠️ Video được AI gắn nhãn 18+ và kích hoạt chế độ làm mờ tự động.'
+                      : '✅ Video đạt tiêu chuẩn an toàn cộng đồng RanMet Community Standards.'}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

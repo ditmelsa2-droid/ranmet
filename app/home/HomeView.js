@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { 
   ShieldCheck, Sparkles, Compass, LogOut, Video, 
-  Globe2, ArrowUpRight, Zap, Award, ArrowRight, Radio, Newspaper, Gift, Flame
+  Globe2, ArrowUpRight, Zap, Award, ArrowRight, Radio, Newspaper, Gift, Flame,
+  Users, Activity, Trophy, Play, CheckCircle2, TrendingUp
 } from 'lucide-react'
 import { trustTier, nextTierInfo } from '@/lib/trust'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -12,6 +14,7 @@ import AppShell from '../components/AppShell'
 
 export default function HomeView({ profile, trust, refCount }) {
   const { t } = useLanguage()
+  const [activeSubTab, setActiveSubTab] = useState('overview')
 
   const score = trust?.score ?? 100
   const tier = trustTier(score)
@@ -22,359 +25,455 @@ export default function HomeView({ profile, trust, refCount }) {
 
   return (
     <AppShell userProfile={profile} trustScore={score}>
-      <div 
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 340px',
-          gap: 24,
-          maxWidth: 1100,
-          margin: '0 auto'
-        }}
-      >
-        {/* MAIN FEED COLUMN */}
-        <div className="flex col g24">
-          {/* Top User Greeting with Official Brand Accent */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center g14">
-              <Link href="/profile" style={{ textDecoration: 'none' }}>
-                <div
-                  className="avatar"
-                  style={{
-                    width: 48,
-                    height: 48,
-                    fontSize: 18,
-                    cursor: 'pointer',
-                    border: '1.5px solid var(--gold-hairline-strong)',
-                    background: 'var(--lacquer-deep)'
-                  }}
-                >
-                  {initial}
-                </div>
-              </Link>
+      <div className="flex col g20" style={{ maxWidth: 1120, margin: '0 auto' }}>
+        
+        {/* 1. F1-STYLE TELEMETRY TICKER BAR */}
+        <div className="telemetry-ticker">
+          <div className="telemetry-item">
+            <span className="telemetry-dot" />
+            <span className="bold champagne">RANMET LIVE:</span>
+            <span className="gold rm-num">1,840 ONLINE</span>
+          </div>
+          <div className="telemetry-item">
+            <span>•</span>
+            <Activity size={12} style={{ color: 'var(--verdigris-patina)' }} />
+            <span>AI MATCH VELOCITY:</span>
+            <span className="champagne rm-num">98.6% ACCURACY</span>
+          </div>
+          <div className="telemetry-item">
+            <span>•</span>
+            <Flame size={12} style={{ color: '#f43f5e' }} />
+            <span>TRENDING:</span>
+            <span className="champagne">#SpatialVoice · #RanVideoCinema</span>
+          </div>
+          <div className="telemetry-item">
+            <span>•</span>
+            <Award size={12} style={{ color: 'var(--kinpaku-gold)' }} />
+            <span>TRUST POOL:</span>
+            <span className="gold rm-num">52,400 PTS</span>
+          </div>
+        </div>
+
+        {/* 2. HIGH-OCTANE HERO BANNER (Lando Norris Aesthetic) */}
+        <div className="f1-hero-banner">
+          {/* Subtle Ambient Looping Motion Glow */}
+          <div 
+            style={{
+              position: 'absolute',
+              right: '-5%',
+              top: '-15%',
+              width: '55%',
+              height: '130%',
+              backgroundImage: 'url(https://media.giphy.com/media/26AHONQ79FdWZhAI0/giphy.gif)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.15,
+              mixBlendMode: 'screen',
+              maskImage: 'linear-gradient(to right, transparent, black 50%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black 50%)',
+              pointerEvents: 'none'
+            }}
+          />
+
+          <div className="flex justify-between items-start" style={{ position: 'relative', zIndex: 2, marginBottom: 16 }}>
+            <div className="flex items-center g10">
+              <img 
+                src="/logo.png" 
+                alt="RanMet" 
+                style={{ width: 34, height: 34, borderRadius: 9, boxShadow: '0 0 16px var(--brand-glow)' }} 
+              />
               <div>
-                <div className="flex items-center g8">
-                  <h1 className="rm-title" style={{ fontSize: 20, margin: 0 }}>{t('welcome')}, {name}</h1>
-                  <span className="badge badge-success tiny">
-                    {t('online')}
-                  </span>
-                </div>
-                <div className="tiny faint" style={{ marginTop: 2 }}>
-                  {profile?.country || 'Việt Nam'} · {profile?.interests?.length || 0} {t('interestsCount')} · {t('styleLabel')}: {profile?.conversation_style || 'Tự do'}
-                </div>
+                <span className="badge badge-gold tiny" style={{ fontSize: 10, letterSpacing: '0.08em' }}>
+                  THE NEXT-GEN SOCIAL ENGINE
+                </span>
               </div>
             </div>
 
             <form action={logoutAction}>
-              <button
-                className="btn-icon"
-                title="Đăng xuất"
-                type="submit"
-              >
+              <button className="btn-icon" title="Đăng xuất" type="submit" style={{ background: 'rgba(255,255,255,0.06)' }}>
                 <LogOut size={16} />
               </button>
             </form>
           </div>
 
-          {/* MAIN HERO ACTION: AI Matching Radar Banner with Looping Anime/Cyberpunk Visual */}
-          <Link href="/match" style={{ textDecoration: 'none' }}>
-            <div
-              className="card card-interactive"
-              style={{
-                background: 'linear-gradient(135deg, rgba(28, 22, 38, 0.96) 0%, rgba(14, 11, 19, 0.98) 100%)',
-                border: '1px solid var(--gold-hairline-strong)',
-                padding: '24px',
-                position: 'relative',
-                overflow: 'hidden',
-                borderRadius: 16
-              }}
-            >
-              {/* Background Aesthetic Subtle GIF */}
-              <div 
-                style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: '45%',
-                  backgroundImage: 'url(https://media.giphy.com/media/26AHONQ79FdWZhAI0/giphy.gif)',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  opacity: 0.18,
-                  mixBlendMode: 'screen',
-                  maskImage: 'linear-gradient(to right, transparent, black 60%)',
-                  WebkitMaskImage: 'linear-gradient(to right, transparent, black 60%)',
-                  pointerEvents: 'none'
-                }} 
-              />
-
-              <div className="flex justify-between items-start" style={{ marginBottom: 14, position: 'relative', zIndex: 2 }}>
-                <div className="flex items-center g8">
-                  <img src="/logo.png" alt="Logo" style={{ width: 22, height: 22, borderRadius: 6 }} />
-                  <span className="badge badge-gold tiny">
-                    <Zap size={11} /> AI MATCHING RADAR
-                  </span>
-                </div>
-                <div 
-                  style={{ 
-                    width: 34, 
-                    height: 34, 
-                    borderRadius: 8, 
-                    background: 'rgba(255, 255, 255, 0.05)', 
-                    border: '1px solid var(--gold-hairline)',
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    color: 'var(--kinpaku-gold)'
-                  }} 
-                >
-                  <ArrowUpRight size={17} />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 14, position: 'relative', zIndex: 2 }}>
-                <h2 className="rm-title" style={{ fontSize: 22, marginBottom: 6 }}>
-                  {t('matchBannerTitle')}
-                </h2>
-                <p className="small muted" style={{ lineHeight: 1.55, maxWidth: 460 }}>
-                  {t('matchBannerSub')}
-                </p>
-              </div>
-
-              <div className="flex items-center g8 tiny bold gold" style={{ position: 'relative', zIndex: 2 }}>
-                <Compass size={15} /> {t('startScan')} <ArrowRight size={14} />
-              </div>
+          <div style={{ position: 'relative', zIndex: 2, maxWidth: 680, marginBottom: 20 }}>
+            <div className="f1-hero-title">
+              KẾT NỐI KHÔNG GIỚI HẠN · TRẢI NGHIỆM ĐỈNH CAO
             </div>
-          </Link>
-
-          {/* TRUST SCORE & REFERRAL METER (2-Col Grid) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-            {/* Trust Engine Card */}
-            <div className="card" style={{ padding: 18 }}>
-              <div className="flex justify-between items-center" style={{ marginBottom: 10 }}>
-                <div className="flex items-center g6 tiny faint">
-                  <ShieldCheck size={14} style={{ color: 'var(--emerald-patina)' }} />
-                  {t('trustEngine')}
-                </div>
-                <span className="badge badge-gold tiny">
-                  <Award size={11} /> {tier.name}
-                </span>
-              </div>
-
-              <div className="flex items-end justify-between" style={{ marginBottom: 8 }}>
-                <div className="rm-num bold" style={{ fontSize: 28, color: 'var(--kinpaku-gold)', lineHeight: 1 }}>
-                  {score} <span className="tiny faint">PTS</span>
-                </div>
-                {next && (
-                  <div className="tiny faint">
-                    {t('neededToRank')} <b className="champagne">{next.needed}</b> {t('ptsToRank')} <b className="gold">{next.label}</b>
-                  </div>
-                )}
-              </div>
-
-              {next && (
-                <div className="compat-bar-track">
-                  <div 
-                    className="compat-bar-fill" 
-                    style={{ transform: `scaleX(${Math.min(1, score / (score + next.needed))})` }} 
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Referral Card */}
-            <Link href="/profile" style={{ textDecoration: 'none' }}>
-              <div className="card card-interactive" style={{ padding: 18, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
-                  <span className="badge badge-gold tiny">
-                    <Gift size={11} /> {t('referralTitle')}
-                  </span>
-                  <span className="tiny bold gold">+100 Trust →</span>
-                </div>
-                <div className="semi small champagne" style={{ marginBottom: 2 }}>
-                  {t('referralSub')}
-                </div>
-                <div className="tiny faint">
-                  {t('referralProgress')}: <b className="champagne">{referrals}/10</b>
-                </div>
-              </div>
-            </Link>
+            <p className="small muted" style={{ marginTop: 10, lineHeight: 1.6, fontSize: 14 }}>
+              Chào mừng <b className="champagne">{name}</b>. Khám phá hệ sinh thái AI Radar, rạp phim ngắn RanVideo Cinema và sân khấu âm thanh không gian đa chiều.
+            </p>
           </div>
 
-          {/* VIBRANT ECOSYSTEM MEDIA TILES (RanVideo, RanNews, RanWorld) */}
-          <div>
-            <div className="tiny faint" style={{ marginBottom: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              {t('ecosystemTitle')}
-            </div>
+          {/* Action CTAs Row */}
+          <div className="flex items-center g12" style={{ position: 'relative', zIndex: 2, flexWrap: 'wrap' }}>
+            <Link href="/match" className="btn btn-primary" style={{ padding: '10px 22px', fontSize: 13.5 }}>
+              <Zap size={16} /> Bắt đầu AI Radar <ArrowRight size={14} />
+            </Link>
+            <Link href="/videos" className="btn btn-secondary" style={{ padding: '10px 20px', fontSize: 13.5 }}>
+              <Play size={15} style={{ color: 'var(--kinpaku-gold)' }} /> Xem RanVideo Cinema
+            </Link>
+          </div>
+        </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-              {/* RanVideo Card with Animated GIF Thumbnail */}
+        {/* 3. INTELLIGENT SUB-TAB NAVIGATION BAR */}
+        <div className="subtab-bar">
+          <button 
+            type="button" 
+            className={`subtab-btn ${activeSubTab === 'overview' ? 'active' : ''}`}
+            onClick={() => setActiveSubTab('overview')}
+          >
+            <Flame size={15} /> Tổng Quan Hệ Sinh Thái
+          </button>
+
+          <button 
+            type="button" 
+            className={`subtab-btn ${activeSubTab === 'radar' ? 'active' : ''}`}
+            onClick={() => setActiveSubTab('radar')}
+          >
+            <Zap size={15} /> AI Radar & Match
+          </button>
+
+          <button 
+            type="button" 
+            className={`subtab-btn ${activeSubTab === 'stages' ? 'active' : ''}`}
+            onClick={() => setActiveSubTab('stages')}
+          >
+            <Radio size={15} /> Sân Khấu Voice Live (3)
+          </button>
+
+          <button 
+            type="button" 
+            className={`subtab-btn ${activeSubTab === 'trust' ? 'active' : ''}`}
+            onClick={() => setActiveSubTab('trust')}
+          >
+            <Trophy size={15} /> Bảng Vàng & Trust ({score} pts)
+          </button>
+        </div>
+
+        {/* 4. SUB-TAB VIEWS CONTENT */}
+
+        {/* TAB 1: OVERVIEW */}
+        {activeSubTab === 'overview' && (
+          <div className="flex col g20">
+            {/* Bento 3-Columns Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: 18 }}>
+              
+              {/* Tile 1: RanVideo Cinema Showcase */}
               <Link href="/videos" style={{ textDecoration: 'none' }}>
                 <div 
                   className="card card-interactive flex col justify-between" 
                   style={{ 
                     padding: 0, 
                     overflow: 'hidden', 
-                    borderRadius: 14,
-                    height: 180,
-                    position: 'relative'
+                    borderRadius: 16, 
+                    height: 240, 
+                    position: 'relative' 
                   }}
                 >
                   <img 
                     src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3JldmhzYWRlZHRrOXB1czVlbm1xcmR2eHBoNTNyMGx1c2o3eW1xZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kigKjAJryWTZK/giphy.gif" 
-                    alt="RanVideo Vibe" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.65)' }} 
+                    alt="RanVideo" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.6)' }} 
                   />
                   <div 
                     style={{ 
                       position: 'absolute', 
                       inset: 0, 
-                      padding: 14, 
+                      padding: 18, 
                       display: 'flex', 
                       flexDirection: 'column', 
                       justifyContent: 'space-between',
-                      background: 'linear-gradient(to top, rgba(10,8,14,0.9) 0%, rgba(10,8,14,0.2) 60%, transparent 100%)'
+                      background: 'linear-gradient(to top, rgba(10,8,14,0.92) 0%, rgba(10,8,14,0.2) 60%, transparent 100%)'
                     }}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="badge badge-gold tiny"><Flame size={10} /> HOT</span>
-                      <Video size={16} style={{ color: 'var(--kinpaku-gold)' }} />
+                      <span className="badge badge-gold tiny"><Flame size={10} /> CINEMA THEATER</span>
+                      <Video size={18} style={{ color: 'var(--kinpaku-gold)' }} />
                     </div>
                     <div>
-                      <div className="semi champagne" style={{ fontSize: 16 }}>RanVideo Cinema</div>
-                      <div className="tiny faint">TikTok & Shorts Theater</div>
+                      <div className="semi champagne" style={{ fontSize: 18, marginBottom: 4 }}>RanVideo Shorts</div>
+                      <div className="tiny muted">Rạp phim video dọc 2 cột, bình luận trực tiếp và lọc 18+ an toàn.</div>
+                      <div className="tiny bold gold flex items-center g4" style={{ marginTop: 8 }}>
+                        Khám phá ngay <ArrowRight size={13} />
+                      </div>
                     </div>
                   </div>
                 </div>
               </Link>
 
-              {/* RanNews Card */}
+              {/* Tile 2: RanNews Pulse */}
               <Link href="/news" style={{ textDecoration: 'none' }}>
                 <div 
                   className="card card-interactive flex col justify-between" 
                   style={{ 
                     padding: 0, 
                     overflow: 'hidden', 
-                    borderRadius: 14,
-                    height: 180,
-                    position: 'relative'
+                    borderRadius: 16, 
+                    height: 240, 
+                    position: 'relative' 
                   }}
                 >
                   <img 
                     src="https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif" 
-                    alt="RanNews Vibe" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.65)' }} 
+                    alt="RanNews" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.6)' }} 
                   />
                   <div 
                     style={{ 
                       position: 'absolute', 
                       inset: 0, 
-                      padding: 14, 
+                      padding: 18, 
                       display: 'flex', 
                       flexDirection: 'column', 
                       justifyContent: 'space-between',
-                      background: 'linear-gradient(to top, rgba(10,8,14,0.9) 0%, rgba(10,8,14,0.2) 60%, transparent 100%)'
+                      background: 'linear-gradient(to top, rgba(10,8,14,0.92) 0%, rgba(10,8,14,0.2) 60%, transparent 100%)'
                     }}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="badge badge-success tiny">MỚI</span>
-                      <Newspaper size={16} style={{ color: 'var(--verdigris-patina)' }} />
+                      <span className="badge badge-success tiny"><Newspaper size={10} /> SOCIAL TIMELINE</span>
+                      <Sparkles size={18} style={{ color: 'var(--verdigris-patina)' }} />
                     </div>
                     <div>
-                      <div className="semi champagne" style={{ fontSize: 16 }}>RanNews Bảng Tin</div>
-                      <div className="tiny faint">Cộng đồng & AI Dịch thuật</div>
+                      <div className="semi champagne" style={{ fontSize: 18, marginBottom: 4 }}>RanNews & AI Dịch</div>
+                      <div className="tiny muted">Bảng tin cộng đồng 3 cột, đính kèm GIF động và AI dịch thuật tức thì.</div>
+                      <div className="tiny bold gold flex items-center g4" style={{ marginTop: 8 }}>
+                        Đọc bản tin <ArrowRight size={13} />
+                      </div>
                     </div>
                   </div>
                 </div>
               </Link>
 
-              {/* RanWorld Card */}
+              {/* Tile 3: RanWorld Spatial Lounges */}
               <Link href="/world" style={{ textDecoration: 'none' }}>
                 <div 
                   className="card card-interactive flex col justify-between" 
                   style={{ 
                     padding: 0, 
                     overflow: 'hidden', 
-                    borderRadius: 14,
-                    height: 180,
-                    position: 'relative'
+                    borderRadius: 16, 
+                    height: 240, 
+                    position: 'relative' 
                   }}
                 >
                   <img 
                     src="https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif" 
-                    alt="RanWorld Vibe" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.65)' }} 
+                    alt="RanWorld" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.6)' }} 
                   />
                   <div 
                     style={{ 
                       position: 'absolute', 
                       inset: 0, 
-                      padding: 14, 
+                      padding: 18, 
                       display: 'flex', 
                       flexDirection: 'column', 
                       justifyContent: 'space-between',
-                      background: 'linear-gradient(to top, rgba(10,8,14,0.9) 0%, rgba(10,8,14,0.2) 60%, transparent 100%)'
+                      background: 'linear-gradient(to top, rgba(10,8,14,0.92) 0%, rgba(10,8,14,0.2) 60%, transparent 100%)'
                     }}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="badge badge-success tiny">LIVE</span>
-                      <Globe2 size={16} style={{ color: 'var(--emerald-patina)' }} />
+                      <span className="badge badge-success tiny"><Radio size={10} /> SPATIAL AUDIO</span>
+                      <Globe2 size={18} style={{ color: 'var(--emerald-patina)' }} />
                     </div>
                     <div>
-                      <div className="semi champagne" style={{ fontSize: 16 }}>RanWorld Âm Thanh</div>
-                      <div className="tiny faint">Spatial Voice Lounges</div>
+                      <div className="semi champagne" style={{ fontSize: 18, marginBottom: 4 }}>RanWorld Voice Live</div>
+                      <div className="tiny muted">Không gian phòng voice theo chủ đề Gaming, Anime Lo-Fi và Dev AI.</div>
+                      <div className="tiny bold gold flex items-center g4" style={{ marginTop: 8 }}>
+                        Vào phòng nghe <ArrowRight size={13} />
+                      </div>
                     </div>
                   </div>
                 </div>
               </Link>
             </div>
-          </div>
-        </div>
 
-        {/* RIGHT DESKTOP SIDEBAR WIDGETS */}
-        <div className="flex col g20">
-          {/* Voice Lounge Widget */}
-          <div className="card" style={{ padding: 18 }}>
-            <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-              <div className="flex items-center g8">
-                <Radio size={15} style={{ color: 'var(--emerald-patina)' }} />
-                <span className="semi small champagne">{t('voiceLive')}</span>
+            {/* Quick Metrics Bar */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+              <div className="card" style={{ padding: 18 }}>
+                <div className="flex justify-between items-center">
+                  <span className="tiny faint">Điểm Tín Nhiệm Trust</span>
+                  <Award size={16} style={{ color: 'var(--kinpaku-gold)' }} />
+                </div>
+                <div className="rm-num bold gold" style={{ fontSize: 26, marginTop: 4 }}>
+                  {score} <span className="tiny faint">PTS ({tier.name})</span>
+                </div>
               </div>
-              <Link href="/world" className="tiny bold gold">{t('viewAll')}</Link>
+
+              <div className="card" style={{ padding: 18 }}>
+                <div className="flex justify-between items-center">
+                  <span className="tiny faint">Lượt Giới Thiệu Bạn Bè</span>
+                  <Gift size={16} style={{ color: 'var(--verdigris-patina)' }} />
+                </div>
+                <div className="rm-num bold champagne" style={{ fontSize: 26, marginTop: 4 }}>
+                  {referrals}/10 <span className="tiny faint">Thành viên</span>
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: 18 }}>
+                <div className="flex justify-between items-center">
+                  <span className="tiny faint">AI Vision Guard</span>
+                  <ShieldCheck size={16} style={{ color: 'var(--emerald-patina)' }} />
+                </div>
+                <div className="bold" style={{ fontSize: 15, marginTop: 6, color: 'var(--emerald-patina)' }}>
+                  Kích hoạt & Bảo vệ 24/7
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: AI RADAR & MATCH */}
+        {activeSubTab === 'radar' && (
+          <div className="card" style={{ padding: 24 }}>
+            <div className="flex justify-between items-start" style={{ marginBottom: 18 }}>
+              <div>
+                <div className="badge badge-gold tiny" style={{ marginBottom: 8 }}>
+                  <Zap size={12} /> AI MATCHING RADAR CONSOLE
+                </div>
+                <h3 className="rm-title" style={{ fontSize: 22 }}>Ghép Đôi Trực Tiếp Bằng Trí Tuệ Nhân Tạo</h3>
+                <p className="small muted" style={{ maxWidth: 600, marginTop: 4 }}>
+                  Thuật toán đối chiếu sở thích, phong cách trò chuyện và độ uy tín để tìm ra bạn đồng hành ăn ý nhất.
+                </p>
+              </div>
+
+              <Link href="/match" className="btn btn-primary" style={{ padding: '9px 18px', fontSize: 13 }}>
+                Mở Radar HUD <ArrowRight size={14} />
+              </Link>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+              <div className="card" style={{ background: 'var(--lacquer-deep)', padding: 16 }}>
+                <div className="semi champagne" style={{ fontSize: 15 }}>🎯 Tương Thích Sở Thích</div>
+                <div className="tiny muted" style={{ marginTop: 4 }}>
+                  Tự động phân tích các tag: {profile?.interests?.slice(0, 3).join(', ') || 'Âm nhạc, Công nghệ'}
+                </div>
+              </div>
+
+              <div className="card" style={{ background: 'var(--lacquer-deep)', padding: 16 }}>
+                <div className="semi champagne" style={{ fontSize: 15 }}>💬 Phong Cách Hội Thoại</div>
+                <div className="tiny muted" style={{ marginTop: 4 }}>
+                  Chế độ: <b className="champagne">{profile?.conversation_style || 'Thoải mái, tự do'}</b>
+                </div>
+              </div>
+
+              <div className="card" style={{ background: 'var(--lacquer-deep)', padding: 16 }}>
+                <div className="semi champagne" style={{ fontSize: 15 }}>🛡️ Lọc Độ Tuổi & 18+</div>
+                <div className="tiny muted" style={{ marginTop: 4 }}>
+                  Trạng thái: <b className="gold">{profile?.age_verified ? 'Đã xác minh 18+' : 'Chế độ an toàn'}</b>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: LIVE STAGES */}
+        {activeSubTab === 'stages' && (
+          <div className="flex col g16">
+            <div className="flex justify-between items-center">
+              <h3 className="rm-title" style={{ fontSize: 20 }}>Sân Khấu Âm Thanh Voice Đang Phát Trực Tiếp</h3>
+              <Link href="/world" className="tiny bold gold">Xem tất cả phòng →</Link>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+              <Link href="/world/minecraft-builders" className="card card-interactive" style={{ padding: 18, textDecoration: 'none' }}>
+                <div className="flex justify-between items-start">
+                  <span className="badge badge-success tiny"><Radio size={10} /> VOICE LIVE</span>
+                  <span className="tiny faint flex items-center g4"><Users size={12} /> 148 thành viên</span>
+                </div>
+                <div className="semi champagne" style={{ fontSize: 16, marginTop: 10 }}>Minecraft Builders & Architects ⛏️</div>
+                <div className="tiny muted" style={{ marginTop: 4 }}>Thảo luận redstone, server sinh tồn và xây dựng thành phố ảo.</div>
+                <div className="tiny bold gold" style={{ marginTop: 12 }}>Tham gia trò chuyện →</div>
+              </Link>
+
+              <Link href="/world/anime-lounge" className="card card-interactive" style={{ padding: 18, textDecoration: 'none' }}>
+                <div className="flex justify-between items-start">
+                  <span className="badge badge-gold tiny"><Flame size={10} /> LOUNGE</span>
+                  <span className="tiny faint flex items-center g4"><Users size={12} /> 112 thành viên</span>
+                </div>
+                <div className="semi champagne" style={{ fontSize: 16, marginTop: 10 }}>Anime Lo-Fi & Manga Lounge ✨</div>
+                <div className="tiny muted" style={{ marginTop: 4 }}>Nghe nhạc nền thư giãn, bàn luận các bộ anime mùa mới.</div>
+                <div className="tiny bold gold" style={{ marginTop: 12 }}>Tham gia trò chuyện →</div>
+              </Link>
+
+              <Link href="/world/dev-ai-hub" className="card card-interactive" style={{ padding: 18, textDecoration: 'none' }}>
+                <div className="flex justify-between items-start">
+                  <span className="badge badge-success tiny"><Radio size={10} /> VOICE LIVE</span>
+                  <span className="tiny faint flex items-center g4"><Users size={12} /> 185 thành viên</span>
+                </div>
+                <div className="semi champagne" style={{ fontSize: 16, marginTop: 10 }}>Dev & AI Creators Space 💻</div>
+                <div className="tiny muted" style={{ marginTop: 4 }}>Giao lưu lập trình viên Next.js, Indie Hackers và Supabase AI.</div>
+                <div className="tiny bold gold" style={{ marginTop: 12 }}>Tham gia trò chuyện →</div>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: TRUST & LEADERBOARD */}
+        {activeSubTab === 'trust' && (
+          <div className="card" style={{ padding: 24 }}>
+            <div className="flex justify-between items-start" style={{ marginBottom: 20 }}>
+              <div>
+                <div className="badge badge-patina tiny" style={{ marginBottom: 6 }}>
+                  <ShieldCheck size={12} /> RANMET TRUST ENGINE
+                </div>
+                <h3 className="rm-title" style={{ fontSize: 22 }}>Bảng Xếp Hạng & Điểm Tín Nhiệm Cá Nhân</h3>
+              </div>
+              <span className="badge badge-gold tiny" style={{ fontSize: 12, padding: '4px 10px' }}>
+                Hạng: {tier.name}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, marginBottom: 20 }}>
+              <div className="card" style={{ padding: 16, background: 'var(--lacquer-deep)' }}>
+                <div className="tiny faint">Điểm Tín Nhiệm Hiện Tại</div>
+                <div className="rm-num bold gold" style={{ fontSize: 32, marginTop: 4 }}>{score} PTS</div>
+                {next && (
+                  <div className="tiny faint" style={{ marginTop: 8 }}>
+                    Cần thêm <b className="champagne">{next.needed}</b> điểm để đạt cấp <b className="gold">{next.label}</b>
+                  </div>
+                )}
+              </div>
+
+              <div className="card" style={{ padding: 16, background: 'var(--lacquer-deep)' }}>
+                <div className="tiny faint">Quyền Lợi Đẳng Cấp {tier.name}</div>
+                <div className="flex col g6" style={{ marginTop: 8 }}>
+                  <div className="tiny flex items-center g6 champagne">
+                    <CheckCircle2 size={13} style={{ color: 'var(--emerald-patina)' }} /> Ưu tiên ghép đôi radar tốc độ cao
+                  </div>
+                  <div className="tiny flex items-center g6 champagne">
+                    <CheckCircle2 size={13} style={{ color: 'var(--emerald-patina)' }} /> Huy hiệu verified uy tín trong phòng Voice
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Creators Leaderboard */}
+            <div className="tiny faint" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+              Top Thành Viên Xuất Sắc Tuần Này
+            </div>
             <div className="flex col g8">
-              <Link href="/world/minecraft-builders" className="card card-interactive" style={{ padding: 12, background: 'var(--lacquer-deep)' }}>
-                <div className="semi small champagne">Minecraft Builders ⛏️</div>
-                <div className="flex items-center justify-between tiny faint" style={{ marginTop: 4 }}>
-                  <span>148 thành viên</span>
-                  <span className="badge badge-success tiny" style={{ padding: '1px 6px', fontSize: 10 }}>Voice</span>
+              {[
+                { rank: 1, name: 'VyVy_Anime', score: '2,450 PTS', badge: 'Kim Cương 💎' },
+                { rank: 2, name: 'Kaito_Gamer', score: '1,980 PTS', badge: 'Bạch Kim ⭐' },
+                { rank: 3, name: 'LinhChi_Dev', score: '1,720 PTS', badge: 'Bạch Kim ⭐' }
+              ].map((c) => (
+                <div key={c.rank} className="flex justify-between items-center" style={{ padding: '10px 14px', background: 'var(--lacquer-deep)', borderRadius: 8, border: '1px solid var(--gold-hairline)' }}>
+                  <div className="flex items-center g10">
+                    <span className="rm-num bold gold" style={{ width: 20 }}>#{c.rank}</span>
+                    <span className="semi champagne" style={{ fontSize: 14 }}>{c.name}</span>
+                  </div>
+                  <div className="flex items-center g10">
+                    <span className="badge badge-gold tiny">{c.badge}</span>
+                    <span className="rm-num bold gold">{c.score}</span>
+                  </div>
                 </div>
-              </Link>
-
-              <Link href="/world/anime-lounge" className="card card-interactive" style={{ padding: 12, background: 'var(--lacquer-deep)' }}>
-                <div className="semi small champagne">Anime Lo-Fi Lounge ✨</div>
-                <div className="flex items-center justify-between tiny faint" style={{ marginTop: 4 }}>
-                  <span>112 thành viên</span>
-                  <span className="badge badge-gold tiny" style={{ padding: '1px 6px', fontSize: 10 }}>Stage</span>
-                </div>
-              </Link>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Official RanMet Safety Badge */}
-          <div className="card" style={{ padding: 18, background: 'var(--lacquer-deep)' }}>
-            <div className="flex items-center g8" style={{ marginBottom: 8 }}>
-              <ShieldCheck size={16} style={{ color: 'var(--kinpaku-gold)' }} />
-              <span className="semi small champagne">Bảo Vệ & An Toàn RanMet</span>
-            </div>
-            <p className="tiny muted" style={{ lineHeight: 1.55, marginBottom: 10 }}>
-              Không gian tương tác an toàn với bộ lọc AI Vision & Gemini Guard thế hệ mới.
-            </p>
-            <div className="tiny faint center-text" style={{ paddingTop: 8, borderTop: '1px solid var(--gold-hairline)' }}>
-              RanMet Official Platform
-            </div>
-          </div>
-        </div>
       </div>
     </AppShell>
   )

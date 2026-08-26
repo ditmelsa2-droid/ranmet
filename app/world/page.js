@@ -201,31 +201,29 @@ export default function RanWorldPage() {
           </div>
         </div>
 
-        {/* Search & Category Filter Bar */}
+        {/* Search & Category Sub-Tabs Bar */}
         <div className="flex col g12">
-          <div className="flex g10 items-center" style={{ flexWrap: 'wrap' }}>
-            <div className="grow" style={{ minWidth: 240 }}>
-              <input
-                className="input"
-                style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--lacquer-deep)' }}
-                placeholder={`🔍 ${t('searchRoomsPlaceholder')}`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex g6" style={{ flexWrap: 'wrap' }}>
-              {CATEGORY_ITEMS.map((cat) => (
-                <button
-                  key={cat.key}
-                  type="button"
-                  className={`chip ${selectedCatKey === cat.key ? 'selected' : ''}`}
-                  style={{ padding: '7px 14px', fontSize: 12.5 }}
-                  onClick={() => setSelectedCatKey(cat.key)}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
+          <div className="subtab-bar">
+            {CATEGORY_ITEMS.map((cat) => (
+              <button
+                key={cat.key}
+                type="button"
+                className={`subtab-btn ${selectedCatKey === cat.key ? 'active' : ''}`}
+                onClick={() => setSelectedCatKey(cat.key)}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ width: '100%' }}>
+            <input
+              className="input"
+              style={{ padding: '10px 16px', borderRadius: 8, background: 'var(--lacquer-deep)' }}
+              placeholder={`🔍 ${t('searchRoomsPlaceholder')}`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </div>
 

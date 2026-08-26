@@ -28,6 +28,7 @@ export default function RanNewsPage() {
   const [selectedImage, setSelectedImage] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
   const [showGifPicker, setShowGifPicker] = useState(false)
+  const [activeFeedSubTab, setActiveFeedSubTab] = useState('all')
   const [isPosting, setIsPosting] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [unblurredMap, setUnblurredMap] = useState({})
@@ -373,20 +374,45 @@ export default function RanNewsPage() {
                     >
                       GIF
                     </button>
+                    
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{ padding: '7px 20px', fontSize: 12.5 }}
+                      onClick={handleCreatePost}
+                      disabled={(!newPostText.trim() && !selectedImage && !imagePreview) || isPosting}
+                    >
+                      {isPosting ? 'Đang đăng...' : 'Đăng tin'}
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    style={{ padding: '7px 20px', fontSize: 12.5 }}
-                    onClick={handleCreatePost}
-                    disabled={(!newPostText.trim() && !selectedImage && !imagePreview) || isPosting}
-                  >
-                    {isPosting ? 'Đang đăng...' : 'Đăng tin'}
-                  </button>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* FEED SUB-TABS */}
+          <div className="subtab-bar" style={{ marginBottom: 16 }}>
+            <button 
+              type="button" 
+              className={`subtab-btn ${activeFeedSubTab === 'all' ? 'active' : ''}`}
+              onClick={() => setActiveFeedSubTab('all')}
+            >
+              <Globe size={14} /> Tất Cả Tin Mới
+            </button>
+            <button 
+              type="button" 
+              className={`subtab-btn ${activeFeedSubTab === 'media' ? 'active' : ''}`}
+              onClick={() => setActiveFeedSubTab('media')}
+            >
+              <ImageIcon size={14} /> Ảnh & GIF Động 📸
+            </button>
+            <button 
+              type="button" 
+              className={`subtab-btn ${activeFeedSubTab === 'trending' ? 'active' : ''}`}
+              onClick={() => setActiveFeedSubTab('trending')}
+            >
+              <Flame size={14} /> Thịnh Hành 🔥
+            </button>
           </div>
 
           {/* POSTS FEED */}
@@ -401,7 +427,13 @@ export default function RanNewsPage() {
             </div>
           ) : (
             <div className="flex col g12">
-              {posts.map((p) => {
+              {posts
+                .filter((p) => {
+                  if (activeFeedSubTab === 'media') return !!p.image_url
+                  if (activeFeedSubTab === 'trending') return (p.likes_count || 0) > 0 || (p.content || '').includes('#')
+                  return true
+                })
+                .map((p) => {
                 const isNsfw = !!p.is_nsfw
                 const isUnblurred = !!unblurredMap[p.id]
                 const shouldBlur = isNsfw && (!isUserAdult || !isUnblurred)

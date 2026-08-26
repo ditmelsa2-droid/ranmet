@@ -460,11 +460,11 @@ export default function ProfilePage() {
               </h2>
             </div>
 
-            {/* Tabs */}
-            <div className="flex g6">
+            {/* Sub-Tabs */}
+            <div className="subtab-bar">
               <button
                 type="button"
-                className={`chip ${activeContentTab === 'videos' ? 'selected' : ''}`}
+                className={`subtab-btn ${activeContentTab === 'videos' ? 'active-gold' : ''}`}
                 onClick={() => setActiveContentTab('videos')}
                 style={{ padding: '5px 12px', fontSize: 11.5 }}
               >
@@ -472,7 +472,7 @@ export default function ProfilePage() {
               </button>
               <button
                 type="button"
-                className={`chip ${activeContentTab === 'posts' ? 'selected' : ''}`}
+                className={`subtab-btn ${activeContentTab === 'posts' ? 'active-gold' : ''}`}
                 onClick={() => setActiveContentTab('posts')}
                 style={{ padding: '5px 12px', fontSize: 11.5 }}
               >
@@ -597,7 +597,8 @@ export default function ProfilePage() {
               <div 
                 className="compat-bar-fill" 
                 style={{ 
-                  width: `${Math.min(100, (referralCount / 10) * 100)}%`,
+                  transform: `scaleX(${Math.min(1, referralCount / 10)})`,
+                  transformOrigin: 'left center',
                   background: 'var(--gold-gradient)'
                 }} 
               />

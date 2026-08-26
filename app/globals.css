@@ -518,6 +518,108 @@ html, body {
   100% { opacity: 1; transform: scale(1); }
 }
 
+/* Sub-Tab Navigation Bar & Segmented Controls (High-End Tactile UI) */
+.subtab-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(18, 14, 24, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--gold-hairline);
+  border-radius: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.subtab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.subtab-btn:hover {
+  color: var(--champagne);
+  background: rgba(255, 255, 255, 0.04);
+}
+.subtab-btn.active {
+  color: var(--dark-ink);
+  background: var(--brand-aurora);
+  border-color: transparent;
+  box-shadow: 0 4px 14px var(--brand-glow);
+  font-weight: 700;
+}
+.subtab-btn.active-gold {
+  color: var(--dark-ink);
+  background: var(--gold-gradient);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(245, 192, 66, 0.3);
+  font-weight: 700;
+}
+
+/* Telemetry Ticker Marquee (Lando Norris / F1 Live Stats Look) */
+.telemetry-ticker {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 16px;
+  background: rgba(14, 11, 19, 0.85);
+  border: 1px solid var(--gold-hairline);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+.telemetry-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.telemetry-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald-patina);
+  box-shadow: 0 0 8px var(--emerald-patina);
+  animation: radarPulse 2s infinite ease-in-out;
+}
+
+/* High-Contrast Lando Norris Style Hero Showcase */
+.f1-hero-banner {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--gold-hairline-strong);
+  background: linear-gradient(135deg, #130f1c 0%, #0c0912 100%);
+  padding: 32px 28px;
+}
+.f1-hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
 /* Responsive Breakpoints */
 @media (max-width: 1024px) {
   .theater-container {
@@ -536,7 +638,7 @@ html, body {
   }
   .app-main {
     margin-left: 0;
-    padding: 16px 14px 90px;
+    padding: 16px 12px 90px;
   }
   .mobile-dock {
     display: flex;
@@ -544,4 +646,8 @@ html, body {
   .theater-stage {
     height: 80vh;
   }
+  .f1-hero-banner {
+    padding: 22px 18px;
+  }
 }
+
