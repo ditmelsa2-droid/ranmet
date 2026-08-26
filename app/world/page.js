@@ -20,7 +20,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: true,
     tags: ['Minecraft', 'Survival', 'Redstone'],
     host_name: 'Kaito_Gamer',
-    color: 'var(--emerald-patina)'
+    banner_url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif'
   },
   {
     id: 'anime-lounge',
@@ -31,7 +31,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: false,
     tags: ['Anime', 'Manga', 'Cosplay'],
     host_name: 'VyVy_Anime',
-    color: 'var(--kinpaku-gold)'
+    banner_url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3JldmhzYWRlZHRrOXB1czVlbm1xcmR2eHBoNTNyMGx1c2o3eW1xZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kigKjAJryWTZK/giphy.gif'
   },
   {
     id: 'dev-ai-hub',
@@ -42,7 +42,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: true,
     tags: ['Next.js', 'AI', 'Fullstack'],
     host_name: 'LinhChi_Dev',
-    color: 'var(--verdigris-patina)'
+    banner_url: 'https://media.giphy.com/media/26AHONQ79FdWZhAI0/giphy.gif'
   },
   {
     id: 'chill-lofi-room',
@@ -53,7 +53,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: true,
     tags: ['Lofi', 'Chill', 'TamSu'],
     host_name: 'MinhQuan',
-    color: 'var(--kinpaku-gold)'
+    banner_url: 'https://media.giphy.com/media/BzyTuYCmvSORqs1ABM/giphy.gif'
   },
   {
     id: 'travel-food',
@@ -64,7 +64,7 @@ const DEFAULT_ROOMS_LIST = [
     is_voice: false,
     tags: ['Foodie', 'Travel', 'Cafe'],
     host_name: 'HaMy',
-    color: 'var(--emerald-patina)'
+    banner_url: 'https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif'
   }
 ]
 
@@ -232,58 +232,64 @@ export default function RanWorldPage() {
         {/* Rooms Grid */}
         <div className="desktop-grid-3">
           {filteredRooms.map((room) => (
-            <Link key={room.id} href={`/world/${room.id}`} className="card card-interactive flex col justify-between" style={{ padding: 18, textDecoration: 'none' }}>
+            <Link key={room.id} href={`/world/${room.id}`} className="card card-interactive flex col justify-between" style={{ padding: 0, overflow: 'hidden', textDecoration: 'none' }}>
               <div>
-                {/* Room Header */}
-                <div className="flex justify-between items-start" style={{ marginBottom: 10 }}>
-                  <span 
-                    className="badge tiny" 
-                    style={{ 
-                      background: 'rgba(245, 192, 66, 0.1)',
-                      color: 'var(--kinpaku-gold)',
-                      border: '1px solid var(--gold-hairline)'
-                    }}
-                  >
-                    {room.category}
-                  </span>
-
-                  <div className="flex items-center g6">
-                    {room.is_voice && (
-                      <span className="badge badge-success tiny" style={{ fontSize: 9.5, padding: '2px 6px' }}>
-                        <Radio size={9} /> Voice Live
+                {/* Room GIF Banner */}
+                {room.banner_url && (
+                  <div style={{ height: 110, width: '100%', position: 'relative', overflow: 'hidden' }}>
+                    <img 
+                      src={room.banner_url} 
+                      alt={room.name} 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.7)' }} 
+                    />
+                    <div style={{ position: 'absolute', top: 10, left: 10, right: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span 
+                        className="badge tiny" 
+                        style={{ 
+                          background: 'rgba(10, 8, 14, 0.85)',
+                          backdropFilter: 'blur(6px)',
+                          color: 'var(--kinpaku-gold)',
+                          border: '1px solid var(--gold-hairline)'
+                        }}
+                      >
+                        {room.category}
                       </span>
-                    )}
-                    <span className="tiny faint flex items-center g4 rm-num">
-                      <Users size={11} /> {room.members || 1}
-                    </span>
+                      {room.is_voice && (
+                        <span className="badge badge-success tiny" style={{ fontSize: 9.5, padding: '2px 6px', backdropFilter: 'blur(6px)' }}>
+                          <Radio size={9} /> Voice Live
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Room Title & Description */}
-                <h3 className="semi champagne" style={{ fontSize: 16, marginBottom: 6 }}>
-                  {room.name}
-                </h3>
-                <p className="small muted" style={{ marginBottom: 14, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {room.description}
-                </p>
+                <div style={{ padding: 16 }}>
+                  {/* Room Title & Description */}
+                  <h3 className="semi champagne" style={{ fontSize: 15, marginBottom: 4 }}>
+                    {room.name}
+                  </h3>
+                  <p className="tiny muted" style={{ marginBottom: 12, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {room.description}
+                  </p>
 
-                {/* Tags */}
-                <div className="flex" style={{ flexWrap: 'wrap', gap: 4, marginBottom: 14 }}>
-                  {(room.tags || []).map((tagItem) => (
-                    <span 
-                      key={tagItem} 
-                      className="tiny" 
-                      style={{ 
-                        padding: '2px 6px', 
-                        borderRadius: 4, 
-                        background: 'var(--lacquer-deep)',
-                        color: 'var(--text-faint)',
-                        border: '1px solid var(--gold-hairline)'
-                      }}
-                    >
-                      #{tagItem}
-                    </span>
-                  ))}
+                  {/* Tags */}
+                  <div className="flex" style={{ flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+                    {(room.tags || []).map((tagItem) => (
+                      <span 
+                        key={tagItem} 
+                        className="tiny" 
+                        style={{ 
+                          padding: '2px 6px', 
+                          borderRadius: 4, 
+                          background: 'var(--lacquer-deep)',
+                          color: 'var(--text-faint)',
+                          border: '1px solid var(--gold-hairline)'
+                        }}
+                      >
+                        #{tagItem}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -291,9 +297,9 @@ export default function RanWorldPage() {
               <div 
                 className="flex justify-between items-center" 
                 style={{ 
-                  paddingTop: 10, 
+                  padding: '10px 16px', 
                   borderTop: '1px solid var(--gold-hairline)',
-                  marginTop: 6
+                  background: 'var(--lacquer-deep)'
                 }}
               >
                 <span className="tiny faint">Host: <b className="champagne">{room.host_name || 'RanMet'}</b></span>

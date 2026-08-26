@@ -22,6 +22,17 @@ const ICE_BREAKERS = [
   'Gu âm nhạc hoặc bộ phim gần đây bạn thích là gì? 🎵'
 ]
 
+const POPULAR_GIFS = [
+  { label: 'Anime Wave', url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3JldmhzYWRlZHRrOXB1czVlbm1xcmR2eHBoNTNyMGx1c2o3eW1xZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kigKjAJryWTZK/giphy.gif' },
+  { label: 'Cute Cat Vibe', url: 'https://media.giphy.com/media/BzyTuYCmvSORqs1ABM/giphy.gif' },
+  { label: 'Dance Party', url: 'https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif' },
+  { label: 'Heart Love', url: 'https://media.giphy.com/media/26FLdmIp6wJr91JAI/giphy.gif' },
+  { label: 'Cheers Celebration', url: 'https://media.giphy.com/media/g9582DNuQppxC/giphy.gif' },
+  { label: 'Gaming Victory', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
+  { label: 'Sparkle Wow', url: 'https://media.giphy.com/media/26AHONQ79FdWZhAI0/giphy.gif' },
+  { label: 'Popcorn Chill', url: 'https://media.giphy.com/media/t3sZxY5zS5B0z5zMIz/giphy.gif' }
+]
+
 export default function ChatRoom({ chatId, myId, otherName, compatibility, initialMessages }) {
   const router = useRouter()
   const { lang, t } = useLanguage()
@@ -30,6 +41,7 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
   const [isSending, setIsSending] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [lockedReason, setLockedReason] = useState('')
+  const [showGifDrawer, setShowGifDrawer] = useState(false)
   
   // Translation state: { [msgId]: { translatedText: string, isTranslating: boolean, showTranslated: boolean } }
   const [translatedMap, setTranslatedMap] = useState({})
@@ -211,6 +223,32 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
       showToast('Lỗi gửi tệp: ' + error.message)
     } else {
       showToast('Đã gửi tệp đính kèm! ✨')
+    }
+  }
+
+  async function sendGif(gifUrl, gifLabel) {
+    if (isLocked) {
+      showToast('Cuộc trò chuyện đang bị khóa!')
+      return
+    }
+    setShowGifDrawer(false)
+    setIsSending(true)
+
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        sender_id: myId,
+        content: `[GIF: ${gifLabel}]`,
+        kind: 'image',
+        media_url: gifUrl
+      })
+
+    setIsSending(false)
+    if (error) {
+      showToast('Lỗi gửi GIF: ' + error.message)
+    } else {
+      showToast('Đã gửi GIF! ✨')
     }
   }
 
@@ -541,14 +579,82 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
           })}
         </div>
 
-        {/* Sleek Bottom Input Bar with Media Attachment */}
+        {/* Sleek Bottom Input Bar with Media Attachment & GIF Drawer */}
         <div 
           style={{ 
             padding: '12px 16px', 
             background: 'var(--lacquer-deep)',
-            borderTop: '1px solid var(--gold-hairline)'
+            borderTop: '1px solid var(--gold-hairline)',
+            position: 'relative'
           }}
         >
+          {/* POPULAR GIFS DRAWER */}
+          {showGifDrawer && (
+            <div 
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: 16,
+                right: 16,
+                marginBottom: 8,
+                background: 'var(--raised-lacquer)',
+                border: '1px solid var(--gold-hairline-strong)',
+                borderRadius: 12,
+                padding: 12,
+                boxShadow: '0 16px 36px rgba(0,0,0,0.8)',
+                zIndex: 40,
+                animation: 'msgPop 0.2s ease'
+              }}
+            >
+              <div className="flex justify-between items-center" style={{ marginBottom: 8, paddingBottom: 6, borderBottom: '1px solid var(--gold-hairline)' }}>
+                <span className="tiny bold gold flex items-center g4">
+                  <Sparkles size={12} /> Nhãn dán GIF & Reaction Động
+                </span>
+                <button 
+                  type="button" 
+                  className="btn-icon" 
+                  style={{ width: 22, height: 22 }}
+                  onClick={() => setShowGifDrawer(false)}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+
+              <div 
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                  gap: 8,
+                  maxHeight: 180,
+                  overflowY: 'auto'
+                }}
+              >
+                {POPULAR_GIFS.map((g, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => sendGif(g.url, g.label)}
+                    style={{
+                      cursor: 'pointer',
+                      borderRadius: 8,
+                      overflow: 'hidden',
+                      border: '1px solid var(--gold-hairline)',
+                      background: 'var(--lacquer-deep)',
+                      height: 72,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'transform 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    <img src={g.url} alt={g.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isLocked ? (
             <div className="center-text tiny faint" style={{ padding: '6px 0', color: '#fb7185' }}>
               🔒 Cuộc trò chuyện đã bị tạm khóa an toàn. Bạn không thể gửi thêm tin nhắn.
@@ -564,6 +670,26 @@ export default function ChatRoom({ chatId, myId, otherName, compatibility, initi
                 title="Đăng Ảnh / Video / File từ máy"
               >
                 <Paperclip size={16} style={{ color: 'var(--kinpaku-gold)' }} />
+              </button>
+
+              {/* GIF Sticker Button */}
+              <button
+                type="button"
+                className={`btn-icon ${showGifDrawer ? 'btn-primary' : ''}`}
+                style={{ 
+                  width: 40, 
+                  height: 40, 
+                  borderRadius: 8, 
+                  flexShrink: 0,
+                  fontWeight: 800,
+                  fontSize: 11,
+                  background: showGifDrawer ? 'var(--gold-gradient)' : 'var(--inset-lacquer)',
+                  color: showGifDrawer ? 'var(--dark-ink)' : 'var(--kinpaku-gold)'
+                }}
+                onClick={() => setShowGifDrawer(!showGifDrawer)}
+                title="Gửi nhãn dán GIF động"
+              >
+                GIF
               </button>
 
               <input

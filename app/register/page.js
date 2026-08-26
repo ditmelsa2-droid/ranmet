@@ -35,8 +35,11 @@ export default function RegisterPage() {
           }}
         >
           <div>
-            <div className="rm-logo" style={{ fontSize: 26, marginBottom: 6 }}>
-              <Zap size={24} style={{ color: 'var(--kinpaku-gold)' }} /> RanMet
+            <div className="flex items-center g10" style={{ marginBottom: 12 }}>
+              <img src="/logo.png" alt="RanMet Logo" style={{ width: 42, height: 42, borderRadius: 12, boxShadow: 'var(--brand-glow)' }} />
+              <div className="rm-wordmark" style={{ fontSize: 24, fontWeight: 800, letterSpacing: '0.1em' }}>
+                RANMET
+              </div>
             </div>
             <div className="tiny faint flex items-center g6" style={{ letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 24 }}>
               <Sparkles size={12} style={{ color: 'var(--kinpaku-gold)' }} />

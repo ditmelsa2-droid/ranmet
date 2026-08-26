@@ -42,23 +42,28 @@ export default function AppShell({ children, userProfile, trustScore }) {
         <div className="flex col g20">
           {/* Brand Logo & Language Switcher */}
           <div className="flex justify-between items-center" style={{ paddingBottom: 16, borderBottom: '1px solid var(--gold-hairline)' }}>
-            <Link href="/home" className="flex items-center g8" style={{ textDecoration: 'none' }}>
+            <Link href="/home" className="flex items-center g10" style={{ textDecoration: 'none' }}>
               <div 
                 style={{ 
-                  width: 32, 
-                  height: 32, 
-                  borderRadius: 8, 
-                  background: 'var(--gold-gradient)', 
+                  width: 36, 
+                  height: 36, 
+                  borderRadius: 10, 
+                  overflow: 'hidden',
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center',
-                  color: 'var(--dark-ink)',
-                  boxShadow: '0 2px 10px rgba(245, 192, 66, 0.3)'
+                  boxShadow: 'var(--brand-glow)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  flexShrink: 0
                 }}
               >
-                <Zap size={18} />
+                <img 
+                  src="/logo.png" 
+                  alt="RanMet Logo" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
               </div>
-              <div className="rm-wordmark" style={{ fontSize: 16, letterSpacing: '0.12em' }}>
+              <div className="rm-wordmark" style={{ fontSize: 17, letterSpacing: '0.12em', fontWeight: 800 }}>
                 RANMET
               </div>
             </Link>

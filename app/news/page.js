@@ -12,6 +12,13 @@ import { readFileAsDataUrl } from '@/lib/upload'
 import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
 
+const POPULAR_NEWS_GIFS = [
+  { label: 'Anime Sparkle', url: 'https://media.giphy.com/media/26AHONQ79FdWZhAI0/giphy.gif' },
+  { label: 'Gaming Win', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
+  { label: 'Vibe Dance', url: 'https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif' },
+  { label: 'Cute Cat', url: 'https://media.giphy.com/media/BzyTuYCmvSORqs1ABM/giphy.gif' }
+]
+
 export default function RanNewsPage() {
   const { t, currentLang } = useLanguage()
   const [supabase] = useState(() => createClient())
@@ -20,6 +27,7 @@ export default function RanNewsPage() {
   const [newPostText, setNewPostText] = useState('')
   const [selectedImage, setSelectedImage] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
+  const [showGifPicker, setShowGifPicker] = useState(false)
   const [isPosting, setIsPosting] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [unblurredMap, setUnblurredMap] = useState({})
@@ -141,6 +149,8 @@ export default function RanNewsPage() {
         setIsPosting(false)
         return
       }
+    } else if (imagePreview && imagePreview.startsWith('http')) {
+      imageUrl = imagePreview
     }
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -296,29 +306,81 @@ export default function RanNewsPage() {
                   </div>
                 )}
 
-                <div className="flex justify-between items-center" style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--gold-hairline)' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary flex items-center g6"
-                    style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6 }}
-                    onClick={() => fileInputRef.current?.click()}
+                {/* Quick GIF Tray */}
+                {showGifPicker && (
+                  <div 
+                    style={{ 
+                      marginTop: 10, 
+                      padding: 10, 
+                      background: 'var(--lacquer-deep)', 
+                      borderRadius: 10, 
+                      border: '1px solid var(--gold-hairline)' 
+                    }}
                   >
-                    <ImageIcon size={15} style={{ color: 'var(--kinpaku-gold)' }} /> Thêm ảnh
-                  </button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleImageSelect}
-                  />
+                    <div className="tiny bold gold flex items-center justify-between" style={{ marginBottom: 6 }}>
+                      <span>✨ Chọn GIF Reaction nhanh:</span>
+                      <X size={13} style={{ cursor: 'pointer' }} onClick={() => setShowGifPicker(false)} />
+                    </div>
+                    <div className="flex g8" style={{ overflowX: 'auto', paddingBottom: 4 }}>
+                      {POPULAR_NEWS_GIFS.map((g, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setImagePreview(g.url)
+                            setSelectedImage(null)
+                            setShowGifPicker(false)
+                          }}
+                          style={{
+                            width: 76,
+                            height: 60,
+                            borderRadius: 6,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            border: '1px solid var(--gold-hairline)'
+                          }}
+                        >
+                          <img src={g.url} alt={g.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center" style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--gold-hairline)' }}>
+                  <div className="flex items-center g8">
+                    <button
+                      type="button"
+                      className="btn btn-secondary flex items-center g6"
+                      style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6 }}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <ImageIcon size={15} style={{ color: 'var(--kinpaku-gold)' }} /> Thêm ảnh
+                    </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleImageSelect}
+                    />
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary flex items-center g6"
+                      style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, fontWeight: 700, color: 'var(--kinpaku-gold)' }}
+                      onClick={() => setShowGifPicker(!showGifPicker)}
+                    >
+                      GIF
+                    </button>
+                  </div>
 
                   <button
                     type="button"
                     className="btn btn-primary"
                     style={{ padding: '7px 20px', fontSize: 12.5 }}
                     onClick={handleCreatePost}
-                    disabled={(!newPostText.trim() && !selectedImage) || isPosting}
+                    disabled={(!newPostText.trim() && !selectedImage && !imagePreview) || isPosting}
                   >
                     {isPosting ? 'Đang đăng...' : 'Đăng tin'}
                   </button>
