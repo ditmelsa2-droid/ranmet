@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { 
   Heart, MessageCircle, Share2, Music, Volume2, 
-  VolumeX, Plus, Flame, X, Upload, Video as VideoIcon
+  VolumeX, Play, Pause, Plus, Flame, X, Upload, Video as VideoIcon,
+  ChevronUp, ChevronDown, CheckCircle, ShieldCheck, Sparkles, Send
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { checkContent, checkTags } from '@/lib/moderation'
@@ -14,25 +15,27 @@ import AppShell from '../components/AppShell'
 
 export default function RanVideoPage() {
   const { t } = useLanguage()
+  const [supabase] = useState(() => createClient())
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(true)
   const [muted, setMuted] = useState(true)
+  const [progress, setProgress] = useState(0)
+  
+  // Likes & Comments
   const [likedMap, setLikedMap] = useState({})
   const [likesCountMap, setLikesCountMap] = useState({})
-  
-  // Comments modal state
-  const [showComments, setShowComments] = useState(false)
-  const [activeVideoComments, setActiveVideoComments] = useState([])
-  const [newComment, setNewComment] = useState('')
-  const [activeVideoId, setActiveVideoId] = useState(null)
+  const [commentsMap, setCommentsMap] = useState({})
+  const [newCommentText, setNewCommentText] = useState('')
+  const [showMobileComments, setShowMobileComments] = useState(false)
   
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [videoUrl, setVideoUrl] = useState('')
   const [videoFileName, setVideoFileName] = useState('')
   const [selectedVideoFile, setSelectedVideoFile] = useState(null)
-  const [uploadMode, setUploadMode] = useState('file') // 'file' or 'url'
+  const [uploadMode, setUploadMode] = useState('file')
   const [newCaption, setNewCaption] = useState('')
   const [newTags, setNewTags] = useState('#trend, #ranmet')
   const [newSong, setNewSong] = useState('Original Sound - RanMet')
@@ -42,10 +45,9 @@ export default function RanVideoPage() {
   
   const [currentUserId, setCurrentUserId] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
-  const containerRef = useRef(null)
-  const videoRefs = useRef([])
+  const videoRef = useRef(null)
   const videoFileInputRef = useRef(null)
-  const [supabase] = useState(() => createClient())
+  const commentsScrollRef = useRef(null)
 
   function showToast(msg) {
     setToastMsg(msg)
@@ -67,6 +69,18 @@ export default function RanVideoPage() {
     setLoading(false)
   }
 
+  // Fetch comments for current active video
+  async function fetchCurrentComments(vidId) {
+    if (!vidId) return
+    const { data } = await supabase
+      .from('video_comments')
+      .select('*')
+      .eq('video_id', vidId)
+      .order('created_at', { ascending: true })
+
+    setCommentsMap((prev) => ({ ...prev, [vidId]: data || [] }))
+  }
+
   useEffect(() => {
     async function loadUser() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -84,12 +98,82 @@ export default function RanVideoPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'videos' }, (payload) => {
         setVideos((prev) => [payload.new, ...prev.filter(v => v.id !== payload.new.id)])
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'video_comments' }, (payload) => {
+        setCommentsMap((prev) => ({
+          ...prev,
+          [payload.new.video_id]: [...(prev[payload.new.video_id] || []), payload.new]
+        }))
+      })
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
   }, [supabase])
+
+  const currentVideo = videos[currentIndex] || null
+
+  useEffect(() => {
+    if (currentVideo?.id) {
+      fetchCurrentComments(currentVideo.id)
+    }
+    setProgress(0)
+    setIsPlaying(true)
+  }, [currentIndex, currentVideo?.id])
+
+  // Keyboard navigation (Up/Down arrow, Space, M)
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault()
+        handleNextVideo()
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault()
+        handlePrevVideo()
+      } else if (e.key === ' ' || e.key === 'k') {
+        e.preventDefault()
+        togglePlayPause()
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault()
+        setMuted((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentIndex, videos.length])
+
+  function handleNextVideo() {
+    if (currentIndex < videos.length - 1) {
+      setCurrentIndex((prev) => prev + 1)
+    } else {
+      showToast('Đã đến video cuối cùng!')
+    }
+  }
+
+  function handlePrevVideo() {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1)
+    }
+  }
+
+  function togglePlayPause() {
+    if (!videoRef.current) return
+    if (videoRef.current.paused) {
+      videoRef.current.play()
+      setIsPlaying(true)
+    } else {
+      videoRef.current.pause()
+      setIsPlaying(false)
+    }
+  }
+
+  function handleTimeUpdate() {
+    if (!videoRef.current) return
+    const cur = videoRef.current.currentTime
+    const dur = videoRef.current.duration || 1
+    setProgress((cur / dur) * 100)
+  }
 
   // Direct Device Video Pick
   async function handleDeviceVideoPick(e) {
@@ -108,7 +192,7 @@ export default function RanVideoPage() {
     }
   }
 
-  // Handle Post Video with Supabase Storage & AI Safety Check
+  // Post Video
   async function handlePostVideo(e) {
     e.preventDefault()
     if ((!selectedVideoFile && !videoUrl.trim()) || isPosting) return
@@ -122,7 +206,6 @@ export default function RanVideoPage() {
     setIsPosting(true)
     showToast('AI đang kiểm duyệt nội dung video... 🧠')
 
-    // 1. AI & DEEP SLANG MODERATION CHECK ON TEXT
     const captionCheck = await checkContent(cleanCaption)
     let isNsfw = false
 
@@ -142,8 +225,7 @@ export default function RanVideoPage() {
       isNsfw = true
     }
 
-    // 2. AI MULTIMODAL VISION CHECK (QUÉT TỪNG KHUNG HÌNH VIDEO PHÂN LOẠI 18+ / NSFW)
-    showToast('AI Vision đang quét hình ảnh video kiểm tra 18+... 👁️')
+    // AI Vision check
     try {
       const { checkVideoVisualSafety } = await import('@/lib/videoInspector')
       const visualCheck = await checkVideoVisualSafety(selectedVideoFile || videoUrl)
@@ -165,22 +247,18 @@ export default function RanVideoPage() {
 
     let finalVideoCdnUrl = videoUrl.trim()
 
-    // Upload real binary file to Supabase Storage CDN
     if (selectedVideoFile) {
       try {
-        showToast('Đang tải video lên Supabase Storage CDN... 🚀')
+        showToast('Đang tải video lên CDN... 🚀')
         const { uploadMediaToSupabase } = await import('@/lib/upload')
         const storageResult = await uploadMediaToSupabase(supabase, selectedVideoFile, 'videos', activeUid || 'guest')
         finalVideoCdnUrl = storageResult.url
       } catch (uploadErr) {
-        console.warn('Storage upload error, fallback:', uploadErr)
-        showToast(uploadErr.message || 'Lỗi tải video lên Supabase Storage')
+        showToast(uploadErr.message || 'Lỗi tải video lên storage')
         setIsPosting(false)
         return
       }
     }
-
-    showToast('Đang lưu bài đăng video vào hệ thống...')
 
     const newVid = {
       creator_id: activeUid,
@@ -230,24 +308,12 @@ export default function RanVideoPage() {
     }
   }
 
-  // Open Comments
-  async function openComments(videoId) {
-    setActiveVideoId(videoId)
-    setShowComments(true)
-    const { data } = await supabase
-      .from('video_comments')
-      .select('*')
-      .eq('video_id', videoId)
-      .order('created_at', { ascending: true })
-    setActiveVideoComments(data || [])
-  }
-
-  // Post Comment with AI Moderation
+  // Post Comment
   async function handleSendComment(e) {
     e.preventDefault()
-    if (!newComment.trim() || !activeVideoId) return
+    if (!newCommentText.trim() || !currentVideo?.id) return
 
-    const modCheck = await checkContent(newComment.trim())
+    const modCheck = await checkContent(newCommentText.trim())
     if (!modCheck.isSafe) {
       showToast('Bình luận vi phạm tiêu chuẩn an toàn cộng đồng!')
       return
@@ -255,442 +321,420 @@ export default function RanVideoPage() {
 
     const authorName = userProfile?.display_name || 'User'
     const newCommentObj = {
-      video_id: activeVideoId,
+      video_id: currentVideo.id,
       user_id: currentUserId,
       user_name: authorName,
-      content: newComment.trim()
+      content: newCommentText.trim()
     }
 
-    setActiveVideoComments((prev) => [...prev, { ...newCommentObj, id: Date.now(), created_at: new Date().toISOString() }])
-    setNewComment('')
+    setCommentsMap((prev) => ({
+      ...prev,
+      [currentVideo.id]: [...(prev[currentVideo.id] || []), { ...newCommentObj, id: Date.now(), created_at: new Date().toISOString() }]
+    }))
+    setNewCommentText('')
 
     await supabase.from('video_comments').insert(newCommentObj)
   }
 
+  const isVideoNsfw = !!currentVideo?.is_nsfw || (currentVideo?.tags && currentVideo?.tags.some(t => /18|nsfw|sex|porn|hentai/i.test(t)))
+  const isUserAdult = !!userProfile?.age_verified
+  const isUnblurred = currentVideo ? !!unblurredMap[currentVideo.id] : false
+  const shouldBlur = isVideoNsfw && (!isUserAdult || !isUnblurred)
+
+  const activeComments = currentVideo ? (commentsMap[currentVideo.id] || []) : []
+  const isLiked = currentVideo ? !!likedMap[currentVideo.id] : false
+  const likesCount = currentVideo ? (likesCountMap[currentVideo.id] || 0) : 0
+
   return (
     <AppShell>
-      <div 
-        className="flex justify-between items-center" 
-        style={{ 
-          maxWidth: 440, 
-          margin: '0 auto 12px', 
-          padding: '0 4px'
-        }}
-      >
-        <div className="flex items-center g8">
-          <Flame size={18} style={{ color: 'var(--kinpaku-gold)' }} />
-          <h1 className="rm-title" style={{ fontSize: 18, margin: 0 }}>{t('ranVideoTitle')}</h1>
-          <span className="badge badge-gold tiny" style={{ fontSize: 9 }}>REALTIME</span>
+      {/* TOP HEADER BAR */}
+      <div className="flex justify-between items-center" style={{ maxWidth: 1100, margin: '0 auto 16px' }}>
+        <div className="flex items-center g10">
+          <Flame size={20} style={{ color: 'var(--kinpaku-gold)' }} />
+          <div>
+            <h1 className="rm-title" style={{ fontSize: 20, margin: 0 }}>RanVideo Cinema</h1>
+            <div className="tiny faint rm-num">
+              Video {videos.length > 0 ? currentIndex + 1 : 0} / {videos.length} · Dùng phím ↑ ↓ hoặc Space để điều khiển
+            </div>
+          </div>
         </div>
 
         <button
           type="button"
           className="btn btn-primary"
-          style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 6 }}
+          style={{ width: 'auto', padding: '7px 16px', fontSize: 12.5 }}
           onClick={() => setShowUploadModal(true)}
         >
-          <Plus size={14} /> {t('uploadNewVideo')}
+          <Plus size={15} /> {t('uploadNewVideo')}
         </button>
       </div>
 
-      {/* FEED CONTAINER */}
-      <div 
-        ref={containerRef}
-        style={{ 
-          maxWidth: 440, 
-          margin: '0 auto', 
-          height: 'calc(100vh - 150px)', 
-          minHeight: 560,
-          background: 'var(--lacquer-deep)',
-          borderRadius: 16,
-          overflowY: 'scroll',
-          scrollSnapType: 'y mandatory',
-          position: 'relative',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.65)',
-          border: '1px solid var(--gold-hairline-strong)'
-        }}
-      >
-        {loading ? (
-          <div className="flex col items-center justify-center" style={{ height: '100%', color: 'var(--text-muted)' }}>
-            <div className="tiny bold">Connecting to RanVideo...</div>
+      {loading ? (
+        <div className="card center-text" style={{ padding: 60, maxWidth: 600, margin: '40px auto' }}>
+          <div className="tiny muted">Đang kết nối kho RanVideo...</div>
+        </div>
+      ) : videos.length === 0 ? (
+        <div className="card flex col items-center center-text" style={{ padding: 60, maxWidth: 500, margin: '40px auto' }}>
+          <div 
+            style={{ 
+              width: 64, 
+              height: 64, 
+              borderRadius: '50%', 
+              background: 'rgba(245, 192, 66, 0.1)', 
+              border: '1px solid var(--gold-hairline-strong)',
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              marginBottom: 16,
+              color: 'var(--kinpaku-gold)'
+            }} 
+          >
+            <VideoIcon size={28} />
           </div>
-        ) : videos.length === 0 ? (
-          <div className="flex col items-center justify-center center-text" style={{ height: '100%', padding: 24 }}>
-            <div 
-              style={{ 
-                width: 56, 
-                height: 56, 
-                borderRadius: '50%', 
-                background: 'rgba(245, 192, 66, 0.1)', 
-                border: '1px solid var(--gold-hairline-strong)',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                marginBottom: 14,
-                color: 'var(--kinpaku-gold)'
-              }} 
-            >
-              <VideoIcon size={26} />
-            </div>
-            <h3 className="rm-title" style={{ fontSize: 16, marginBottom: 6 }}>{t('noVideosYet')}</h3>
-            <p className="tiny muted" style={{ maxWidth: 280, marginBottom: 18, lineHeight: 1.5 }}>
-              {t('firstVideoPrompt')}
-            </p>
-            <button 
-              type="button" 
-              className="btn btn-primary"
-              style={{ width: 'auto', padding: '10px 20px', borderRadius: 6 }}
-              onClick={() => setShowUploadModal(true)}
-            >
-              <Upload size={15} /> {t('uploadFirstVideoBtn')}
-            </button>
-          </div>
-        ) : (
-          videos.map((vid, idx) => {
-            const isLiked = !!likedMap[vid.id]
-            const likesCount = (likesCountMap[vid.id] || 0)
-            const isVideoNsfw = !!vid.is_nsfw || (vid.tags && vid.tags.some(t => /18|nsfw|sex|porn|hentai/i.test(t)))
-            const isUserAdult = !!userProfile?.age_verified
-            const isUnblurred = !!unblurredMap[vid.id]
-            const shouldBlur = isVideoNsfw && (!isUserAdult || !isUnblurred)
+          <h3 className="rm-title" style={{ fontSize: 18, marginBottom: 6 }}>{t('noVideosYet')}</h3>
+          <p className="small muted" style={{ marginBottom: 20, lineHeight: 1.5 }}>
+            {t('firstVideoPrompt')}
+          </p>
+          <button 
+            type="button" 
+            className="btn btn-primary"
+            style={{ width: 'auto', padding: '10px 24px' }}
+            onClick={() => setShowUploadModal(true)}
+          >
+            <Upload size={15} /> {t('uploadFirstVideoBtn')}
+          </button>
+        </div>
+      ) : (
+        /* THEATER SPLIT VIEW DESKTOP CONTAINER */
+        <div className="theater-container">
+          {/* LEFT: CINEMA VIDEO PLAYER STAGE */}
+          <div className="theater-stage">
+            <video
+              ref={videoRef}
+              src={currentVideo?.video_url}
+              loop
+              muted={muted}
+              playsInline
+              autoPlay={!shouldBlur}
+              onTimeUpdate={handleTimeUpdate}
+              onClick={togglePlayPause}
+              style={{
+                filter: shouldBlur ? 'blur(45px) brightness(0.55)' : 'none',
+                transform: shouldBlur ? 'scale(1.12)' : 'none',
+                transition: 'filter 0.35s ease, transform 0.35s ease'
+              }}
+            />
 
-            return (
+            {/* 18+ NSFW AGE GATE OVERLAY */}
+            {shouldBlur && (
               <div 
-                key={vid.id}
                 style={{
-                  height: '100%',
-                  width: '100%',
-                  scrollSnapAlign: 'start',
-                  position: 'relative',
-                  background: '#070609',
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(10, 8, 14, 0.86)',
+                  backdropFilter: 'blur(16px)',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  overflow: 'hidden'
+                  padding: 24,
+                  textAlign: 'center',
+                  zIndex: 10
                 }}
               >
-                {/* VIDEO ELEMENT WITH 18+ BLUR */}
-                <video
-                  ref={(el) => (videoRefs.current[idx] = el)}
-                  src={vid.video_url}
-                  loop
-                  muted={muted}
-                  playsInline
-                  autoPlay={idx === 0 && !shouldBlur}
-                  controls={false}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    filter: shouldBlur ? 'blur(45px) brightness(0.6)' : 'none',
-                    transform: shouldBlur ? 'scale(1.15)' : 'none',
-                    transition: 'filter 0.4s ease, transform 0.4s ease'
+                <div 
+                  style={{ 
+                    width: 56, 
+                    height: 56, 
+                    borderRadius: '50%', 
+                    background: 'rgba(244, 63, 94, 0.15)', 
+                    border: '1.5px solid rgba(244, 63, 94, 0.4)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    fontSize: 24,
+                    marginBottom: 12
                   }}
-                  onClick={() => {
-                    if (shouldBlur) return
-                    const el = videoRefs.current[idx]
-                    if (el) {
-                      if (el.paused) el.play()
-                      else el.pause()
-                    }
-                  }}
-                />
+                >
+                  🔞
+                </div>
+                <div className="rm-title" style={{ fontSize: 18, color: '#f43f5e', marginBottom: 6 }}>
+                  NỘI DUNG 18+ NHẠY CẢM (NSFW)
+                </div>
+                <p className="tiny muted" style={{ maxWidth: 300, lineHeight: 1.55, marginBottom: 18 }}>
+                  {!isUserAdult 
+                    ? 'Video này chứa nội dung 18+ và đã được AI làm mờ bảo vệ. Bạn cần xác thực trên 18 tuổi trong Hồ Sơ để mở khóa xem.'
+                    : 'Video chứa hình ảnh 18+. Bạn đã xác thực đủ 18 tuổi.'}
+                </p>
 
-                {/* 18+ NSFW AGE GATE OVERLAY */}
-                {shouldBlur && (
-                  <div 
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: 'rgba(10, 8, 14, 0.84)',
-                      backdropFilter: 'blur(16px)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 24,
-                      textAlign: 'center',
-                      zIndex: 8,
-                      animation: 'msgPop 0.3s ease'
+                {!isUserAdult ? (
+                  <Link 
+                    href="/profile" 
+                    className="btn btn-secondary" 
+                    style={{ width: 'auto', padding: '9px 18px', fontSize: 12, borderRadius: 8, borderColor: 'rgba(244, 63, 94, 0.3)', color: '#f43f5e' }}
+                  >
+                    🛡️ Xác thực 18+ trong Hồ Sơ
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ width: 'auto', padding: '9px 20px', fontSize: 12.5 }}
+                    onClick={() => {
+                      setUnblurredMap((prev) => ({ ...prev, [currentVideo.id]: true }))
+                      if (videoRef.current) videoRef.current.play()
                     }}
                   >
-                    <div 
-                      style={{ 
-                        width: 52, 
-                        height: 52, 
-                        borderRadius: '50%', 
-                        background: 'rgba(244, 63, 94, 0.15)', 
-                        border: '1.5px solid rgba(244, 63, 94, 0.5)', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        fontSize: 22,
-                        marginBottom: 10
-                      }}
-                    >
-                      🔞
-                    </div>
-                    <div className="rm-title" style={{ fontSize: 16, color: '#f43f5e', marginBottom: 4 }}>
-                      NỘI DUNG 18+ NHẠY CẢM (NSFW)
-                    </div>
-                    <p className="tiny muted" style={{ maxWidth: 280, lineHeight: 1.5, marginBottom: 14 }}>
-                      {!isUserAdult 
-                        ? 'Video này chứa hình ảnh 18+ và đã được AI tự động làm mờ bảo vệ. Bạn cần xác thực trên 18 tuổi trong Hồ Sơ để mở khóa xem.'
-                        : 'Video chứa hình ảnh 18+. Bạn đã xác thực đủ 18 tuổi.'}
-                    </p>
-
-                    {!isUserAdult ? (
-                      <Link 
-                        href="/profile" 
-                        className="btn btn-secondary" 
-                        style={{ width: 'auto', padding: '8px 16px', fontSize: 11.5, borderRadius: 6, borderColor: 'rgba(244, 63, 94, 0.3)', color: '#f43f5e' }}
-                      >
-                        🛡️ Xác thực 18+ trong Hồ Sơ
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        style={{ width: 'auto', padding: '8px 18px', fontSize: 12, borderRadius: 6 }}
-                        onClick={() => {
-                          setUnblurredMap((prev) => ({ ...prev, [vid.id]: true }))
-                          const el = videoRefs.current[idx]
-                          if (el) el.play()
-                        }}
-                      >
-                        👁️ Mở khóa xem video
-                      </button>
-                    )}
-                  </div>
+                    👁️ Mở khóa xem video
+                  </button>
                 )}
+              </div>
+            )}
 
-                {/* OVERLAY GRADIENT */}
-                <div 
+            {/* PLAYER OVERLAY CONTROLS */}
+            <div 
+              style={{
+                position: 'absolute',
+                top: 14,
+                left: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                zIndex: 5
+              }}
+            >
+              <button
+                type="button"
+                className="btn-icon"
+                style={{ width: 34, height: 34, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+                onClick={() => setMuted(!muted)}
+                title="Bật/Tắt âm thanh (Phím M)"
+              >
+                {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+
+              <button
+                type="button"
+                className="btn-icon"
+                style={{ width: 34, height: 34, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+                onClick={togglePlayPause}
+                title="Phát/Tạm dừng (Phím Space)"
+              >
+                {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+              </button>
+            </div>
+
+            {/* FLOATING VERTICAL NEXT / PREV BUTTONS */}
+            <div 
+              style={{
+                position: 'absolute',
+                right: 14,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                zIndex: 5
+              }}
+            >
+              <button
+                type="button"
+                className="btn-icon"
+                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
+                onClick={handlePrevVideo}
+                disabled={currentIndex === 0}
+                title="Video trước (Phím ↑)"
+              >
+                <ChevronUp size={20} />
+              </button>
+              <button
+                type="button"
+                className="btn-icon"
+                style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
+                onClick={handleNextVideo}
+                disabled={currentIndex === videos.length - 1}
+                title="Video tiếp theo (Phím ↓)"
+              >
+                <ChevronDown size={20} />
+              </button>
+            </div>
+
+            {/* SCRUB PROGRESS BAR */}
+            <div 
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 4,
+                background: 'rgba(255,255,255,0.15)',
+                zIndex: 5
+              }}
+            >
+              <div 
+                style={{
+                  height: '100%',
+                  background: 'var(--gold-gradient)',
+                  transform: `scaleX(${progress / 100})`,
+                  transformOrigin: 'left center',
+                  transition: 'transform 0.1s linear'
+                }} 
+              />
+            </div>
+          </div>
+
+          {/* RIGHT: INTERACTIVE CREATOR & COMMENTS PANEL */}
+          <div className="theater-panel">
+            {/* 1. CREATOR HEADER */}
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--gold-hairline)' }}>
+              <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
+                <div className="flex items-center g10">
+                  <div className="avatar" style={{ width: 42, height: 42, fontSize: 16 }}>
+                    {currentVideo?.avatar_letter || 'R'}
+                  </div>
+                  <div>
+                    <div className="semi champagne" style={{ fontSize: 15 }}>{currentVideo?.creator_name}</div>
+                    <div className="tiny faint">{currentVideo?.creator_handle}</div>
+                  </div>
+                </div>
+
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  style={{ width: 'auto', padding: '5px 12px', fontSize: 11.5 }}
+                  onClick={() => showToast('Đã theo dõi creator!')}
+                >
+                  + Follow
+                </button>
+              </div>
+
+              {/* Caption & Tags */}
+              <div className="small champagne" style={{ lineHeight: 1.5, marginBottom: 8 }}>
+                {currentVideo?.caption}
+              </div>
+
+              {currentVideo?.tags && currentVideo?.tags.length > 0 && (
+                <div className="flex" style={{ flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                  {currentVideo.tags.map((tg, i) => (
+                    <span key={i} className="tiny gold" style={{ fontWeight: 600 }}>{tg}</span>
+                  ))}
+                </div>
+              )}
+
+              <div className="tiny faint flex items-center g4">
+                <Music size={12} style={{ color: 'var(--kinpaku-gold)' }} /> {currentVideo?.song_title}
+              </div>
+
+              {/* Quick Actions (Like & Share) */}
+              <div className="flex items-center g10" style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--gold-hairline)' }}>
+                <button
+                  type="button"
+                  className="btn-secondary flex items-center g6"
                   style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 40%, rgba(0,0,0,0.85) 100%)',
-                    pointerEvents: 'none'
+                    padding: '6px 14px',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    background: isLiked ? 'rgba(245, 192, 66, 0.12)' : 'var(--inset-lacquer)',
+                    color: isLiked ? 'var(--kinpaku-gold)' : 'var(--champagne)'
                   }}
-                />
+                  onClick={() => currentVideo && toggleLike(currentVideo.id)}
+                >
+                  <Heart size={16} fill={isLiked ? 'var(--kinpaku-gold)' : 'none'} />
+                  <span className="bold rm-num">{likesCount}</span>
+                </button>
 
-                {/* 18+ Re-blur Toggle for Adult Users */}
+                <button
+                  type="button"
+                  className="btn-secondary flex items-center g6"
+                  style={{ padding: '6px 14px', borderRadius: 6, fontSize: 13 }}
+                  onClick={() => {
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(window.location.href)
+                      showToast('Đã sao chép link video! 📋')
+                    }
+                  }}
+                >
+                  <Share2 size={16} /> Chia sẻ
+                </button>
+
                 {isVideoNsfw && isUserAdult && isUnblurred && (
                   <button
                     type="button"
-                    onClick={() => setUnblurredMap((prev) => ({ ...prev, [vid.id]: false }))}
-                    style={{
-                      position: 'absolute',
-                      top: 16,
-                      right: 16,
-                      background: 'rgba(244, 63, 94, 0.2)',
-                      border: '1px solid rgba(244, 63, 94, 0.4)',
-                      borderRadius: 6,
-                      padding: '3px 8px',
-                      fontSize: 10.5,
-                      color: '#fff',
-                      cursor: 'pointer',
-                      zIndex: 10
-                    }}
+                    className="btn-secondary tiny"
+                    style={{ padding: '6px 10px', borderRadius: 6, marginLeft: 'auto', color: '#fb7185' }}
+                    onClick={() => setUnblurredMap((prev) => ({ ...prev, [currentVideo.id]: false }))}
                   >
-                    🔞 Làm mờ lại
+                    🔞 Làm mờ
                   </button>
                 )}
-
-                {/* SOUND TOGGLE */}
-                <button
-                  type="button"
-                  onClick={() => setMuted(!muted)}
-                  style={{
-                    position: 'absolute',
-                    top: 16,
-                    left: 16,
-                    background: 'rgba(0,0,0,0.5)',
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid var(--gold-hairline)',
-                    borderRadius: '50%',
-                    width: 34,
-                    height: 34,
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    zIndex: 10
-                  }}
-                >
-                  {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                </button>
-
-                {/* RIGHT ACTION BAR */}
-                <div 
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    bottom: 24,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 14,
-                    zIndex: 10
-                  }}
-                >
-                  {/* Creator Avatar */}
-                  <div style={{ position: 'relative', marginBottom: 2 }}>
-                    <div 
-                      className="avatar" 
-                      style={{ 
-                        width: 40, 
-                        height: 40, 
-                        fontSize: 14, 
-                      }}
-                    >
-                      {vid.avatar_letter}
-                    </div>
-                  </div>
-
-                  {/* Like Button */}
-                  <button
-                    type="button"
-                    onClick={() => toggleLike(vid.id)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: isLiked ? 'var(--kinpaku-gold)' : '#fff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      gap: 3
-                    }}
-                  >
-                    <div 
-                      style={{ 
-                        width: 38, 
-                        height: 38, 
-                        borderRadius: '50%', 
-                        background: 'rgba(0,0,0,0.45)', 
-                        backdropFilter: 'blur(6px)',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        border: '1px solid var(--gold-hairline)'
-                      }} 
-                    >
-                      <Heart size={18} fill={isLiked ? 'var(--kinpaku-gold)' : 'none'} />
-                    </div>
-                    <span className="tiny bold rm-num" style={{ color: '#fff', fontSize: 11 }}>{likesCount}</span>
-                  </button>
-
-                  {/* Comments Button */}
-                  <button
-                    type="button"
-                    onClick={() => openComments(vid.id)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#fff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      gap: 3
-                    }}
-                  >
-                    <div 
-                      style={{ 
-                        width: 38, 
-                        height: 38, 
-                        borderRadius: '50%', 
-                        background: 'rgba(0,0,0,0.45)', 
-                        backdropFilter: 'blur(6px)',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        border: '1px solid var(--gold-hairline)'
-                      }} 
-                    >
-                      <MessageCircle size={18} />
-                    </div>
-                    <span className="tiny bold" style={{ color: '#fff', fontSize: 10 }}>{t('commentsLabel')}</span>
-                  </button>
-
-                  {/* Share Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (navigator.share) {
-                        navigator.share({ title: vid.caption, url: window.location.href })
-                      } else {
-                        navigator.clipboard.writeText(window.location.href)
-                        showToast('Link copied!')
-                      }
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#fff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      gap: 3
-                    }}
-                  >
-                    <div 
-                      style={{ 
-                        width: 38, 
-                        height: 38, 
-                        borderRadius: '50%', 
-                        background: 'rgba(0,0,0,0.45)', 
-                        backdropFilter: 'blur(6px)',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        border: '1px solid var(--gold-hairline)'
-                      }} 
-                    >
-                      <Share2 size={17} />
-                    </div>
-                    <span className="tiny bold" style={{ color: '#fff', fontSize: 10 }}>{t('shareLabel')}</span>
-                  </button>
-                </div>
-
-                {/* BOTTOM INFO */}
-                <div 
-                  style={{
-                    position: 'absolute',
-                    left: 16,
-                    bottom: 20,
-                    right: 70,
-                    color: '#fff',
-                    zIndex: 10
-                  }}
-                >
-                  <div className="semi" style={{ fontSize: 15, marginBottom: 3, textShadow: '0 2px 4px rgba(0,0,0,0.7)' }}>
-                    {vid.creator_name} <span className="tiny faint" style={{ color: 'rgba(255,255,255,0.7)' }}>{vid.creator_handle}</span>
-                  </div>
-                  <div className="small" style={{ lineHeight: 1.4, marginBottom: 6, textShadow: '0 2px 4px rgba(0,0,0,0.7)' }}>
-                    {vid.caption}
-                  </div>
-                  
-                  {vid.tags && (
-                    <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                      {vid.tags.map((t, i) => (
-                        <span key={i} className="tiny bold gold">{t}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="tiny faint flex items-center g4" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                    <Music size={12} /> {vid.song_title}
-                  </div>
-                </div>
               </div>
-            )
-          })
-        )}
-      </div>
+            </div>
+
+            {/* 2. REAL-TIME COMMENTS STREAM */}
+            <div 
+              ref={commentsScrollRef} 
+              className="grow" 
+              style={{ 
+                overflowY: 'auto', 
+                padding: '14px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10
+              }}
+            >
+              <div className="tiny bold faint" style={{ letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2 }}>
+                Bình luận ({activeComments.length})
+              </div>
+
+              {activeComments.length === 0 ? (
+                <div className="center-text tiny faint" style={{ margin: 'auto 0' }}>
+                  Chưa có bình luận nào. Hãy là người đầu tiên!
+                </div>
+              ) : (
+                activeComments.map((c) => (
+                  <div key={c.id} className="flex g8 items-start">
+                    <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, flexShrink: 0 }}>
+                      {(c.user_name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ background: 'var(--lacquer-deep)', padding: '8px 12px', borderRadius: 8, grow: 1, width: '100%', border: '1px solid var(--gold-hairline)' }}>
+                      <div className="flex justify-between items-center">
+                        <span className="semi tiny gold">{c.user_name}</span>
+                        <span className="tiny faint rm-num" style={{ fontSize: 9.5 }}>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="small champagne" style={{ marginTop: 2 }}>
+                        {c.content}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* 3. STICKY COMMENT INPUT DOCK */}
+            <form 
+              onSubmit={handleSendComment} 
+              className="flex g8 items-center" 
+              style={{ padding: '12px 16px', borderTop: '1px solid var(--gold-hairline)', background: 'var(--lacquer-deep)' }}
+            >
+              <input
+                className="input"
+                placeholder="Thêm bình luận cho video này..."
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                style={{ padding: '9px 14px', fontSize: 13, borderRadius: 6 }}
+              />
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                style={{ width: 36, height: 36, borderRadius: 6, padding: 0, flexShrink: 0 }}
+                disabled={!newCommentText.trim()}
+              >
+                <Send size={15} />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* UPLOAD VIDEO MODAL */}
       {showUploadModal && (
@@ -710,13 +754,13 @@ export default function RanVideoPage() {
         >
           <div 
             className="card" 
-            style={{ width: '100%', maxWidth: 440, padding: 24, animation: 'msgPop 0.25s ease' }}
+            style={{ width: '100%', maxWidth: 460, padding: 24, animation: 'msgPop 0.25s ease' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center" style={{ marginBottom: 14 }}>
               <div className="flex items-center g8">
                 <VideoIcon size={18} style={{ color: 'var(--kinpaku-gold)' }} />
-                <h2 className="rm-title" style={{ fontSize: 16 }}>{t('uploadNewVideo')}</h2>
+                <h2 className="rm-title" style={{ fontSize: 17 }}>{t('uploadNewVideo')}</h2>
               </div>
               <button 
                 type="button" 
@@ -753,7 +797,7 @@ export default function RanVideoPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ padding: '16px', borderStyle: 'dashed', width: '100%', borderRadius: 10 }}
+                  style={{ padding: '16px', borderStyle: 'dashed', width: '100%', borderRadius: 8 }}
                   onClick={() => videoFileInputRef.current?.click()}
                 >
                   <Upload size={18} style={{ color: 'var(--kinpaku-gold)' }} /> 
@@ -820,80 +864,6 @@ export default function RanVideoPage() {
                 disabled={(!videoUrl.trim() && !selectedVideoFile) || isPosting}
               >
                 {isPosting ? 'Đang tải lên & Đăng bài...' : t('postVideoBtn')}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* COMMENTS MODAL */}
-      {showComments && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(10px)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center'
-          }}
-          onClick={() => setShowComments(false)}
-        >
-          <div 
-            className="card" 
-            style={{ 
-              width: '100%', 
-              maxWidth: 440, 
-              height: '60vh', 
-              padding: 0, 
-              borderBottomLeftRadius: 0, 
-              borderBottomRightRadius: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              animation: 'msgPop 0.25s ease'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center" style={{ padding: '14px 18px', borderBottom: '1px solid var(--gold-hairline)' }}>
-              <div className="semi champagne" style={{ fontSize: 15 }}>{t('commentsLabel')} ({activeVideoComments.length})</div>
-              <button type="button" onClick={() => setShowComments(false)} className="btn-icon" style={{ width: 28, height: 28 }}>
-                <X size={14} />
-              </button>
-            </div>
-
-            <div className="grow" style={{ overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {activeVideoComments.length === 0 ? (
-                <div className="center-text tiny faint" style={{ margin: 'auto 0' }}>
-                  Chưa có bình luận nào.
-                </div>
-              ) : (
-                activeVideoComments.map((c) => (
-                  <div key={c.id} className="flex g8 items-start">
-                    <div className="avatar" style={{ width: 30, height: 30, fontSize: 11, flexShrink: 0 }}>
-                      {c.user_name?.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="semi tiny gold">{c.user_name}</div>
-                      <div className="small champagne" style={{ marginTop: 2 }}>{c.content}</div>
-                      <div className="tiny faint rm-num" style={{ marginTop: 2 }}>{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <form onSubmit={handleSendComment} className="flex g8" style={{ padding: '10px 16px', borderTop: '1px solid var(--gold-hairline)' }}>
-              <input
-                className="input"
-                placeholder={t('writeCommentPlaceholder')}
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                style={{ borderRadius: 6, padding: '8px 12px', fontSize: 13 }}
-              />
-              <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 16px', borderRadius: 6, fontSize: 13 }}>
-                Send
               </button>
             </form>
           </div>

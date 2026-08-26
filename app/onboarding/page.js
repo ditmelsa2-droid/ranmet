@@ -101,11 +101,13 @@ export default function OnboardingPage() {
             <div
               style={{
                 height: '100%',
-                width: `${progressPct}%`,
-                background: 'var(--brand-gradient)',
+                width: '100%',
+                background: 'var(--gold-gradient)',
                 borderRadius: 999,
-                transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                boxShadow: '0 0 12px rgba(236, 72, 153, 0.5)',
+                transform: `scaleX(${progressPct / 100})`,
+                transformOrigin: 'left center',
+                transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: '0 0 12px rgba(245, 192, 66, 0.3)',
               }}
             />
           </div>

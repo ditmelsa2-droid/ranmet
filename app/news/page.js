@@ -3,182 +3,74 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { 
-  Newspaper, Heart, MessageCircle, Share2, Send, 
-  Sparkles, Flame, Clock, AlertCircle, ShieldCheck, Upload,
-  Languages, Loader2
+  Heart, MessageCircle, Share2, Send, Sparkles, 
+  Globe, ShieldCheck, Image as ImageIcon, Flame, TrendingUp, X
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { checkContent } from '@/lib/moderation'
+import { checkContent, checkTags } from '@/lib/moderation'
 import { readFileAsDataUrl } from '@/lib/upload'
-import { translateText } from '@/lib/translate'
 import { useLanguage } from '@/lib/LanguageContext'
 import AppShell from '../components/AppShell'
 
-const INITIAL_SEED_POSTS = [
-  {
-    id: 'post-seed-1',
-    author_name: 'MinhQuan',
-    author_avatar: 'M',
-    content: 'Chào cả nhà RanMet! Hôm nay có bạn nào tham gia phòng Minecraft RanWorld không? Mình vừa thiết kế xong hệ thống redstone farm tự động cực đỉnh! ⛏️🔥',
-    image_url: '',
-    tags: ['#RanWorld', '#Minecraft', '#Gaming'],
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    likesCount: 18,
-    comments: [
-      { id: 1, user_name: 'Kaito_Gamer', content: 'Tối nay 8h vào giao lưu nhé bác!' }
-    ]
-  },
-  {
-    id: 'post-seed-2',
-    author_name: 'LinhChi_Dev',
-    author_avatar: 'L',
-    content: 'Setup không gian làm việc ban đêm phong cách Kinpaku Gold và vừa hoàn thiện tính năng AI Vision Multimodal trên Next.js 🚀 Mọi người trải nghiệm giao diện mới thế nào?',
-    image_url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-    tags: ['#Developer', '#Nextjs', '#Impeccable'],
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-    likesCount: 34,
-    comments: [
-      { id: 1, user_name: 'VyVy_Anime', content: 'Giao diện mới nhìn sang trọng và sắc nét thật sự á chị ơi! ✨' }
-    ]
-  }
-]
-
 export default function RanNewsPage() {
-  const { lang, t } = useLanguage()
+  const { t, currentLang } = useLanguage()
   const [supabase] = useState(() => createClient())
-  const [posts, setPosts] = useState(INITIAL_SEED_POSTS)
-  const [postDraft, setPostDraft] = useState('')
-  const [imageDraft, setImageDraft] = useState('')
-  const [likedPosts, setLikedPosts] = useState({})
-  const [likesCountMap, setLikesCountMap] = useState({ 'post-seed-1': 18, 'post-seed-2': 34 })
-  const [commentsMap, setCommentsMap] = useState({
-    'post-seed-1': [{ id: 1, user_name: 'Kaito_Gamer', content: 'Tối nay 8h vào giao lưu nhé bác!' }],
-    'post-seed-2': [{ id: 1, user_name: 'VyVy_Anime', content: 'Giao diện mới nhìn sang trọng và sắc nét thật sự á chị ơi! ✨' }]
-  })
-  const [commentDrafts, setCommentDrafts] = useState({})
-  const [activeCommentsPostId, setActiveCommentsPostId] = useState(null)
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [newPostText, setNewPostText] = useState('')
+  const [selectedImage, setSelectedImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState('')
+  const [isPosting, setIsPosting] = useState(false)
+  const [toastMsg, setToastMsg] = useState('')
+  const [unblurredMap, setUnblurredMap] = useState({})
   
-  // Translation state for posts & comments: { [id]: { translated: string, isTranslating: boolean, show: boolean } }
-  const [postTranslations, setPostTranslations] = useState({})
-  const [commentTranslations, setCommentTranslations] = useState({})
+  // Likes & Comments
+  const [likedPosts, setLikedPosts] = useState({})
+  const [commentsMap, setCommentsMap] = useState({})
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null)
+  const [commentInputText, setCommentInputText] = useState('')
+  
+  // Translations
+  const [translations, setTranslations] = useState({})
+  const [translatingPostId, setTranslatingPostId] = useState(null)
 
   const [currentUserId, setCurrentUserId] = useState(null)
-  const [currentUserName, setCurrentUserName] = useState('User')
   const [userProfile, setUserProfile] = useState(null)
-  const [isImageDraftNsfw, setIsImageDraftNsfw] = useState(false)
-  const [unblurredNewsMap, setUnblurredNewsMap] = useState({})
-  const [toastMsg, setToastMsg] = useState('')
-  const [moderationWarning, setModerationWarning] = useState('')
-
   const fileInputRef = useRef(null)
 
   function showToast(msg) {
     setToastMsg(msg)
-    setTimeout(() => setToastMsg(''), 3000)
+    setTimeout(() => setToastMsg(''), 4000)
   }
 
-  // Handle AI Post Translation
-  async function handleTranslatePost(postId, originalText) {
-    if (postTranslations[postId]?.translated) {
-      setPostTranslations((prev) => ({
-        ...prev,
-        [postId]: { ...prev[postId], show: !prev[postId].show }
-      }))
-      return
-    }
+  async function fetchPosts() {
+    const { data } = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-    setPostTranslations((prev) => ({
-      ...prev,
-      [postId]: { isTranslating: true, show: true }
-    }))
-
-    const translated = await translateText(originalText, lang)
-    setPostTranslations((prev) => ({
-      ...prev,
-      [postId]: { translated, isTranslating: false, show: true }
-    }))
-  }
-
-  // Handle AI Comment Translation
-  async function handleTranslateComment(commentId, originalText) {
-    if (commentTranslations[commentId]?.translated) {
-      setCommentTranslations((prev) => ({
-        ...prev,
-        [commentId]: { ...prev[commentId], show: !prev[commentId].show }
-      }))
-      return
-    }
-
-    setCommentTranslations((prev) => ({
-      ...prev,
-      [commentId]: { isTranslating: true, show: true }
-    }))
-
-    const translated = await translateText(originalText, lang)
-    setCommentTranslations((prev) => ({
-      ...prev,
-      [commentId]: { translated, isTranslating: false, show: true }
-    }))
+    if (data) setPosts(data)
+    setLoading(false)
   }
 
   useEffect(() => {
-    async function loadData() {
+    async function loadUser() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setCurrentUserId(user.id)
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-        if (profile) {
-          setUserProfile(profile)
-          if (profile.display_name) setCurrentUserName(profile.display_name)
-        }
-      }
-
-      // Fetch posts from database
-      const { data: dbPosts } = await supabase
-        .from('rannews_posts')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (dbPosts && dbPosts.length > 0) {
-        setPosts(dbPosts)
-      }
-
-      // Fetch likes
-      const { data: dbLikes } = await supabase.from('rannews_likes').select('post_id, user_id')
-      if (dbLikes) {
-        const counts = { ...likesCountMap }
-        const userLiked = {}
-        dbLikes.forEach((l) => {
-          counts[l.post_id] = (counts[l.post_id] || 0) + 1
-          if (user && l.user_id === user.id) {
-            userLiked[l.post_id] = true
-          }
-        })
-        setLikesCountMap(counts)
-        setLikedPosts(userLiked)
-      }
-
-      // Fetch comments
-      const { data: dbComments } = await supabase.from('rannews_comments').select('*').order('created_at', { ascending: true })
-      if (dbComments) {
-        const cm = { ...commentsMap }
-        dbComments.forEach((c) => {
-          if (!cm[c.post_id]) cm[c.post_id] = []
-          cm[c.post_id].push(c)
-        })
-        setCommentsMap(cm)
+        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        if (prof) setUserProfile(prof)
       }
     }
+    loadUser()
+    fetchPosts()
 
-    loadData()
-
-    // Realtime subscription for posts and comments
     const channel = supabase
-      .channel('rannews-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rannews_posts' }, (payload) => {
-        setPosts((prev) => [payload.new, ...prev])
+      .channel('news-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+        setPosts((prev) => [payload.new, ...prev.filter(p => p.id !== payload.new.id)])
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rannews_comments' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'post_comments' }, (payload) => {
         setCommentsMap((prev) => ({
           ...prev,
           [payload.new.post_id]: [...(prev[payload.new.post_id] || []), payload.new]
@@ -191,341 +83,383 @@ export default function RanNewsPage() {
     }
   }, [supabase])
 
-  async function handleImageUpload(e) {
+  // Select Image
+  async function handleImageSelect(e) {
     const file = e.target.files?.[0]
     if (!file) return
+
     try {
-      showToast('Đang quét an toàn hình ảnh bằng AI Vision... 👁️')
       const res = await readFileAsDataUrl(file, 20)
-
-      // Gemini Vision Check
-      const { checkImageVisualSafety } = await import('@/lib/videoInspector')
-      const visionCheck = await checkImageVisualSafety(res.url)
-      
-      if (!visionCheck.isAllowed) {
-        showToast(`Hình ảnh bị AI từ chối: ${visionCheck.reason || 'Nội dung bạo lực / bất hợp pháp!'} ⚠️`)
-        setImageDraft('')
-        setIsImageDraftNsfw(false)
-        return
-      }
-
-      if (visionCheck.isNsfw) {
-        setIsImageDraftNsfw(true)
-        showToast('AI phát hiện ảnh 18+ — Đã gắn nhãn NSFW và kích hoạt làm mờ bảo vệ! 🔞')
-      } else {
-        setIsImageDraftNsfw(false)
-        showToast('Đã đính kèm ảnh thành công! 🖼️')
-      }
-
-      setImageDraft(res.url)
+      setSelectedImage(file)
+      setImagePreview(res.url)
     } catch (err) {
       showToast(err.message)
     }
   }
 
+  // Create Post
   async function handleCreatePost(e) {
     e.preventDefault()
-    if (!postDraft.trim() || !currentUserId) return
+    if ((!newPostText.trim() && !selectedImage) || isPosting) return
 
-    // GEMINI AI & SLANG AUTO-MODERATION CHECK
-    const modCheck = await checkContent(postDraft)
-    let isNsfw = isImageDraftNsfw
+    setIsPosting(true)
+    showToast('AI đang kiểm duyệt bài viết... 🧠')
 
-    if (!modCheck.isSafe) {
-      if (modCheck.reason?.includes('18+') || modCheck.reason?.includes('nhạy cảm') || modCheck.reason?.includes('thô tục')) {
-        isNsfw = true
-      } else {
-        setModerationWarning(`Hệ thống AI từ chối: Bài viết chứa nội dung không an toàn (${modCheck.flaggedWord}). Hãy điều chỉnh để bảo vệ cộng đồng!`)
-        showToast('Nội dung bài viết vi phạm tiêu chuẩn an toàn!')
+    let isNsfw = false
+    if (newPostText.trim()) {
+      const mod = await checkContent(newPostText.trim())
+      if (!mod.isSafe) {
+        if (mod.reason?.includes('18+') || mod.reason?.includes('nhạy cảm') || mod.reason?.includes('thô tục')) {
+          isNsfw = true
+        } else {
+          showToast(`Bài viết bị từ chối: Vi phạm an toàn cộng đồng! ⚠️`)
+          setIsPosting(false)
+          return
+        }
+      }
+    }
+
+    let imageUrl = ''
+    if (selectedImage) {
+      try {
+        const { uploadMediaToSupabase } = await import('@/lib/upload')
+        const { checkImageVisualSafety } = await import('@/lib/videoInspector')
+        const imgCheck = await checkImageVisualSafety(selectedImage)
+        if (!imgCheck.isAllowed) {
+          showToast(`Ảnh bị AI từ chối: ${imgCheck.reason || 'Nội dung không phù hợp'} ⚠️`)
+          setIsPosting(false)
+          return
+        }
+        if (imgCheck.isNsfw) {
+          isNsfw = true
+        }
+
+        const res = await uploadMediaToSupabase(supabase, selectedImage, 'posts', currentUserId || 'guest')
+        imageUrl = res.url
+      } catch (uploadErr) {
+        showToast(uploadErr.message || 'Lỗi tải ảnh lên!')
+        setIsPosting(false)
         return
       }
     }
 
-    setModerationWarning('')
+    const { data: { user } } = await supabase.auth.getUser()
+    const activeUid = currentUserId || user?.id || null
 
     const newPost = {
-      author_id: currentUserId,
-      author_name: currentUserName,
-      author_avatar: currentUserName.charAt(0).toUpperCase(),
-      content: postDraft.trim(),
-      image_url: imageDraft.trim() || null,
-      tags: ['#RanNews', '#Community'],
-      is_nsfw: isNsfw
+      user_id: activeUid,
+      author_name: userProfile?.display_name || 'RanMet Member',
+      author_handle: `@${(userProfile?.display_name || 'user').toLowerCase().replace(/\s+/g, '')}`,
+      avatar_letter: (userProfile?.display_name || 'R').charAt(0).toUpperCase(),
+      content: newPostText.trim(),
+      image_url: imageUrl,
+      is_nsfw: isNsfw,
+      likes_count: 0
     }
 
-    const { data, error } = await supabase.from('rannews_posts').insert(newPost).select().single()
-    if (!error && data) {
-      setPosts([data, ...posts])
+    const { data, error } = await supabase.from('posts').insert(newPost).select().single()
+
+    setIsPosting(false)
+    if (error) {
+      showToast('Lỗi đăng bài: ' + error.message)
     } else {
-      setPosts([{ id: 'post-' + Date.now(), ...newPost, created_at: new Date().toISOString() }, ...posts])
-    }
-
-    setPostDraft('')
-    setImageDraft('')
-    setIsImageDraftNsfw(false)
-    showToast(isNsfw ? 'Đã đăng bài viết (Chế độ 18+ đã làm mờ)! 🔞' : 'Đã đăng bài viết lên RanNews! 🎉')
-  }
-
-  async function handleToggleLike(postId) {
-    if (!currentUserId) {
-      showToast('Vui lòng đăng nhập để thích bài viết!')
-      return
-    }
-
-    const wasLiked = !!likedPosts[postId]
-    setLikedPosts((prev) => ({ ...prev, [postId]: !wasLiked }))
-    setLikesCountMap((prev) => ({
-      ...prev,
-      [postId]: Math.max(0, (prev[postId] || 0) + (wasLiked ? -1 : 1))
-    }))
-
-    if (wasLiked) {
-      await supabase.from('rannews_likes').delete().match({ post_id: postId, user_id: currentUserId })
-    } else {
-      await supabase.from('rannews_likes').insert({ post_id: postId, user_id: currentUserId })
+      setNewPostText('')
+      setSelectedImage(null)
+      setImagePreview('')
+      showToast('Đã đăng bài viết thành công! ✨')
+      if (data) {
+        setPosts((prev) => [data, ...prev.filter(p => p.id !== data.id)])
+      }
     }
   }
 
-  async function handleAddComment(postId) {
-    const text = (commentDrafts[postId] || '').trim()
-    if (!text || !currentUserId) return
-
-    // AI MODERATION CHECK ON COMMENT
-    const modCheck = await checkContent(text)
-    if (!modCheck.isSafe) {
-      showToast('Bình luận chứa từ ngữ không phù hợp, đã bị chặn!')
+  // Translate Post
+  async function handleTranslatePost(post) {
+    if (translations[post.id]) {
+      setTranslations((prev) => {
+        const updated = { ...prev }
+        delete updated[post.id]
+        return updated
+      })
       return
     }
 
-    setCommentDrafts((prev) => ({ ...prev, [postId]: '' }))
+    setTranslatingPostId(post.id)
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: post.content, targetLang: currentLang })
+      })
+      const data = await res.json()
+      if (data.translatedText) {
+        setTranslations((prev) => ({ ...prev, [post.id]: data.translatedText }))
+      } else {
+        showToast('Không thể dịch bài viết này.')
+      }
+    } catch {
+      showToast('Lỗi khi gọi API dịch thuật.')
+    } finally {
+      setTranslatingPostId(null)
+    }
+  }
+
+  // Comments Fetch & Send
+  async function toggleComments(postId) {
+    if (activeCommentPostId === postId) {
+      setActiveCommentPostId(null)
+      return
+    }
+    setActiveCommentPostId(postId)
+    if (!commentsMap[postId]) {
+      const { data } = await supabase
+        .from('post_comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true })
+      if (data) setCommentsMap((prev) => ({ ...prev, [postId]: data }))
+    }
+  }
+
+  async function handleSendComment(postId, e) {
+    e.preventDefault()
+    if (!commentInputText.trim()) return
+
+    const mod = await checkContent(commentInputText.trim())
+    if (!mod.isSafe) {
+      showToast('Bình luận vi phạm an toàn cộng đồng!')
+      return
+    }
 
     const newComment = {
       post_id: postId,
       user_id: currentUserId,
-      user_name: currentUserName,
-      content: text,
+      user_name: userProfile?.display_name || 'Member',
+      content: commentInputText.trim()
     }
 
-    const { error } = await supabase.from('rannews_comments').insert(newComment)
-    if (error) {
-      setCommentsMap((prev) => ({
-        ...prev,
-        [postId]: [...(prev[postId] || []), { id: Date.now(), ...newComment, created_at: new Date().toISOString() }]
-      }))
-    }
-    showToast('Đã gửi bình luận!')
+    setCommentsMap((prev) => ({
+      ...prev,
+      [postId]: [...(prev[postId] || []), { ...newComment, id: Date.now(), created_at: new Date().toISOString() }]
+    }))
+    setCommentInputText('')
+
+    await supabase.from('post_comments').insert(newComment)
   }
+
+  const isUserAdult = !!userProfile?.age_verified
 
   return (
     <AppShell>
-      <div className="desktop-grid-2">
-        {/* MAIN FEED COLUMN */}
-        <div className="flex col g20">
-          {/* CREATE POST CARD */}
-          <div 
-            className="card"
-            style={{
-              padding: 20,
-              background: 'var(--raised-lacquer)',
-              border: '1px solid var(--gold-hairline-strong)'
-            }}
-          >
-            <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-              <div className="flex items-center g10">
-                <div className="avatar" style={{ width: 38, height: 38, fontSize: 14 }}>
-                  {currentUserName.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <div className="semi small champagne">{currentUserName}</div>
-                  <div className="tiny faint">{t('composerSub')}</div>
-                </div>
+      {/* 3-COLUMN SOCIAL TIMELINE CONTAINER */}
+      <div 
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) 320px',
+          gap: 24,
+          maxWidth: 1040,
+          margin: '0 auto'
+        }}
+      >
+        {/* CENTER: FEED & COMPOSER */}
+        <div>
+          {/* COMPOSER */}
+          <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+            <div className="flex g12 items-start">
+              <div className="avatar" style={{ width: 40, height: 40, fontSize: 16 }}>
+                {(userProfile?.display_name || 'R').charAt(0).toUpperCase()}
               </div>
-
-              <span className="badge badge-success tiny">
-                <ShieldCheck size={11} /> Gemini Guard
-              </span>
-            </div>
-
-            {moderationWarning && (
-              <div className="err-text" style={{ marginBottom: 12 }}>
-                <AlertCircle size={15} /> {moderationWarning}
-              </div>
-            )}
-
-            <form onSubmit={handleCreatePost} className="flex col g10">
-              <textarea
-                className="input"
-                rows={3}
-                placeholder={`${currentUserName} ${t('composerPlaceholder')}`}
-                value={postDraft}
-                onChange={(e) => setPostDraft(e.target.value)}
-                required
-                style={{ resize: 'none' }}
-              />
-
-              {/* Image Preview */}
-              {imageDraft && (
-                <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', maxHeight: 220, animation: 'msgPop 0.2s ease', border: '1px solid var(--gold-hairline)' }}>
-                  <img src={imageDraft} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button
-                    type="button"
-                    className="btn-icon"
-                    style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, background: 'rgba(0,0,0,0.7)' }}
-                    onClick={() => setImageDraft('')}
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center" style={{ paddingTop: 8, borderTop: '1px solid var(--gold-hairline)' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ width: 'auto', padding: '6px 14px', fontSize: 12, borderRadius: 6 }}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload size={13} style={{ color: 'var(--verdigris-patina)' }} /> {t('uploadPhotoBtn')}
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  accept="image/*" 
-                  style={{ display: 'none' }} 
-                  onChange={handleImageUpload} 
+              <div className="grow">
+                <textarea
+                  className="input"
+                  rows={3}
+                  placeholder={t('postComposerPlaceholder') || 'Chia sẻ suy nghĩ, tin tức, hình ảnh cùng cộng đồng RanMet...'}
+                  value={newPostText}
+                  onChange={(e) => setNewPostText(e.target.value)}
+                  style={{ border: 'none', background: 'transparent', padding: '4px 0', resize: 'none', fontSize: 14.5 }}
                 />
 
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ width: 'auto', padding: '7px 18px', fontSize: 13, borderRadius: 6 }}
-                  disabled={!postDraft.trim()}
-                >
-                  <Send size={13} /> {t('postNewsBtn')}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* POSTS LIST */}
-          <div className="flex col g16">
-            {posts.map((post) => {
-              const isLiked = !!likedPosts[post.id]
-              const likesCount = likesCountMap[post.id] || 0
-              const postComments = commentsMap[post.id] || []
-              const showCommentsSection = activeCommentsPostId === post.id
-              const timeStr = new Date(post.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              const postTrans = postTranslations[post.id]
-
-              return (
-                <div key={post.id} className="card" style={{ padding: 20 }}>
-                  {/* Post Author Header */}
-                  <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-                    <div className="flex items-center g10">
-                      <div className="avatar" style={{ width: 38, height: 38, fontSize: 14 }}>
-                        {(post.author_name || 'U').charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="semi small champagne">{post.author_name}</div>
-                        <div className="tiny faint flex items-center g4 rm-num">
-                          <Clock size={11} /> {timeStr} · Global
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* AI Translation 1-tap button */}
-                    <button 
-                      type="button" 
-                      className="btn-secondary flex items-center g4" 
-                      style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, color: 'var(--kinpaku-gold)' }}
-                      onClick={() => handleTranslatePost(post.id, post.content)}
+                {imagePreview && (
+                  <div style={{ position: 'relative', marginTop: 10, borderRadius: 8, overflow: 'hidden', maxHeight: 240, border: '1px solid var(--gold-hairline)' }}>
+                    <img src={imagePreview} alt="Preview" style={{ width: '100%', objectFit: 'cover' }} />
+                    <button
+                      type="button"
+                      className="btn-icon"
+                      style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, background: 'rgba(0,0,0,0.7)' }}
+                      onClick={() => {
+                        setSelectedImage(null)
+                        setImagePreview('')
+                      }}
                     >
-                      {postTrans?.isTranslating ? (
-                        <><Loader2 size={11} className="spin" /> {t('aiTranslating')}</>
-                      ) : postTrans?.show ? (
-                        <><Languages size={11} /> {t('showOriginal')}</>
-                      ) : (
-                        <><Sparkles size={11} /> {t('aiTranslate')}</>
-                      )}
+                      <X size={14} />
                     </button>
                   </div>
+                )}
 
-                  {/* Post Content with AI Translation */}
-                  <div className="small champagne" style={{ lineHeight: 1.65, marginBottom: 12, whiteSpace: 'pre-line' }}>
-                    {postTrans?.show && postTrans?.translated ? (
-                      <div>
-                        <div style={{ borderLeft: '2px solid var(--kinpaku-gold)', paddingLeft: 10, color: 'var(--champagne)', marginBottom: 4 }}>
-                          {postTrans.translated}
+                <div className="flex justify-between items-center" style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--gold-hairline)' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary flex items-center g6"
+                    style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6 }}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImageIcon size={15} style={{ color: 'var(--kinpaku-gold)' }} /> Thêm ảnh
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleImageSelect}
+                  />
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ padding: '7px 20px', fontSize: 12.5 }}
+                    onClick={handleCreatePost}
+                    disabled={(!newPostText.trim() && !selectedImage) || isPosting}
+                  >
+                    {isPosting ? 'Đang đăng...' : 'Đăng tin'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* POSTS FEED */}
+          {loading ? (
+            <div className="card center-text" style={{ padding: 40 }}>
+              <div className="tiny muted">Đang tải bảng tin RanNews...</div>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="card center-text" style={{ padding: 40 }}>
+              <div className="semi champagne" style={{ fontSize: 16, marginBottom: 4 }}>Bảng tin đang trống</div>
+              <div className="tiny faint">Hãy là người đầu tiên đăng bài lên RanNews!</div>
+            </div>
+          ) : (
+            <div className="flex col g12">
+              {posts.map((p) => {
+                const isNsfw = !!p.is_nsfw
+                const isUnblurred = !!unblurredMap[p.id]
+                const shouldBlur = isNsfw && (!isUserAdult || !isUnblurred)
+                const translated = translations[p.id]
+                const postComments = commentsMap[p.id] || []
+
+                return (
+                  <div key={p.id} className="card" style={{ padding: '18px 20px' }}>
+                    {/* Author Header */}
+                    <div className="flex justify-between items-start" style={{ marginBottom: 10 }}>
+                      <div className="flex items-center g10">
+                        <div className="avatar" style={{ width: 38, height: 38, fontSize: 15 }}>
+                          {p.avatar_letter || 'R'}
                         </div>
-                        <div className="tiny faint">(Original: {post.content})</div>
+                        <div>
+                          <div className="flex items-center g6">
+                            <span className="semi champagne" style={{ fontSize: 14.5 }}>{p.author_name}</span>
+                            <span className="badge badge-gold" style={{ fontSize: 9, padding: '1px 5px' }}>✓ Verified</span>
+                          </div>
+                          <div className="tiny faint rm-num">{p.author_handle} · {new Date(p.created_at).toLocaleDateString()}</div>
+                        </div>
                       </div>
-                    ) : (
-                      post.content
-                    )}
-                  </div>
 
-                  {/* Attached Image with 18+ Blur & Age Gate */}
-                  {post.image_url && (() => {
-                    const isPostNsfw = !!post.is_nsfw || (post.tags && post.tags.some(t => /18|nsfw|sex|porn|hentai/i.test(t)))
-                    const isUserAdult = !!userProfile?.age_verified
-                    const isUnblurred = !!unblurredNewsMap[post.id]
-                    const shouldBlur = isPostNsfw && (!isUserAdult || !isUnblurred)
+                      {/* AI Translate Pill */}
+                      {p.content && (
+                        <button
+                          type="button"
+                          className={`btn ${translated ? 'btn-primary' : 'btn-secondary'} flex items-center g4`}
+                          style={{ padding: '4px 9px', fontSize: 11, borderRadius: 6 }}
+                          onClick={() => handleTranslatePost(p)}
+                          disabled={translatingPostId === p.id}
+                        >
+                          <Globe size={12} />
+                          {translatingPostId === p.id ? 'Đang dịch...' : translated ? 'Bản gốc' : 'AI Dịch'}
+                        </button>
+                      )}
+                    </div>
 
-                    return (
-                      <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', marginBottom: 12, maxHeight: 380, border: '1px solid var(--gold-hairline)' }}>
+                    {/* Post Content */}
+                    <div 
+                      style={{ 
+                        fontSize: 14.5, 
+                        lineHeight: 1.6, 
+                        marginBottom: p.image_url ? 12 : 6,
+                        filter: shouldBlur ? 'blur(16px)' : 'none',
+                        transition: 'filter 0.25s ease'
+                      }}
+                    >
+                      {translated ? (
+                        <div>
+                          <span className="gold bold">[Bản dịch AI]: </span>
+                          <span>{translated}</span>
+                        </div>
+                      ) : (
+                        p.content
+                      )}
+                    </div>
+
+                    {/* Post Image Attachment with 18+ Blur Gate */}
+                    {p.image_url && (
+                      <div 
+                        style={{ 
+                          position: 'relative', 
+                          borderRadius: 10, 
+                          overflow: 'hidden', 
+                          marginBottom: 12, 
+                          border: '1px solid var(--gold-hairline)',
+                          maxHeight: 400
+                        }}
+                      >
                         <img 
-                          src={post.image_url} 
+                          src={p.image_url} 
                           alt="Post attachment" 
                           style={{ 
                             width: '100%', 
-                            height: '100%', 
                             objectFit: 'cover',
-                            filter: shouldBlur ? 'blur(40px) brightness(0.6)' : 'none',
-                            transform: shouldBlur ? 'scale(1.1)' : 'none',
+                            filter: shouldBlur ? 'blur(35px) brightness(0.6)' : 'none',
+                            transform: shouldBlur ? 'scale(1.08)' : 'none',
                             transition: 'filter 0.3s ease, transform 0.3s ease'
                           }} 
                         />
 
                         {shouldBlur && (
-                          <div
+                          <div 
                             style={{
                               position: 'absolute',
                               inset: 0,
-                              background: 'rgba(10, 8, 14, 0.82)',
-                              backdropFilter: 'blur(14px)',
+                              background: 'rgba(10, 8, 14, 0.85)',
+                              backdropFilter: 'blur(12px)',
                               display: 'flex',
                               flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              padding: 16,
-                              textAlign: 'center',
-                              zIndex: 5
+                              padding: 20,
+                              textAlign: 'center'
                             }}
                           >
-                            <div style={{ fontSize: 22, marginBottom: 4 }}>🔞</div>
-                            <div className="semi small" style={{ color: '#f43f5e', marginBottom: 2 }}>
-                              Hình ảnh 18+ Nhạy cảm
+                            <span style={{ fontSize: 24, marginBottom: 6 }}>🔞</span>
+                            <div className="rm-title" style={{ color: '#f43f5e', fontSize: 15, marginBottom: 4 }}>
+                              NỘI DUNG 18+ ĐÃ LÀM MỜ
                             </div>
-                            <p className="tiny faint" style={{ maxWidth: 260, lineHeight: 1.4, marginBottom: 10 }}>
+                            <p className="tiny muted" style={{ maxWidth: 280, lineHeight: 1.5, marginBottom: 12 }}>
                               {!isUserAdult 
-                                ? 'Đã làm mờ bảo vệ. Cần xác thực độ tuổi 18+ trong Hồ sơ để xem.'
-                                : 'Hình ảnh 18+ đã làm mờ.'}
+                                ? 'Hình ảnh chứa nội dung nhạy cảm. Bạn cần xác thực 18+ trong Hồ Sơ để xem.'
+                                : 'Bạn đã đủ điều kiện 18+.'}
                             </p>
-
                             {!isUserAdult ? (
-                              <Link
-                                href="/profile"
-                                className="btn btn-secondary"
-                                style={{ width: 'auto', padding: '5px 12px', fontSize: 11, borderRadius: 6, color: '#f43f5e' }}
+                              <Link 
+                                href="/profile" 
+                                className="btn btn-secondary" 
+                                style={{ padding: '6px 14px', fontSize: 11.5, color: '#f43f5e', borderColor: 'rgba(244,63,94,0.3)' }}
                               >
-                                🛡️ Xác thực 18+ trong Hồ sơ
+                                🛡️ Xác thực 18+
                               </Link>
                             ) : (
                               <button
                                 type="button"
                                 className="btn btn-primary"
-                                style={{ width: 'auto', padding: '5px 14px', fontSize: 11.5, borderRadius: 6 }}
-                                onClick={() => setUnblurredNewsMap((prev) => ({ ...prev, [post.id]: true }))}
+                                style={{ padding: '6px 16px', fontSize: 12 }}
+                                onClick={() => setUnblurredMap((prev) => ({ ...prev, [p.id]: true }))}
                               >
                                 👁️ Mở khóa xem ảnh
                               </button>
@@ -533,156 +467,131 @@ export default function RanNewsPage() {
                           </div>
                         )}
                       </div>
-                    )
-                  })()}
+                    )}
 
-                  {/* Tags */}
-                  {post.tags && post.tags.length > 0 && (
-                    <div className="flex" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-                      {post.tags.map((tagItem) => (
-                        <span key={tagItem} className="tiny gold">
-                          {tagItem}
-                        </span>
-                      ))}
+                    {/* Post Actions (Like, Comment, Share) */}
+                    <div className="flex items-center g16" style={{ paddingTop: 10, borderTop: '1px solid var(--gold-hairline)' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary flex items-center g6"
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 6,
+                          fontSize: 12.5,
+                          background: likedPosts[p.id] ? 'rgba(245, 192, 66, 0.12)' : 'var(--inset-lacquer)',
+                          color: likedPosts[p.id] ? 'var(--kinpaku-gold)' : 'var(--text-muted)'
+                        }}
+                        onClick={() => {
+                          setLikedPosts((prev) => ({ ...prev, [p.id]: !prev[p.id] }))
+                        }}
+                      >
+                        <Heart size={15} fill={likedPosts[p.id] ? 'var(--kinpaku-gold)' : 'none'} />
+                        <span className="bold rm-num">{(p.likes_count || 0) + (likedPosts[p.id] ? 1 : 0)}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-secondary flex items-center g6"
+                        style={{ padding: '5px 12px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-muted)' }}
+                        onClick={() => toggleComments(p.id)}
+                      >
+                        <MessageCircle size={15} />
+                        <span className="rm-num">{postComments.length || 0}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-secondary flex items-center g6"
+                        style={{ padding: '5px 12px', borderRadius: 6, fontSize: 12.5, color: 'var(--text-muted)', marginLeft: 'auto' }}
+                        onClick={() => {
+                          if (navigator.clipboard) {
+                            navigator.clipboard.writeText(window.location.href)
+                            showToast('Đã sao chép liên kết bài viết!')
+                          }
+                        }}
+                      >
+                        <Share2 size={15} />
+                      </button>
                     </div>
-                  )}
 
-                  {/* Action Bar (Like, Comment, Share) */}
-                  <div className="flex justify-between items-center" style={{ paddingTop: 8, borderTop: '1px solid var(--gold-hairline)' }}>
-                    <button
-                      type="button"
-                      className="btn-secondary flex items-center g6"
-                      style={{
-                        padding: '5px 12px',
-                        borderRadius: 6,
-                        fontSize: 13,
-                        border: 'none',
-                        background: isLiked ? 'rgba(245, 192, 66, 0.12)' : 'transparent',
-                        color: isLiked ? 'var(--kinpaku-gold)' : 'var(--text-muted)'
-                      }}
-                      onClick={() => handleToggleLike(post.id)}
-                    >
-                      <Heart size={15} style={{ fill: isLiked ? 'var(--kinpaku-gold)' : 'none' }} />
-                      <span className="bold rm-num">{likesCount}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn-secondary flex items-center g6"
-                      style={{ padding: '5px 12px', borderRadius: 6, fontSize: 13, border: 'none', background: 'transparent' }}
-                      onClick={() => setActiveCommentsPostId(showCommentsSection ? null : post.id)}
-                    >
-                      <MessageCircle size={15} />
-                      <span className="bold rm-num">{postComments.length} {t('commentsCountSuffix')}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn-secondary flex items-center g6"
-                      style={{ padding: '5px 12px', borderRadius: 6, fontSize: 13, border: 'none', background: 'transparent' }}
-                      onClick={() => showToast('Link copied! 📋')}
-                    >
-                      <Share2 size={15} />
-                    </button>
-                  </div>
-
-                  {/* EXPANDABLE COMMENTS SECTION */}
-                  {showCommentsSection && (
-                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--gold-hairline)', animation: 'msgPop 0.2s ease' }}>
-                      {/* Comments Feed */}
-                      <div className="flex col g8" style={{ marginBottom: 10 }}>
-                        {postComments.length === 0 ? (
-                          <div className="tiny faint">Chưa có bình luận nào. Hãy là người đầu tiên!</div>
-                        ) : (
-                          postComments.map((c) => {
-                            const cTrans = commentTranslations[c.id]
-                            return (
-                              <div key={c.id} className="flex g8 items-start">
-                                <div className="avatar" style={{ width: 26, height: 26, fontSize: 10 }}>
-                                  {(c.user_name || 'U').charAt(0).toUpperCase()}
+                    {/* Comments Drawer */}
+                    {activeCommentPostId === p.id && (
+                      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--gold-hairline)', animation: 'msgPop 0.2s ease' }}>
+                        <div className="flex col g8" style={{ marginBottom: 12 }}>
+                          {postComments.length === 0 ? (
+                            <div className="tiny faint center-text" style={{ padding: '8px 0' }}>Chưa có bình luận nào.</div>
+                          ) : (
+                            postComments.map((cm) => (
+                              <div key={cm.id} className="flex g8 items-start" style={{ background: 'var(--lacquer-deep)', padding: '8px 12px', borderRadius: 8 }}>
+                                <div className="avatar" style={{ width: 24, height: 24, fontSize: 10 }}>
+                                  {(cm.user_name || 'U').charAt(0).toUpperCase()}
                                 </div>
-                                <div style={{ background: 'var(--lacquer-deep)', padding: '7px 10px', borderRadius: 8, grow: 1, width: '100%', border: '1px solid var(--gold-hairline)' }}>
-                                  <div className="flex justify-between items-center">
-                                    <span className="semi tiny gold">{c.user_name}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleTranslateComment(c.id, c.content)}
-                                      style={{ background: 'none', border: 'none', color: 'var(--kinpaku-gold)', fontSize: 10, cursor: 'pointer' }}
-                                    >
-                                      {cTrans?.isTranslating ? '...' : cTrans?.show ? t('showOriginal') : t('aiTranslate')}
-                                    </button>
-                                  </div>
-                                  <div className="small champagne" style={{ marginTop: 2 }}>
-                                    {cTrans?.show && cTrans?.translated ? cTrans.translated : c.content}
-                                  </div>
+                                <div>
+                                  <div className="semi tiny gold">{cm.user_name}</div>
+                                  <div className="small champagne">{cm.content}</div>
                                 </div>
                               </div>
-                            )
-                          })
-                        )}
-                      </div>
+                            ))
+                          )}
+                        </div>
 
-                      {/* Comment Input */}
-                      <div className="flex g6 items-center">
-                        <input
-                          className="input"
-                          style={{ padding: '7px 12px', fontSize: 13, borderRadius: 6 }}
-                          placeholder={t('writeCommentPlaceholder')}
-                          value={commentDrafts[post.id] || ''}
-                          onChange={(e) => setCommentDrafts({ ...commentDrafts, [post.id]: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleAddComment(post.id)
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          style={{ width: 34, height: 34, borderRadius: 6, padding: 0, flexShrink: 0 }}
-                          onClick={() => handleAddComment(post.id)}
-                        >
-                          <Send size={13} />
-                        </button>
+                        <form onSubmit={(e) => handleSendComment(p.id, e)} className="flex g8 items-center">
+                          <input
+                            className="input"
+                            placeholder="Viết bình luận cho bài đăng này..."
+                            value={commentInputText}
+                            onChange={(e) => setCommentInputText(e.target.value)}
+                            style={{ padding: '8px 12px', fontSize: 12.5, borderRadius: 6 }}
+                          />
+                          <button type="submit" className="btn btn-primary" style={{ padding: '8px 14px', borderRadius: 6 }}>
+                            <Send size={14} />
+                          </button>
+                        </form>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
-        {/* RIGHT DESKTOP SIDEBAR */}
-        <div className="flex col g16">
+        {/* RIGHT SIDEBAR: TRENDS & GEMINI SAFETY STATUS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Trending Topics */}
           <div className="card" style={{ padding: 18 }}>
-            <div className="flex items-center g8" style={{ marginBottom: 10 }}>
-              <Flame size={15} style={{ color: 'var(--kinpaku-gold)' }} />
-              <span className="semi small champagne">{t('newsTrendsTitle')}</span>
+            <div className="flex items-center g6" style={{ marginBottom: 12 }}>
+              <TrendingUp size={16} style={{ color: 'var(--kinpaku-gold)' }} />
+              <div className="rm-title" style={{ fontSize: 15 }}>Chủ Đề Thịnh Hành</div>
             </div>
-            <div className="flex col g8">
-              <div className="flex justify-between items-center tiny">
-                <span className="bold champagne">#RanMetLaunch</span>
-                <span className="faint rm-num">1.2k {t('postsCountSuffix')}</span>
-              </div>
-              <div className="flex justify-between items-center tiny">
-                <span className="bold champagne">#MinecraftBackrooms</span>
-                <span className="faint rm-num">840 {t('postsCountSuffix')}</span>
-              </div>
-              <div className="flex justify-between items-center tiny">
-                <span className="bold champagne">#AIMatchRealtime</span>
-                <span className="faint rm-num">520 {t('postsCountSuffix')}</span>
-              </div>
+
+            <div className="flex col g10">
+              {[
+                { tag: '#RanMetAI', count: '14.2K bài viết' },
+                { tag: '#SpatialAudio', count: '8.7K bài viết' },
+                { tag: '#AnimeVoice', count: '6.1K bài viết' },
+                { tag: '#CreatorStudio', count: '4.9K bài viết' },
+                { tag: '#GamingHub', count: '3.4K bài viết' }
+              ].map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center" style={{ cursor: 'pointer' }}>
+                  <div>
+                    <div className="semi gold tiny">{item.tag}</div>
+                    <div className="tiny faint rm-num">{item.count}</div>
+                  </div>
+                  <span className="tiny faint">🔥</span>
+                </div>
+              ))}
             </div>
           </div>
 
+          {/* Gemini AI Guard Status */}
           <div className="card" style={{ padding: 18, background: 'var(--lacquer-deep)' }}>
-            <div className="flex items-center g8" style={{ marginBottom: 6 }}>
-              <ShieldCheck size={15} style={{ color: 'var(--emerald-patina)' }} />
-              <span className="semi small champagne">{t('geminiGuardTitle')}</span>
+            <div className="flex items-center g8" style={{ marginBottom: 8 }}>
+              <ShieldCheck size={16} style={{ color: 'var(--emerald-patina)' }} />
+              <div className="rm-title" style={{ fontSize: 14 }}>Gemini AI Guard</div>
             </div>
-            <p className="tiny muted" style={{ lineHeight: 1.5 }}>
-              {t('geminiGuardDesc')}
+            <p className="tiny muted" style={{ lineHeight: 1.55 }}>
+              Mọi bài đăng, hình ảnh và video đều được AI kiểm duyệt thời gian thực theo tiêu chuẩn an toàn cộng đồng toàn cầu.
             </p>
           </div>
         </div>
@@ -698,7 +607,6 @@ export default function RanNewsPage() {
             transform: 'translateX(-50%)',
             background: 'var(--raised-lacquer)',
             border: '1px solid var(--gold-hairline-strong)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.65)',
             padding: '9px 18px',
             borderRadius: 8,
             color: 'var(--champagne)',
